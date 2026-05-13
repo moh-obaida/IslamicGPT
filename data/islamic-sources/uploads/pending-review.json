@@ -1,0 +1,18 @@
+[
+  {
+    "id": "upload-sample-1",
+    "source_type": "uploaded_document",
+    "source_name": "User Upload",
+    "title": "Pending sample upload",
+    "language": "en",
+    "reliability_level": 5,
+    "verified_by_admin": false,
+    "approved_for_answers": false,
+    "approved_for_fatwa": false,
+    "uploaded_by": "sample-user",
+    "file_name": "sample.pdf",
+    "file_hash": "sample-hash",
+    "local_reference": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "upload_status": "pending_review"
+  }
+]
