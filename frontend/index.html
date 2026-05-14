@@ -103,6 +103,35 @@
     .field { width: 100%; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px; padding: 8px 10px; }
     .field:focus, .mini-select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accentSoft); }
     .note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .manager-panel { width: min(1080px, 96vw); }
+    .manager-grid { display: grid; gap: 14px; grid-template-columns: minmax(320px, 380px) 1fr; align-items: start; }
+    .manager-grid .section { margin-bottom: 0; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .section-title h4 { margin: 0; }
+    .helper { margin-top: 6px; color: var(--muted); font-size: 12px; min-height: 18px; }
+    .fields-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .field-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .field-wrap[data-hidden="true"] { display: none; }
+    .field-wrap label { color: var(--muted); font-size: 11px; letter-spacing: .02em; }
+    .field-wrap.wide { grid-column: 1 / -1; }
+    .actions-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .save-btn.primary { border-color: rgba(24,201,181,.45); background: var(--accentSoft); color: var(--accent); font-weight: 600; }
+    .save-btn.warn { border-color: rgba(242,127,117,.35); background: var(--dangerSoft); color: var(--danger); }
+    .source-list { display: grid; gap: 8px; max-height: 68vh; overflow: auto; }
+    .source-item { border: 1px solid var(--border); background: var(--panel); border-radius: 10px; padding: 10px; }
+    .source-item-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; align-items: flex-start; }
+    .source-item-id { font-weight: 600; font-size: 12px; word-break: break-all; }
+    .source-item-type { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+    .source-meta { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .status-line { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .status-chip { border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--muted); background: var(--card); }
+    .status-chip.ok { border-color: rgba(24,201,181,.35); color: var(--accent); background: var(--accentSoft); }
+    .source-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .source-actions .icon-btn { padding: 6px 10px; font-size: 12px; }
+    .empty-sources { color: var(--muted); font-size: 13px; border: 1px dashed var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+    @media (max-width: 980px) {
+      .manager-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -117,7 +146,7 @@
     </div>
     <div class="sb-bottom">
       <button class="nav-item active">Chat</button>
-      <button class="nav-item">Sources</button>
+      <button class="nav-item" onclick="openSourceManager()">Sources</button>
       <button class="nav-item" onclick="openSettings()">Settings</button>
       <button class="nav-item" onclick="checkServer()">AI Server Check</button>
     </div>
@@ -164,49 +193,561 @@
   </div>
 </div>
 
+<div class="modal" id="sourceManagerModal">
+  <div class="panel manager-panel">
+    <div class="panel-head">
+      <h3 style="margin:0;">Admin Source Manager</h3>
+      <button class="icon-btn" onclick="closeSourceManager()">Close</button>
+    </div>
+    <div class="manager-grid">
+      <div class="section">
+        <div class="section-title"><h4 id="sourceFormTitle">Add Source</h4></div>
+        <form id="sourceForm" onsubmit="saveSource(event)">
+          <div class="field-wrap">
+            <label for="source_type">Source Type</label>
+            <select id="source_type" class="field" onchange="onSourceTypeChange()"></select>
+            <div id="sourceTypeHelper" class="helper"></div>
+          </div>
+          <div class="fields-grid" id="sourceFields">
+            <div class="field-wrap" data-field="id"><label for="id">id</label><input id="id" class="field" /></div>
+            <div class="field-wrap" data-field="title"><label for="title">title</label><input id="title" class="field" /></div>
+            <div class="field-wrap" data-field="source_title"><label for="source_title">source_title</label><input id="source_title" class="field" /></div>
+            <div class="field-wrap" data-field="surah_name_en"><label for="surah_name_en">surah_name_en</label><input id="surah_name_en" class="field" /></div>
+            <div class="field-wrap" data-field="surah_name_ar"><label for="surah_name_ar">surah_name_ar</label><input id="surah_name_ar" class="field" /></div>
+            <div class="field-wrap" data-field="surah_number"><label for="surah_number">surah_number</label><input id="surah_number" type="number" class="field" /></div>
+            <div class="field-wrap" data-field="ayah_number"><label for="ayah_number">ayah_number</label><input id="ayah_number" type="number" class="field" /></div>
+            <div class="field-wrap" data-field="ayah_range"><label for="ayah_range">ayah_range</label><input id="ayah_range" class="field" placeholder="e.g. 1-7" /></div>
+            <div class="field-wrap" data-field="collection_name"><label for="collection_name">collection_name</label><input id="collection_name" class="field" /></div>
+            <div class="field-wrap" data-field="book_name"><label for="book_name">book_name</label><input id="book_name" class="field" /></div>
+            <div class="field-wrap" data-field="chapter_name"><label for="chapter_name">chapter_name</label><input id="chapter_name" class="field" /></div>
+            <div class="field-wrap" data-field="hadith_number"><label for="hadith_number">hadith_number</label><input id="hadith_number" class="field" /></div>
+            <div class="field-wrap" data-field="hadith_number_unavailable">
+              <label for="hadith_number_unavailable">hadith_number_unavailable</label>
+              <select id="hadith_number_unavailable" class="field"><option value="false">false</option><option value="true">true</option></select>
+            </div>
+            <div class="field-wrap" data-field="grade"><label for="grade">grade</label><input id="grade" class="field" /></div>
+            <div class="field-wrap" data-field="narrator_if_available"><label for="narrator_if_available">narrator_if_available</label><input id="narrator_if_available" class="field" /></div>
+            <div class="field-wrap" data-field="scholar_name"><label for="scholar_name">scholar_name</label><input id="scholar_name" class="field" /></div>
+            <div class="field-wrap" data-field="reference_number"><label for="reference_number">reference_number</label><input id="reference_number" class="field" /></div>
+            <div class="field-wrap" data-field="fatwa_number"><label for="fatwa_number">fatwa_number</label><input id="fatwa_number" class="field" /></div>
+            <div class="field-wrap" data-field="page_number"><label for="page_number">page_number</label><input id="page_number" class="field" /></div>
+            <div class="field-wrap" data-field="timestamp"><label for="timestamp">timestamp</label><input id="timestamp" class="field" placeholder="e.g. 12:40" /></div>
+            <div class="field-wrap" data-field="url"><label for="url">url</label><input id="url" class="field" placeholder="https://..." /></div>
+            <div class="field-wrap" data-field="local_reference"><label for="local_reference">local_reference</label><input id="local_reference" class="field" /></div>
+            <div class="field-wrap" data-field="document_title"><label for="document_title">document_title</label><input id="document_title" class="field" /></div>
+            <div class="field-wrap" data-field="file_name"><label for="file_name">file_name</label><input id="file_name" class="field" /></div>
+            <div class="field-wrap" data-field="section_title"><label for="section_title">section_title</label><input id="section_title" class="field" /></div>
+            <div class="field-wrap" data-field="upload_status">
+              <label for="upload_status">upload_status</label>
+              <select id="upload_status" class="field"><option value="pending_review">pending_review</option><option value="approved">approved</option><option value="rejected">rejected</option></select>
+            </div>
+            <div class="field-wrap" data-field="approved_by_admin"><label for="approved_by_admin">approved_by_admin</label><input id="approved_by_admin" class="field" /></div>
+            <div class="field-wrap wide" data-field="arabic_text"><label for="arabic_text">arabic_text</label><textarea id="arabic_text" class="field" rows="2"></textarea></div>
+            <div class="field-wrap wide" data-field="translation_text"><label for="translation_text">translation_text</label><textarea id="translation_text" class="field" rows="2"></textarea></div>
+            <div class="field-wrap wide" data-field="summary"><label for="summary">summary</label><textarea id="summary" class="field" rows="2"></textarea></div>
+            <div class="field-wrap wide" data-field="keywords"><label for="keywords">keywords (comma separated)</label><input id="keywords" class="field" /></div>
+            <div class="field-wrap" data-field="verified_by_admin">
+              <label for="verified_by_admin">verified_by_admin</label>
+              <select id="verified_by_admin" class="field"><option value="true">true</option><option value="false">false</option></select>
+            </div>
+            <div class="field-wrap" data-field="approved_for_answers">
+              <label for="approved_for_answers">approved_for_answers</label>
+              <select id="approved_for_answers" class="field"><option value="true">true</option><option value="false">false</option></select>
+            </div>
+            <div class="field-wrap" data-field="disabled">
+              <label for="disabled">disabled</label>
+              <select id="disabled" class="field"><option value="false">false</option><option value="true">true</option></select>
+            </div>
+          </div>
+          <div class="actions-row">
+            <button type="submit" class="save-btn primary" id="sourceSubmitBtn">Add Source</button>
+            <button type="button" class="save-btn warn" id="cancelEditBtn" onclick="cancelSourceEditing()" style="display:none;">Cancel Editing</button>
+          </div>
+          <div class="note" style="margin-top:10px;">Validation and API payload format are preserved for required references and approval flags.</div>
+        </form>
+      </div>
+      <div class="section">
+        <div class="section-title"><h4>Sources</h4><span class="note" id="sourceCountLabel">0 records</span></div>
+        <div id="sourceList" class="source-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const DEFAULT_API='http://localhost:3001';
+const SOURCE_STORAGE_KEY='ISLAMICGPT_ADMIN_SOURCES';
 const modes=[['islamic_search_mode','Search'],['quran_mode','Quran'],['hadith_mode','Hadith'],['tafsir_mode','Tafsir'],['fiqh_mode','Fiqh'],['aqidah_mode','Aqidah'],['arabic_mode','Arabic'],['student_explanation_mode','Student']];
+const sourceTypes=[
+  'quran','quran_translation','tafsir',
+  'hadith','hadith_explanation',
+  'scholar_statement','fatwa','book','lecture','video_transcript','educational_explanation',
+  'uploaded_document','approved_pdf'
+];
+const sourceTypeGroups={
+  quran:['quran','quran_translation','tafsir'],
+  hadith:['hadith','hadith_explanation'],
+  scholar:['scholar_statement','fatwa','book','lecture','video_transcript','educational_explanation'],
+  document:['uploaded_document','approved_pdf']
+};
+const sourceHelperText={
+  quran:'Requires surah and ayah reference.',
+  hadith:'Requires collection and hadith number unless marked unavailable.',
+  scholar:'Requires exact reference.',
+  document:'Uploaded documents must be reviewed before approval.'
+};
+const sourceFieldsByGroup={
+  quran:['id','title','source_title','surah_name_en','surah_name_ar','surah_number','ayah_number','ayah_range','arabic_text','translation_text','summary','keywords','verified_by_admin','approved_for_answers','disabled'],
+  hadith:['id','collection_name','book_name','chapter_name','hadith_number','hadith_number_unavailable','grade','narrator_if_available','arabic_text','translation_text','summary','keywords','verified_by_admin','approved_for_answers','disabled'],
+  scholar:['id','scholar_name','title','source_title','reference_number','fatwa_number','page_number','timestamp','url','local_reference','arabic_text','translation_text','summary','keywords','verified_by_admin','approved_for_answers','disabled'],
+  document:['id','document_title','file_name','page_number','section_title','upload_status','approved_by_admin','summary','keywords','verified_by_admin','approved_for_answers','disabled'],
+};
+const sourceFormFieldIds=[
+  'id','title','source_title','surah_name_en','surah_name_ar','surah_number','ayah_number','ayah_range',
+  'collection_name','book_name','chapter_name','hadith_number','hadith_number_unavailable','grade','narrator_if_available',
+  'scholar_name','reference_number','fatwa_number','page_number','timestamp','url','local_reference',
+  'document_title','file_name','section_title','upload_status','approved_by_admin',
+  'arabic_text','translation_text','summary','keywords','verified_by_admin','approved_for_answers','disabled',
+];
+const sourceBooleanFields=new Set(['hadith_number_unavailable','verified_by_admin','approved_for_answers','disabled']);
+const sourceNumericFields=new Set(['surah_number','ayah_number']);
 let selectedMode=localStorage.getItem('ISLAMICGPT_MODE')||'islamic_search_mode';
 let modelMode=localStorage.getItem('ISLAMICGPT_MODEL_MODE')||'auto';
 let currentChatId=null;
-const chats=JSON.parse(localStorage.getItem('ISLAMICGPT_CHATS')||'[]');
-const messagesByChat=JSON.parse(localStorage.getItem('ISLAMICGPT_CHAT_MESSAGES')||'{}');
+let editingSourceId=null;
+const chats=safeParse(localStorage.getItem('ISLAMICGPT_CHATS'),'[]');
+const messagesByChat=safeParse(localStorage.getItem('ISLAMICGPT_CHAT_MESSAGES'),'{}');
+let adminSources=safeParse(localStorage.getItem(SOURCE_STORAGE_KEY),'[]');
 const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const getApi=()=> (localStorage.getItem('ISLAMICGPT_API_URL')||DEFAULT_API).replace(/\/$/, '');
+
+function safeParse(raw,fallback){
+  try{
+    return JSON.parse(raw||fallback);
+  }catch{
+    return JSON.parse(fallback);
+  }
+}
 
 function init(){
   applyTheme(localStorage.getItem('ISLAMICGPT_THEME')||'dark');
   document.getElementById('apiUrl').value=getApi();
   document.getElementById('currentApi').textContent='Current: '+getApi();
-  renderModeSelects(); renderHistory(); initResize(); syncDepth();
+  renderModeSelects();
+  renderHistory();
+  initResize();
+  syncDepth();
+  initSourceManager();
+  checkServer();
 }
+
 function renderModeSelects(){
   const selects=['modeSelect','settingsMode'].map(id=>document.getElementById(id));
-  selects.forEach(s=>{s.innerHTML='';modes.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;s.appendChild(o)});s.value=selectedMode;s.onchange=e=>setMode(e.target.value);});
+  selects.forEach(s=>{
+    s.innerHTML='';
+    modes.forEach(([v,l])=>{
+      const o=document.createElement('option');
+      o.value=v;
+      o.textContent=l;
+      s.appendChild(o);
+    });
+    s.value=selectedMode;
+    s.onchange=e=>setMode(e.target.value);
+  });
   updateModeLabel();
 }
-function updateModeLabel(){ const m=modes.find(([v])=>v===selectedMode); document.getElementById('modeLabel').textContent=(m?m[1]:'Islamic Search')+' Mode'; }
-function setMode(v){ selectedMode=v; localStorage.setItem('ISLAMICGPT_MODE',v); document.getElementById('modeSelect').value=v; document.getElementById('settingsMode').value=v; updateModeLabel(); }
-function syncDepth(){ ['depthSelect','settingsDepth'].forEach(id=>{const el=document.getElementById(id); el.value=modelMode; el.onchange=e=>setDepth(e.target.value);}); }
-function setDepth(v){ modelMode=v; localStorage.setItem('ISLAMICGPT_MODEL_MODE',v); document.getElementById('depthSelect').value=v; document.getElementById('settingsDepth').value=v; }
-function renderHistory(){ const h=document.getElementById('history'); h.innerHTML=''; document.getElementById('emptyHistory').style.display=chats.length?'none':'block'; chats.forEach(c=>{const b=document.createElement('button'); b.className='history-item'; b.textContent=c.title; b.onclick=()=>selectChat(c.id); h.appendChild(b)}); }
-function newChat(){ currentChatId='c'+Date.now(); messagesByChat[currentChatId]=[]; document.getElementById('messages').innerHTML=''; document.getElementById('sources').innerHTML=''; document.getElementById('welcome').style.display='block'; }
-function selectChat(id){ currentChatId=id; document.getElementById('welcome').style.display='none'; document.getElementById('messages').innerHTML=''; document.getElementById('sources').innerHTML=''; (messagesByChat[id]||[]).forEach(m=>addMessage(m.role,m.text,false)); }
-function persist(){ localStorage.setItem('ISLAMICGPT_CHATS',JSON.stringify(chats)); localStorage.setItem('ISLAMICGPT_CHAT_MESSAGES',JSON.stringify(messagesByChat)); }
-function ensureChatTitle(firstMessage){ if(!currentChatId) newChat(); if(!chats.some(c=>c.id===currentChatId)){ chats.unshift({id:currentChatId,title:firstMessage.slice(0,42)}); persist(); renderHistory(); } }
-function addMessage(role,text,save=true){ const d=document.createElement('div'); d.className='msg '+(role==='user'?'user':'assistant'); d.innerHTML=`<div class='bubble'>${esc(text)}</div>`; document.getElementById('messages').appendChild(d); if(save&&currentChatId){ messagesByChat[currentChatId].push({role,text}); persist(); } }
-function renderSourceCards(cards){ const el=document.getElementById('sources'); el.innerHTML=''; cards.forEach(c=>{const d=document.createElement('div'); d.className='card'; d.innerHTML=`<div class='type'>${esc(c.badge||'Source')}</div><strong>${esc(c.type||'Source')}</strong><div>${esc(c.copyCitation||c.reference||'')}</div>`; el.appendChild(d);}); }
-async function sendMsg(){ const q=document.getElementById('q').value.trim(); if(!q) return; ensureChatTitle(q); document.getElementById('welcome').style.display='none'; addMessage('user',q); document.getElementById('q').value=''; try{ const r=await fetch(`${getApi()}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode:selectedMode,modelMode})}); const d=await r.json(); addMessage('assistant', d.answer||'No answer returned.'); renderSourceCards(d.sourceCards||[]);} catch(e){ addMessage('assistant','IslamicGPT could not reach the backend. Check Backend API URL and VM server.'); } }
-function applyTheme(t){ document.body.dataset.theme=t; localStorage.setItem('ISLAMICGPT_THEME',t); document.getElementById('themeDark').classList.toggle('active',t==='dark'); document.getElementById('themeLight').classList.toggle('active',t==='light'); }
+
+function updateModeLabel(){
+  const m=modes.find(([v])=>v===selectedMode);
+  document.getElementById('modeLabel').textContent=(m?m[1]:'Islamic Search')+' Mode';
+}
+
+function setMode(v){
+  selectedMode=v;
+  localStorage.setItem('ISLAMICGPT_MODE',v);
+  document.getElementById('modeSelect').value=v;
+  document.getElementById('settingsMode').value=v;
+  updateModeLabel();
+}
+
+function syncDepth(){
+  ['depthSelect','settingsDepth'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.value=modelMode;
+    el.onchange=e=>setDepth(e.target.value);
+  });
+}
+
+function setDepth(v){
+  modelMode=v;
+  localStorage.setItem('ISLAMICGPT_MODEL_MODE',v);
+  document.getElementById('depthSelect').value=v;
+  document.getElementById('settingsDepth').value=v;
+}
+
+function renderHistory(){
+  const h=document.getElementById('history');
+  h.innerHTML='';
+  document.getElementById('emptyHistory').style.display=chats.length?'none':'block';
+  chats.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='history-item';
+    b.textContent=c.title;
+    b.onclick=()=>selectChat(c.id);
+    h.appendChild(b);
+  });
+}
+
+function newChat(){
+  currentChatId='c'+Date.now();
+  messagesByChat[currentChatId]=[];
+  document.getElementById('messages').innerHTML='';
+  document.getElementById('sources').innerHTML='';
+  document.getElementById('welcome').style.display='block';
+}
+
+function selectChat(id){
+  currentChatId=id;
+  document.getElementById('welcome').style.display='none';
+  document.getElementById('messages').innerHTML='';
+  document.getElementById('sources').innerHTML='';
+  (messagesByChat[id]||[]).forEach(m=>addMessage(m.role,m.text,false));
+}
+
+function persist(){
+  localStorage.setItem('ISLAMICGPT_CHATS',JSON.stringify(chats));
+  localStorage.setItem('ISLAMICGPT_CHAT_MESSAGES',JSON.stringify(messagesByChat));
+}
+
+function ensureChatTitle(firstMessage){
+  if(!currentChatId) newChat();
+  if(!chats.some(c=>c.id===currentChatId)){
+    chats.unshift({id:currentChatId,title:firstMessage.slice(0,42)});
+    persist();
+    renderHistory();
+  }
+}
+
+function addMessage(role,text,save=true){
+  const d=document.createElement('div');
+  d.className='msg '+(role==='user'?'user':'assistant');
+  d.innerHTML=`<div class='bubble'>${esc(text)}</div>`;
+  document.getElementById('messages').appendChild(d);
+  if(save&&currentChatId){
+    messagesByChat[currentChatId].push({role,text});
+    persist();
+  }
+}
+
+function renderSourceCards(cards){
+  const el=document.getElementById('sources');
+  el.innerHTML='';
+  cards.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='card';
+    d.innerHTML=`<div class='type'>${esc(c.badge||'Source')}</div><strong>${esc(c.type||'Source')}</strong><div>${esc(c.copyCitation||c.reference||'')}</div>`;
+    el.appendChild(d);
+  });
+}
+
+async function sendMsg(){
+  const q=document.getElementById('q').value.trim();
+  if(!q) return;
+  ensureChatTitle(q);
+  document.getElementById('welcome').style.display='none';
+  addMessage('user',q);
+  document.getElementById('q').value='';
+  try{
+    const r=await fetch(`${getApi()}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode:selectedMode,modelMode})});
+    const d=await r.json();
+    addMessage('assistant', d.answer||'No answer returned.');
+    renderSourceCards(d.sourceCards||[]);
+  }catch{
+    addMessage('assistant','IslamicGPT could not reach the backend. Check Backend API URL and VM server.');
+  }
+}
+
+function applyTheme(t){
+  document.body.dataset.theme=t;
+  localStorage.setItem('ISLAMICGPT_THEME',t);
+  document.getElementById('themeDark').classList.toggle('active',t==='dark');
+  document.getElementById('themeLight').classList.toggle('active',t==='light');
+}
+
 function toggleTheme(){ setTheme(document.body.dataset.theme==='dark'?'light':'dark'); }
 function setTheme(t){ applyTheme(t); }
 function openSettings(){ document.getElementById('settingsModal').classList.add('open'); }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
 function saveApiUrl(){ const v=document.getElementById('apiUrl').value.trim().replace(/\/$/, ''); if(v) localStorage.setItem('ISLAMICGPT_API_URL',v); document.getElementById('currentApi').textContent='Current: '+getApi(); }
 function setExample(t){ document.getElementById('q').value=t; document.getElementById('q').focus(); }
-async function checkServer(){ try{ const r=await fetch(`${getApi()}/health`); const ok=r.ok; document.getElementById('aiPill').textContent=ok?'AI Online':'AI Offline'; } catch { document.getElementById('aiPill').textContent='AI Offline'; } }
-function initResize(){ const saved=localStorage.getItem('ISLAMICGPT_SIDEBAR_WIDTH'); if(saved) document.documentElement.style.setProperty('--sidebarWidth',saved+'px'); const r=document.getElementById('resizer'); let drag=false; r.onpointerdown=e=>{drag=true;r.classList.add('drag');r.setPointerCapture(e.pointerId)}; r.onpointermove=e=>{if(!drag) return; const w=Math.max(240,Math.min(420,e.clientX)); document.documentElement.style.setProperty('--sidebarWidth',w+'px'); localStorage.setItem('ISLAMICGPT_SIDEBAR_WIDTH',w)}; r.onpointerup=e=>{drag=false;r.classList.remove('drag'); try{r.releasePointerCapture(e.pointerId)}catch{}}; }
+
+async function checkServer(){
+  try{
+    const r=await fetch(`${getApi()}/health`);
+    const ok=r.ok;
+    document.getElementById('aiPill').textContent=ok?'AI Online':'AI Offline';
+  }catch{
+    document.getElementById('aiPill').textContent='AI Offline';
+  }
+}
+
+function initResize(){
+  const saved=localStorage.getItem('ISLAMICGPT_SIDEBAR_WIDTH');
+  if(saved) document.documentElement.style.setProperty('--sidebarWidth',saved+'px');
+  const r=document.getElementById('resizer');
+  let drag=false;
+  r.onpointerdown=e=>{drag=true;r.classList.add('drag');r.setPointerCapture(e.pointerId);};
+  r.onpointermove=e=>{
+    if(!drag) return;
+    const w=Math.max(240,Math.min(420,e.clientX));
+    document.documentElement.style.setProperty('--sidebarWidth',w+'px');
+    localStorage.setItem('ISLAMICGPT_SIDEBAR_WIDTH',w);
+  };
+  r.onpointerup=e=>{drag=false;r.classList.remove('drag'); try{r.releasePointerCapture(e.pointerId);}catch{}};
+}
+
+function initSourceManager(){
+  const typeSelect=document.getElementById('source_type');
+  typeSelect.innerHTML='';
+  sourceTypes.forEach(type=>{
+    const option=document.createElement('option');
+    option.value=type;
+    option.textContent=type;
+    typeSelect.appendChild(option);
+  });
+  resetSourceForm('quran');
+  renderSourceList();
+  const list=document.getElementById('sourceList');
+  list.addEventListener('click',onSourceActionClick);
+  document.getElementById('sourceManagerModal').addEventListener('click',(e)=>{
+    if(e.target.id==='sourceManagerModal') closeSourceManager();
+  });
+}
+
+function getSourceGroup(sourceType){
+  if(sourceTypeGroups.quran.includes(sourceType)) return 'quran';
+  if(sourceTypeGroups.hadith.includes(sourceType)) return 'hadith';
+  if(sourceTypeGroups.document.includes(sourceType)) return 'document';
+  return 'scholar';
+}
+
+function onSourceTypeChange(){
+  const sourceType=document.getElementById('source_type').value;
+  const visibleFields=new Set(sourceFieldsByGroup[getSourceGroup(sourceType)]||[]);
+  document.querySelectorAll('#sourceFields [data-field]').forEach((wrapper)=>{
+    const fieldName=wrapper.dataset.field;
+    wrapper.dataset.hidden=visibleFields.has(fieldName)?'false':'true';
+  });
+  document.getElementById('sourceTypeHelper').textContent=sourceHelperText[getSourceGroup(sourceType)]||'';
+}
+
+function openSourceManager(){
+  renderSourceList();
+  document.getElementById('sourceManagerModal').classList.add('open');
+}
+
+function closeSourceManager(){
+  document.getElementById('sourceManagerModal').classList.remove('open');
+}
+
+function resetSourceForm(sourceType='quran'){
+  document.getElementById('sourceForm').reset();
+  document.getElementById('source_type').value=sourceType;
+  document.getElementById('verified_by_admin').value='true';
+  document.getElementById('approved_for_answers').value='false';
+  document.getElementById('hadith_number_unavailable').value='false';
+  document.getElementById('disabled').value='false';
+  document.getElementById('upload_status').value='pending_review';
+  onSourceTypeChange();
+}
+
+function setEditMode(isEditing){
+  document.getElementById('sourceFormTitle').textContent=isEditing?'Edit Source':'Add Source';
+  document.getElementById('sourceSubmitBtn').textContent=isEditing?'Update Source':'Add Source';
+  document.getElementById('cancelEditBtn').style.display=isEditing?'inline-block':'none';
+}
+
+function cancelSourceEditing(){
+  editingSourceId=null;
+  setEditMode(false);
+  resetSourceForm(document.getElementById('source_type').value||'quran');
+}
+
+function parseFieldValue(fieldId){
+  const el=document.getElementById(fieldId);
+  if(!el) return undefined;
+  if(sourceBooleanFields.has(fieldId)) return el.value==='true';
+  const raw=String(el.value||'').trim();
+  if(!raw) return undefined;
+  if(fieldId==='keywords') return raw.split(',').map(x=>x.trim()).filter(Boolean);
+  if(sourceNumericFields.has(fieldId)){
+    const asNum=Number(raw);
+    return Number.isFinite(asNum)?asNum:undefined;
+  }
+  return raw;
+}
+
+function createSourceFromForm(){
+  const source={ source_type:document.getElementById('source_type').value };
+  sourceFormFieldIds.forEach((fieldId)=>{
+    const value=parseFieldValue(fieldId);
+    if(value!==undefined){
+      source[fieldId]=value;
+    }
+  });
+  if(source.verified_by_admin===undefined) source.verified_by_admin=false;
+  if(source.approved_for_answers===undefined) source.approved_for_answers=false;
+  if(source.disabled===undefined) source.disabled=false;
+  return source;
+}
+
+function validateSource(source){
+  const errors=[];
+  if(!source.id) errors.push('id is required.');
+  if(!source.source_type) errors.push('source_type is required.');
+  const group=getSourceGroup(source.source_type);
+  if(group==='quran'){
+    if(source.surah_number===undefined) errors.push('Quran sources require surah_number.');
+    if(source.ayah_number===undefined && !source.ayah_range) errors.push('Quran sources require ayah_number or ayah_range.');
+  }
+  if(group==='hadith'){
+    if(!source.collection_name) errors.push('Hadith sources require collection_name.');
+    if(!source.hadith_number && source.hadith_number_unavailable!==true) errors.push('Hadith sources require hadith_number unless unavailable is true.');
+  }
+  if(group==='scholar'){
+    const hasReference=Boolean(source.reference_number||source.fatwa_number||source.page_number||source.timestamp||source.local_reference||source.url);
+    if(!source.scholar_name) errors.push('Scholar and fatwa sources require scholar_name.');
+    if(!hasReference) errors.push('Scholar and fatwa sources require an exact reference.');
+  }
+  if(group==='document'){
+    if(!source.document_title) errors.push('Document sources require document_title.');
+    if(!source.file_name) errors.push('Document sources require file_name.');
+    if(!source.upload_status) errors.push('Document sources require upload_status.');
+    if(!source.approved_by_admin) errors.push('Document sources require approved_by_admin.');
+  }
+  return errors;
+}
+
+function saveAdminSources(){
+  localStorage.setItem(SOURCE_STORAGE_KEY,JSON.stringify(adminSources));
+}
+
+function saveSource(event){
+  event.preventDefault();
+  const source=createSourceFromForm();
+  const errors=validateSource(source);
+  if(editingSourceId!==source.id && adminSources.some(s=>s.id===source.id)){
+    errors.push('A source with this id already exists.');
+  }
+  if(errors.length){
+    window.alert(errors.join('\n'));
+    return;
+  }
+
+  if(editingSourceId){
+    const index=adminSources.findIndex((s)=>s.id===editingSourceId);
+    if(index>=0){
+      adminSources[index]={...adminSources[index],...source};
+    }else{
+      adminSources.unshift(source);
+    }
+  }else{
+    adminSources.unshift(source);
+  }
+  saveAdminSources();
+  renderSourceList();
+  cancelSourceEditing();
+}
+
+function renderSourceList(){
+  const list=document.getElementById('sourceList');
+  document.getElementById('sourceCountLabel').textContent=`${adminSources.length} records`;
+  if(!adminSources.length){
+    list.innerHTML='<div class="empty-sources">No sources yet. Add your first source.</div>';
+    return;
+  }
+  list.innerHTML=adminSources.map((source)=>{
+    const title=source.title||source.source_title||source.document_title||source.collection_name||source.scholar_name||'Untitled source';
+    const summary=source.summary||source.local_reference||source.url||'No summary';
+    return `
+      <article class="source-item">
+        <div class="source-item-head">
+          <div>
+            <div class="source-item-id">${esc(source.id)}</div>
+            <div class="source-item-type">${esc(source.source_type)}</div>
+          </div>
+          <div class="source-meta">${esc(title)}</div>
+        </div>
+        <div class="status-line">
+          <span class="status-chip ${source.approved_for_answers?'ok':''}">approved_for_answers: ${source.approved_for_answers===true?'true':'false'}</span>
+          <span class="status-chip ${source.verified_by_admin?'ok':''}">verified_by_admin: ${source.verified_by_admin===true?'true':'false'}</span>
+          <span class="status-chip ${source.disabled?'':'ok'}">disabled: ${source.disabled===true?'true':'false'}</span>
+        </div>
+        <div class="source-meta">${esc(summary)}</div>
+        <div class="source-actions">
+          <button class="icon-btn" type="button" data-action="edit" data-id="${esc(source.id)}">Edit</button>
+          <button class="icon-btn" type="button" data-action="delete" data-id="${esc(source.id)}">Delete</button>
+          <button class="icon-btn" type="button" data-action="toggle-approve" data-id="${esc(source.id)}">${source.approved_for_answers?'Unapprove':'Approve'}</button>
+          <button class="icon-btn" type="button" data-action="toggle-verify" data-id="${esc(source.id)}">${source.verified_by_admin?'Unverify':'Verify'}</button>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+function onSourceActionClick(event){
+  const btn=event.target.closest('button[data-action]');
+  if(!btn) return;
+  const sourceId=btn.dataset.id;
+  const action=btn.dataset.action;
+  if(action==='edit') startSourceEditing(sourceId);
+  if(action==='delete') deleteSource(sourceId);
+  if(action==='toggle-approve') toggleSourceFlag(sourceId,'approved_for_answers');
+  if(action==='toggle-verify') toggleSourceFlag(sourceId,'verified_by_admin');
+}
+
+function startSourceEditing(sourceId){
+  const source=adminSources.find((s)=>s.id===sourceId);
+  if(!source) return;
+  editingSourceId=sourceId;
+  setEditMode(true);
+  resetSourceForm(source.source_type||'quran');
+  sourceFormFieldIds.forEach((fieldId)=>{
+    const el=document.getElementById(fieldId);
+    if(!el) return;
+    const value=source[fieldId];
+    if(sourceBooleanFields.has(fieldId)){
+      el.value=value===true?'true':'false';
+      return;
+    }
+    if(fieldId==='keywords'){
+      el.value=Array.isArray(value)?value.join(', '):(value||'');
+      return;
+    }
+    el.value=value===undefined?'':String(value);
+  });
+  document.getElementById('id').focus();
+}
+
+function deleteSource(sourceId){
+  if(!window.confirm(`Delete source "${sourceId}"?`)) return;
+  adminSources=adminSources.filter((source)=>source.id!==sourceId);
+  saveAdminSources();
+  if(editingSourceId===sourceId){
+    cancelSourceEditing();
+  }
+  renderSourceList();
+}
+
+function toggleSourceFlag(sourceId,flag){
+  adminSources=adminSources.map((source)=>{
+    if(source.id!==sourceId) return source;
+    return { ...source, [flag]: source[flag]!==true };
+  });
+  saveAdminSources();
+  renderSourceList();
+}
+
 init();
 </script>
 </body>
