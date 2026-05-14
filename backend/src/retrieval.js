@@ -1,40 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const normalizeArabic = (s = '') => s.replace(/[\u064B-\u065F\u0670]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
-const normalizeEnglish = (s = '') => s.toLowerCase().replace(/\s+/g, ' ').trim();
-const normalizeText = (s = '') => `${normalizeArabic(String(s))} ${normalizeEnglish(String(s))}`.trim();
-const SEARCH_FIELDS = [
-  'title',
-  'source_name',
-  'topic',
-  'scholar_name',
-  'collection_name',
-  'book_name',
-  'chapter_name',
-  'translation_text',
-  'arabic_text',
-  'original_text',
-  'extracted_text',
-  'summary',
-  'source_title',
-  'document_title',
-  'section_title',
-  'article_title',
-  'video_title',
-  'local_reference',
-];
-
-function loadIndexSources() {
-  const p = path.join(__dirname, '..', '..', 'data', 'islamic-sources', 'indexes', 'compiled-sources.json');
-  if (!fs.existsSync(p)) return [];
-
-  const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
-  if (!parsed || !Array.isArray(parsed.records)) {
-    throw new Error('Compiled source index is missing a records array.');
-  }
-  return parsed.records;
-}
+const { loadIndexSources, normalizeText, sourceScore } = require('./sourceStore');
 
 function modeAllowedTypes(mode) {
   return {
@@ -65,13 +29,7 @@ function searchIslamicKnowledgeBase(question, mode) {
     return true;
   });
 
-  const tokens = normalizeText(question).split(' ').filter(Boolean);
-  const score = (s) => {
-    const txt = normalizeText(SEARCH_FIELDS.map((field) => s[field]).filter(Boolean).join(' '));
-    return tokens.reduce((acc, t) => acc + (txt.includes(t) ? 1 : 0), 0);
-  };
-
-  const matches = approved.map((s) => ({ s, sc: score(s) })).filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 8).map((x) => x.s);
+  const matches = approved.map((s) => ({ s, sc: sourceScore(s, question) })).filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 8).map((x) => x.s);
   debug.matchedApproved = matches.length;
   debug.matchedSourceIds = matches.map((m) => m.id);
 
