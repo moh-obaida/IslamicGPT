@@ -11,6 +11,7 @@ const DEBUG_SOURCES = String(process.env.VITE_DEBUG_SOURCES || 'false').toLowerC
 const classifyIslamicQuestion = (q = '') => /(allah|quran|hadith|sunnah|fiqh|fatwa|tafsir|islam|prophet|dua|aqidah|zakat|salah|ramadan|umrah|hajj|bukhari|muslim|تفسير|حديث|القران|القرآن|فقه|فتوى)/i.test(q);
 const detectLanguage = (m = '') => /[\u0600-\u06FF]/.test(m) ? 'arabic' : /[a-zA-Z]/.test(m) ? 'english' : 'auto';
 const fatwaRisk = (q = '') => /(divorce|marriage dispute|inheritance|contract|medical|oath|takfir|apostasy|legal|custody)/i.test(q);
+const wantsExplanation = (q = '') => /(explain|why|how|detail|detailed|compare|analyze|meaning|lesson|benefit|شرح|لماذا|كيف|تفصيل|قارن|معنى)/i.test(q);
 
 function buildPrompt({ question, mode, language, sources }) {
   const context = sources.map((s) => `SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nSURAH:${s.surah_name_en || ''}\nSURAH NUMBER:${s.surah_number || ''}\nAYAH:${s.ayah_number || s.ayah_range || ''}\nCOLLECTION:${s.collection_name || ''}\nHADITH NUMBER:${s.hadith_number || (s.hadith_number_unavailable ? 'Hadith number not available in this source.' : '')}\nSCHOLAR:${s.scholar_name || ''}\nREFERENCE:${s.reference_number || s.fatwa_number || s.page_number || s.timestamp || s.local_reference || s.url || ''}\nARABIC:${s.arabic_text || ''}\nTRANSLATION:${s.translation_text || ''}`).join('\n\n');
@@ -34,6 +35,64 @@ function noSourceResponse(mode, modelMode) {
     llmCalled: false,
     validation: { passed: false, attempts: 0, issues: ['no_sources_found'] },
     loadingStagesCompleted: ['classified_question', 'searched_approved_sources'],
+  };
+}
+
+function directSourceResponse({ source, mode, modelMode, sourceCards, loading }) {
+  let answer = '';
+
+  if (source.source_type === 'hadith') {
+    const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
+    answer = [
+      'Answer:',
+      source.translation_text || source.arabic_text || 'The approved source text is available in the source card.',
+      '',
+      'Evidence from Hadith:',
+      `${ref}.`,
+      source.arabic_text ? `Arabic: ${source.arabic_text}` : '',
+      source.grade ? `Grade: ${source.grade}.` : '',
+      '',
+      'Explanation:',
+      'This is a direct source-based answer from the approved Islamic source database.',
+      '',
+      'Confidence: High',
+    ].filter(Boolean).join('\n');
+  } else if (source.source_type === 'quran') {
+    const ayah = source.ayah_number || source.ayah_range || '';
+    const ref = `${source.surah_name_en || 'Quran'}${source.surah_number ? ` ${source.surah_number}` : ''}${ayah ? `:${ayah}` : ''}`;
+    answer = [
+      'Answer:',
+      source.translation_text || source.arabic_text || 'The approved Quran text is available in the source card.',
+      '',
+      'Evidence from Quran:',
+      `${ref}.`,
+      source.arabic_text ? `Arabic: ${source.arabic_text}` : '',
+      '',
+      'Explanation:',
+      'This is a direct source-based answer from the approved Quran source database.',
+      '',
+      'Confidence: High',
+    ].filter(Boolean).join('\n');
+  } else {
+    return null;
+  }
+
+  return {
+    answer,
+    mode,
+    modelMode,
+    resolvedModelMode: 'direct_source',
+    modelUsed: null,
+    modelSelectionReason: 'Direct Quran/Hadith match answered without local model for speed.',
+    isIslamicQuestion: true,
+    confidence: 'high',
+    sources: [source],
+    sourceCards,
+    warnings: [],
+    errorState: null,
+    llmCalled: false,
+    validation: { passed: true, attempts: 0, issues: [] },
+    loadingStagesCompleted: [...loading, 'built_source_context', 'validated_citations', 'prepared_answer'],
   };
 }
 
@@ -92,6 +151,16 @@ http.createServer((req, res) => {
         return send(res, 200, out);
       }
 
+      const sourceCards = formatSourceCards(matches);
+      const directMatch = matches.find((m) => ['hadith', 'quran'].includes(m.source_type));
+      if (directMatch && !wantsExplanation(question) && String(modelMode).toLowerCase() === 'fast') {
+        const direct = directSourceResponse({ source: directMatch, mode, modelMode, sourceCards, loading });
+        if (direct) {
+          if (DEBUG_SOURCES || payload.debug) direct.debug = { ...debug, llmCalled: false, directSourceAnswer: true, openWebDisabled: true };
+          return send(res, 200, direct);
+        }
+      }
+
       const selection = resolveModelMode({
         requestedModelMode: modelMode,
         islamicMode: mode,
@@ -100,7 +169,6 @@ http.createServer((req, res) => {
         fatwaRisk: fatwaRisk(question),
       });
 
-      const sourceCards = formatSourceCards(matches);
       loading.push('built_source_context');
       const prompt = buildPrompt({ question, mode, language, sources: matches });
 
@@ -130,7 +198,7 @@ http.createServer((req, res) => {
       let attempts = 1;
       let validation = validateIslamicCitations(answer, matches);
 
-      if (!validation.passed) {
+      if (!validation.passed && selection.resolvedModelMode !== 'fast') {
         const repairPrompt = `${prompt}\n\nYour previous answer included unsupported or invalid citations. Rewrite the answer using only the provided source IDs. If you cannot, return exactly: ${REFUSAL_MESSAGE}`;
         const second = await callOllama({ model: selection.model, prompt: repairPrompt, timeout: modelTimeoutMs(selection.resolvedModelMode) });
         attempts = 2;
