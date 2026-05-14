@@ -29,13 +29,45 @@
     .sourcePreview,.sourceArabic{margin-top:8px;font-size:13px;line-height:1.55}
     .sourceArabic{direction:rtl}
     .sourceSubtle{font-size:12px;color:var(--muted);margin-top:6px}
+  
+    :root{--radius:14px;--shadow:0 8px 24px rgba(0,0,0,.18);--shadowSoft:0 6px 18px rgba(4,16,14,.08)}
+    body[data-theme=light]{--bg:#f5f1ea;--side:#efe9df;--main:#f8f4ee;--card:#fffdfa;--card2:#f8f3ec;--line:#dfd5c8;--text:#1f2421;--muted:#72685e;--soft:#8d8378;--softTurq:rgba(17,184,161,.11)}
+    .sideHead{padding:14px 16px;border-bottom:1px solid var(--line)}
+    .logo{width:34px;height:34px;border-radius:11px;box-shadow:0 4px 16px rgba(18,200,178,.25)}
+    .new{margin:12px 14px;border-radius:12px;padding:11px 13px;font-size:13px}
+    .nav button{border-radius:10px;padding:9px 11px;transition:.2s}
+    .mode button{border-radius:10px;padding:8px 7px}
+    .foot{padding:12px 14px}
+    .offline{border-radius:10px;padding:8px 10px;font-size:11.5px;background:linear-gradient(180deg,var(--card),var(--card2))}
+    .top{padding:0 18px}
+    .pill{padding:5px 10px;font-size:11px}
+    .welcome{margin:16px auto auto;position:relative;padding:20px 20px 8px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,var(--card),var(--card2));box-shadow:var(--shadowSoft)}
+    .welcomeGlow{position:absolute;inset:auto 10% -30px 10%;height:120px;background:radial-gradient(circle,rgba(18,200,178,.14),transparent 70%);pointer-events:none}
+    .big{width:50px;height:50px;border-radius:16px;font-size:16px;margin-bottom:16px}
+    .welcome h1{font-size:26px}
+    .welcome p{font-size:15px}
+    .quick{padding:10px;border-radius:14px}
+    .chip{padding:7px 11px}
+    .msg{max-width:100%}
+    .user .bubble{max-width:64%;padding:10px 12px;border-radius:14px}
+    .msg.assistant .bubble{box-shadow:var(--shadowSoft)}
+    .answerBody{font-size:14px;line-height:1.7}
+    .card{box-shadow:var(--shadowSoft)}
+    .card h4{font-size:15px;margin:7px 0 5px}
+    .copy{width:auto;padding:6px 10px;border-radius:10px}
+    .toolbar{grid-template-columns:minmax(0,1.7fr) 170px auto}
+    #adminLogin{max-width:420px;margin:20px auto}
+    .adminSections{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+    .adminSections span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:var(--card2)}
+    @media(max-width:920px){.top{height:auto;flex-wrap:wrap;padding:12px 14px}.actions{width:100%;justify-content:space-between}.welcome{margin-top:8px}.adminSections{grid-template-columns:1fr 1fr}.toolbar{grid-template-columns:1fr}.user .bubble{max-width:90%}}
+
   </style>
 </head>
 <body data-theme="dark">
   <div class="app" id="app">
     <aside class="side">
-      <div class="sideHead"><div class="logo">IG</div><div class="brand"><b>IslamicGPT</b><span>AI workspace</span></div><button class="collapse" type="button">‹</button></div>
-      <button class="new" type="button" onclick="newChat()">+ New Chat</button>
+      <div class="sideHead"><div class="logo">IG</div><div class="brand"><b>IslamicGPT</b><span>Source-first Islamic assistant</span></div><button class="collapse" type="button">‹</button></div>
+      <button class="new" type="button" onclick="newChat()">+ New Islamic chat</button>
       <div class="scroll">
         <div class="box">
           <div class="label">Workspace</div>
@@ -56,21 +88,21 @@
           <details><summary>Backend API URL</summary><p class="hint">Backend is embedded securely.</p><input id="apiUrl" type="hidden"><button class="save" type="button" onclick="saveApiUrl()">Save URL</button></details>
         </div>
       </div>
-      <div class="foot"><div class="offline" id="backendStatusPanel"><span id="backendStatusText">Checking backend...</span><button class="secondary" id="backendReconnect" type="button">Reconnect</button></div></div>
+      <div class="foot"><div class="offline" id="backendStatusPanel"><span id="backendStatusText">Checking connection</span><button class="secondary" id="backendReconnect" type="button">Reconnect</button></div></div>
     </aside>
     <div class="resizer" id="sidebarResizer" title="Drag to resize sidebar"></div>
     <main class="main">
       <header class="top">
-        <div class="title"><b id="pageTitle">New task session</b><span id="pageSubtitle">Ready to plan, organize, create, or analyze</span></div>
-        <div class="actions"><button class="theme" id="themeToggle" type="button" onclick="toggleTheme()">Light mode</button><span class="pill" id="backendStatusPill">Checking backend...</span></div>
+        <div class="title"><b id="pageTitle">New Islamic chat</b><span id="pageSubtitle">Ready to search approved Islamic sources</span></div>
+        <div class="actions"><button class="theme" id="themeToggle" type="button" onclick="toggleTheme()">Light mode</button><span class="pill" id="backendStatusPill">Checking connection</span></div>
       </header>
       <div class="banner hidden" id="offlineBanner"><b>AI server offline</b><span>The rest of the app works.</span><button class="secondary" id="offlineBannerRetry" type="button">Reconnect</button></div>
       <section class="work" id="work">
         <div id="chatView" class="page">
-          <div class="welcome" id="welcome">
+          <div class="welcome" id="welcome"><div class="welcomeGlow"></div>
             <div class="big">IG</div>
             <h1>Welcome to IslamicGPT</h1>
-            <p>Ask in chat. IslamicGPT can answer from approved Quran, Hadith, scholar, and document sources.</p>
+            <p>Ask from approved Quran, Hadith, scholar, and document sources.</p>
             <div class="sub">Supports Quran citations, numbered Hadith references, scholar source cards, and no source, no answer refusal.</div>
             <div class="chips"><span class="chip t">Local-source AI</span><span class="chip b">No source, no answer</span><span class="chip">Hadith numbered</span></div>
             <div class="quick"><button class="chip" type="button" onclick="setExample('What is the importance of prayer?')">Importance of prayer</button><button class="chip" type="button" onclick="setExample('Give me a hadith about intention.')">Hadith about intention</button><button class="chip" type="button" onclick="setExample('Explain this ayah simply.')">Explain an ayah simply</button></div>
@@ -117,7 +149,7 @@
               </div>
               <div class="card">
                 <h4 id="sourceFormTitle">Add Source</h4>
-                <div class="formGrid">
+                <div class="adminSections"><span>Source type</span><span>Required details</span><span>Text content</span><span>Approval status</span></div><div class="formGrid">
                   <div class="fieldWrap" data-field="id"><label>ID</label><input id="f_id"></div>
                   <div class="fieldWrap" data-field="source_type"><label>Source Type</label><select id="f_source_type"><option value="quran">quran</option><option value="quran_translation">quran_translation</option><option value="tafsir">tafsir</option><option value="hadith">hadith</option><option value="hadith_explanation">hadith_explanation</option><option value="scholar_statement">scholar_statement</option><option value="fatwa">fatwa</option><option value="book">book</option><option value="lecture">lecture</option><option value="video_transcript">video_transcript</option><option value="educational_explanation">educational_explanation</option><option value="approved_pdf">approved_pdf</option><option value="uploaded_document">uploaded_document</option></select><div class="hint fieldTypeHint" id="sourceTypeHint">Requires surah and ayah reference.</div></div>
                   <div class="fieldWrap" data-field="title"><label>Title</label><input id="f_title"></div>
@@ -200,13 +232,13 @@
     async function parseJson(response){let data={};try{data=await response.json()}catch{data={error:'Invalid backend response'}}return data}
     function bindBackendStatusControls(){[backendReconnect,offlineBannerRetry].forEach(btn=>btn&&btn.addEventListener('click',()=>checkBackendStatus(true)))}
     function setBackendStatus(online,label){backendReachable=online;backendStatusText.textContent=label;backendStatusPill.textContent=online?'AI Online':'AI Offline';backendStatusPill.classList.toggle('online',online);backendStatusPanel.classList.toggle('online',online);offlineBanner.classList.toggle('hidden',online)}
-    function setBackendChecking(label='Checking backend...'){backendStatusText.textContent=label;backendStatusPill.textContent='Checking backend...';backendStatusPill.classList.remove('online');backendStatusPanel.classList.remove('online');offlineBanner.classList.add('hidden')}
-    async function checkBackendStatus(isRetry=false){setBackendChecking(isRetry?'Reconnecting...':'Checking backend...');try{const r=await api('/health');if(r.ok){setBackendStatus(true,'Backend reachable.');return true}}catch{}try{const r=await api('/api/sources/search?q=intention&type=hadith');if(!r.ok)throw new Error('backend check failed');await parseJson(r);setBackendStatus(true,'Backend reachable.');return true}catch{setBackendStatus(false,'Backend unreachable.');return false}}
+    function setBackendChecking(label='Checking connection'){backendStatusText.textContent=label;backendStatusPill.textContent='Checking connection';backendStatusPill.classList.remove('online');backendStatusPanel.classList.remove('online');offlineBanner.classList.add('hidden')}
+    async function checkBackendStatus(isRetry=false){setBackendChecking(isRetry?'Reconnecting...':'Checking connection');try{const r=await api('/health');if(r.ok){setBackendStatus(true,'AI Online');return true}}catch{}try{const r=await api('/api/sources/search?q=intention&type=hadith');if(!r.ok)throw new Error('backend check failed');await parseJson(r);setBackendStatus(true,'AI Online');return true}catch{setBackendStatus(false,'AI Offline');return false}}
     function initTheme(){const s=localStorage.getItem('ISLAMICGPT_THEME')||'dark';document.body.dataset.theme=s;document.getElementById('themeToggle').textContent=s==='dark'?'Light mode':'Dark mode'}
     function toggleTheme(){const n=document.body.dataset.theme==='dark'?'light':'dark';localStorage.setItem('ISLAMICGPT_THEME',n);initTheme()}
     function initSidebarResize(){const saved=localStorage.getItem('ISLAMICGPT_SIDEBAR_WIDTH');if(saved)document.documentElement.style.setProperty('--sidebarWidth',saved+'px');const r=document.getElementById('sidebarResizer');if(!r)return;let dragging=false;r.addEventListener('pointerdown',e=>{dragging=true;r.classList.add('dragging');r.setPointerCapture(e.pointerId);document.body.style.userSelect='none'});r.addEventListener('pointermove',e=>{if(!dragging)return;const w=Math.max(250,Math.min(430,e.clientX));document.documentElement.style.setProperty('--sidebarWidth',w+'px');localStorage.setItem('ISLAMICGPT_SIDEBAR_WIDTH',String(w))});r.addEventListener('pointerup',e=>{dragging=false;r.classList.remove('dragging');document.body.style.userSelect='';try{r.releasePointerCapture(e.pointerId)}catch{}})}
     function bindNav(){document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)))}
-    function switchView(view){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));['chat','sources','admin'].forEach(v=>document.getElementById(`${v}View`).classList.toggle('hidden',v!==view));document.getElementById('composerWrap').classList.toggle('hidden',view!=='chat');document.getElementById('chatControls').classList.toggle('hidden',view!=='chat');const titles={chat:['New task session','Ready to plan, organize, create, or analyze'],sources:['Approved sources','Read-only source catalog'],admin:['Admin source manager','Protected owner tools']};document.getElementById('pageTitle').textContent=titles[view][0];document.getElementById('pageSubtitle').textContent=titles[view][1];if(view==='sources')loadPublicSources();if(view==='admin')renderAdmin()}
+    function switchView(view){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));['chat','sources','admin'].forEach(v=>document.getElementById(`${v}View`).classList.toggle('hidden',v!==view));document.getElementById('composerWrap').classList.toggle('hidden',view!=='chat');document.getElementById('chatControls').classList.toggle('hidden',view!=='chat');const titles={chat:['New Islamic chat','Ready to search approved Islamic sources'],sources:['Approved sources','Read-only source catalog'],admin:['Admin source manager','Protected owner tools']};document.getElementById('pageTitle').textContent=titles[view][0];document.getElementById('pageSubtitle').textContent=titles[view][1];if(view==='sources')loadPublicSources();if(view==='admin')renderAdmin()}
     function renderModeButtons(){const g=document.getElementById('modeGrid');g.innerHTML='';modes.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className=v===selectedMode?'active':'';b.textContent=l;b.onclick=()=>{selectedMode=v;document.getElementById('activeModeLabel').textContent=l+' Mode';renderModeButtons()};g.appendChild(b)})}
     function setExample(t){switchView('chat');document.getElementById('q').value=t;document.getElementById('q').focus()}
     function newChat(){switchView('chat');messagesEl.innerHTML='';document.getElementById('sources').innerHTML='';statusEl.innerHTML='';document.getElementById('welcome').style.display='block';document.getElementById('q').value=''}
@@ -215,11 +247,11 @@
     function parseAnswerSections(text=''){const sections=[];let current=null;String(text||'').split('\n').forEach(line=>{const trimmed=line.trim();if(!trimmed){if(current&&current.body)current.body+='\n';return}const match=/^(Answer|Evidence from Quran|Evidence from Hadith|Scholarly Explanation|Evidence|Arabic|Explanation|Confidence):\s*(.*)$/.exec(trimmed);if(match){current={title:match[1].replace('Evidence from Quran','Evidence').replace('Evidence from Hadith','Evidence'),body:match[2]||''};sections.push(current);return}if(!current){current={title:'Response',body:trimmed};sections.push(current);return}current.body+=`${current.body&&!current.body.endsWith('\n')?'\n':''}${trimmed}`});return sections.filter(section=>String(section.body||'').trim())}
     function directHadithSections(response){const source=(response.sources||[]).find(s=>['hadith','hadith_explanation'].includes(s.source_type));if(!source||response.resolvedModelMode!=='direct_source')return[];return[{title:'Answer',body:source.translation_text||source.summary||response.answer||'No answer returned.'},{title:'Evidence',body:`${source.collection_name||'Hadith'}${source.hadith_number?`, Hadith ${source.hadith_number}`:''}`},...(source.arabic_text?[{title:'Arabic',body:source.arabic_text}]:[]),{title:'Explanation',body:source.summary||'This hadith teaches that actions are valued according to the intention behind them. Sincere intention gives a deed its meaning and reward before Allah.'}]}
     function renderAssistantMessage(response){const sections=directHadithSections(response);const content=(sections.length?sections:parseAnswerSections(response.answer||'No answer returned.')).map(section=>`<div class="answerSection"><div class="answerLabel">${esc(section.title)}</div><div class="answerBody">${nl2br(section.body)}</div></div>`).join('')||`<div class="answerSection"><div class="answerBody">No answer returned.</div></div>`;const w=document.createElement('div');w.className='msg assistant';w.innerHTML=`<div class="av">IG</div><div class="bubble"><div class="assistantCard">${content}</div></div>`;messagesEl.appendChild(w)}
-    async function sendMsg(){const q=document.getElementById('q').value.trim();if(!q)return;const modelMode=document.getElementById('modelMode').value;document.getElementById('welcome').style.display='none';document.getElementById('sources').innerHTML='';addUserMessage(q);document.getElementById('q').value='';renderStatus(['Classifying question','Searching approved sources','Calling local model']);try{const r=await api('/api/chat',{method:'POST',headers:jsonHeaders(),body:JSON.stringify({message:q,mode:selectedMode,modelMode})});const d=await parseJson(r);setBackendStatus(true,'Backend reachable.');renderAssistantMessage(d);renderStatus(d.loadingStagesCompleted||[],d.errorState||(!r.ok?'backend_error':null));renderSourceCards(d)}catch(e){setBackendStatus(false,'Backend unreachable.');renderStatus([],'backend_unavailable');renderAssistantMessage({answer:'IslamicGPT could not reach the backend. Check the VM server status.'})}}
+    async function sendMsg(){const q=document.getElementById('q').value.trim();if(!q)return;const modelMode=document.getElementById('modelMode').value;document.getElementById('welcome').style.display='none';document.getElementById('sources').innerHTML='';addUserMessage(q);document.getElementById('q').value='';renderStatus(['Classifying question','Searching approved sources','Calling local model']);try{const r=await api('/api/chat',{method:'POST',headers:jsonHeaders(),body:JSON.stringify({message:q,mode:selectedMode,modelMode})});const d=await parseJson(r);setBackendStatus(true,'AI Online');renderAssistantMessage(d);renderStatus(d.loadingStagesCompleted||[],d.errorState||(!r.ok?'backend_error':null));renderSourceCards(d)}catch(e){setBackendStatus(false,'AI Offline');renderStatus([],'backend_unavailable');renderAssistantMessage({answer:'IslamicGPT could not reach the backend. Check the VM server status.'})}}
     function addCopyHandler(button,text){button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(text||'');button.textContent='Copied'}catch{button.textContent='Copy failed'}setTimeout(()=>{button.textContent='Copy citation'},1400)})}
     function filterSourceCards(response){let cards=[...(response.sourceCards||[])];if(response.resolvedModelMode==='direct_source'){const sourceIds=new Set((response.sources||[]).map(source=>source.id));cards=cards.filter(card=>sourceIds.has(card.id))}if(response.mode==='hadith_mode')cards=cards.filter(card=>['hadith','hadith_explanation'].includes(card.type));return cards}
     function renderSourceCards(response){const cards=filterSourceCards(response);const el=document.getElementById('sources');el.innerHTML='';cards.forEach(c=>{const card=document.createElement('div');card.className='card';card.innerHTML=`<span class="type">${esc(c.badge||'Source')}</span><h4>${esc(c.title||c.copyCitation||c.type||'Source')}</h4>${row('Reference',c.reference)}${row('Grade',c.grade)}${c.arabic?`<div class="sourceArabic">${nl2br(shortText(c.arabic,180))}</div>`:''}${c.preview?`<div class="sourcePreview">${nl2br(shortText(c.preview,240))}</div>`:''}${c.weakWarning?`<div class="sourceSubtle">${esc(c.weakWarning)}</div>`:''}<button class="copy" type="button">Copy citation</button>`;addCopyHandler(card.querySelector('.copy'),c.copyCitation||c.title||'');el.appendChild(card)})}
-    async function loadPublicSources(){const q=document.getElementById('sourceSearch').value.trim(),type=document.getElementById('sourceType').value;const params=new URLSearchParams();if(q)params.set('q',q);if(type&&type!=='all')params.set('type',type);document.getElementById('sourceSummary').textContent='Loading approved sources...';try{const r=await api(`/api/sources/search?${params.toString()}`);const d=await parseJson(r);setBackendStatus(true,'Backend reachable.');document.getElementById('sourceSummary').textContent=`${d.total||0} approved source records`;renderPublicSources(d.sources||[])}catch{setBackendStatus(false,'Backend unreachable.');document.getElementById('sourceSummary').textContent='Could not load approved sources.'}}
+    async function loadPublicSources(){const q=document.getElementById('sourceSearch').value.trim(),type=document.getElementById('sourceType').value;const params=new URLSearchParams();if(q)params.set('q',q);if(type&&type!=='all')params.set('type',type);document.getElementById('sourceSummary').textContent='Loading approved sources...';try{const r=await api(`/api/sources/search?${params.toString()}`);const d=await parseJson(r);setBackendStatus(true,'AI Online');document.getElementById('sourceSummary').textContent=`${d.total||0} approved source records`;renderPublicSources(d.sources||[])}catch{setBackendStatus(false,'AI Offline');document.getElementById('sourceSummary').textContent='Could not load approved sources.'}}
     function renderPublicSources(sources){const el=document.getElementById('publicSourceCards');el.innerHTML='';if(!sources.length){el.innerHTML='<div class="card muted">No approved sources found.</div>';return}sources.forEach(s=>{const hadithRef=s.collection_name?`${s.collection_name} ${s.hadith_number?`#${s.hadith_number}`:(s.hadith_number_unavailable?'#N/A':'')}`:'';const card=document.createElement('div');card.className='card';card.innerHTML=`<span class="type">${esc(s.source_type)}</span><h4>${esc(s.title||s.id)}</h4>${row('Quran',s.surah_number?`${s.surah_name_en||s.surah_name_ar||''} ${s.surah_number}:${s.ayah_number||s.ayah_range||''}`:'')}${row('Hadith',hadithRef)}${row('Scholar',s.scholar_name)}${row('Reference',s.exact_reference)}${row('Grade',s.grade)}${row('Status',s.approved_status)}<button class="copy" type="button">Copy citation</button>`;addCopyHandler(card.querySelector('.copy'),s.copyCitation||'');el.appendChild(card)})}
     function renderAdmin(){const loggedIn=!!adminToken();document.getElementById('adminLogin').classList.toggle('hidden',loggedIn);document.getElementById('adminManager').classList.toggle('hidden',!loggedIn);if(loggedIn)loadAdminSources()}
     async function adminLogin(){const email=document.getElementById('adminEmail').value,password=document.getElementById('adminPassword').value,status=document.getElementById('adminLoginStatus');status.textContent='Logging in...';try{const r=await api('/api/admin/login',{method:'POST',headers:jsonHeaders(),body:JSON.stringify({email,password})});const d=await parseJson(r);if(!r.ok)throw new Error(d.error||'Login failed');sessionStorage.setItem('ISLAMICGPT_ADMIN_TOKEN',d.token);status.textContent='';renderAdmin()}catch(e){status.textContent=e.message}}
