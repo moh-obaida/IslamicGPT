@@ -55,13 +55,13 @@
     .main { display: flex; flex-direction: column; background: var(--main); overflow: hidden; }
 
     /* Sidebar Header */
-    .sideHead { padding: 24px; display: flex; flex-direction: column; gap: 4px; }
+    .sideHead { padding: 24px 20px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--line); }
     .brand-logo { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .brand-logo img { width: 100%; max-width: 170px; height: auto; max-height: 32px; object-fit: contain; object-position: left; }
+    .brand-logo img { width: 100%; max-width: 190px; height: auto; max-height: 40px; object-fit: contain; object-position: left; }
     .brand-subtitle { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--soft); font-weight: 800; }
 
     .new-chat-btn {
-      margin: 0 16px 20px;
+      margin: 16px;
       background: var(--card2);
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -91,19 +91,21 @@
     .nav-item.active { background: var(--softTurq); color: var(--turq); font-weight: 700; }
 
     .sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; }
-    .section-card { margin-bottom: 24px; }
-    .section-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; display: block; padding-left: 4px; }
+    .section-card { margin-bottom: 24px; padding: 12px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; }
+    .section-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; display: block; padding-left: 4px; letter-spacing: 0.05em; }
 
-    .status-card { padding: 16px; border-top: 1px solid var(--line); }
+    .status-card { padding: 16px; border-top: 1px solid var(--line); background: var(--side); }
+    .status-row { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
     .status-dot.online { background: var(--turq); box-shadow: 0 0 8px var(--turq); }
+    .status-sub { font-size: 10px; color: var(--soft); }
 
     /* Workspace Header */
     .workspace-header { height: 72px; padding: 0 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
     .header-title h2 { margin: 0; font-size: 16px; font-weight: 800; }
     .header-title span { font-size: 12px; color: var(--soft); }
     .header-actions { display: flex; gap: 12px; }
-    .action-pill { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line); font-size: 12px; font-weight: 700; background: var(--card2); }
+    .action-pill { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; font-weight: 700; background: var(--card2); text-transform: uppercase; letter-spacing: 0.02em; }
     .action-pill.status { color: var(--turq); border-color: var(--softTurq); background: var(--softTurq); }
     .action-pill.status.error { color: var(--bad); border-color: var(--badBg); background: var(--badBg); }
 
@@ -124,26 +126,36 @@
       opacity: 0.5;
     }
     .welcome-logo-large { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 24px; }
-    .welcome-logo-large img.icon { width: 80px; height: 80px; object-fit: contain; }
-    .welcome-logo-large img.text { width: 200px; height: auto; object-fit: contain; }
-    .welcome-card p { font-size: 16px; color: var(--muted); max-width: 480px; margin: 0 auto 32px; line-height: 1.6; }
+    .welcome-logo-large img { width: 100%; max-width: 240px; height: auto; object-fit: contain; }
+    
+    .welcome-card h1 { font-size: 28px; font-weight: 900; margin-bottom: 12px; }
+    .welcome-card p { font-size: 15px; color: var(--muted); max-width: 520px; margin: 0 auto 32px; line-height: 1.6; }
 
-    .workflow-steps { display: flex; justify-content: center; gap: 32px; margin-bottom: 48px; }
-    .step {
-      font-size: 12px;
+    .trust-badges { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
+    .trust-badge {
+      padding: 8px 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      font-size: 11px;
       font-weight: 800;
+      color: var(--turq);
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--soft);
+      letter-spacing: 0.05em;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .step.active { color: var(--turq); border-color: var(--turq); }
 
-    .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 600px; margin: 0 auto; }
-    .prompt-chip { padding: 12px 16px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; text-align: left; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-    .prompt-chip:hover { border-color: var(--turq); background: var(--softTurq); }
+    .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 640px; margin: 0 auto; }
+    .prompt-chip { padding: 14px 18px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; text-align: left; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+    .prompt-chip:hover { border-color: var(--turq); background: var(--softTurq); transform: translateY(-1px); }
+
+    /* Mode Grid */
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .mode-btn { padding: 8px 4px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; font-size: 11px; font-weight: 700; color: var(--muted); transition: all 0.2s; }
+    .mode-btn:hover { border-color: var(--turq); color: var(--text); }
+    .mode-btn.active { background: var(--softTurq); border-color: var(--turq); color: var(--turq); }
 
     /* Progress Tracker */
     .progress-tracker { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeIn 0.3s ease; }
@@ -185,6 +197,14 @@
     .dashboard-header p { margin: 0; color: var(--muted); }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .full-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
+    .settings-section { margin-bottom: 32px; }
+    .settings-label { font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--turq); margin-bottom: 16px; display: block; letter-spacing: 0.05em; }
+    .settings-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .settings-item:last-child { border-bottom: none; }
+    .settings-item label { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .settings-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--turq); }
+    .settings-item select, .settings-item input[type="text"] { background: var(--card2); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; font-size: 13px; outline: none; }
+
     .hidden { display: none !important; }
     .hint { font-size: 12px; color: var(--soft); text-align: center; padding: 20px; }
 
@@ -213,27 +233,31 @@
       </nav>
       <div class="sidebar-scroll">
         <div class="section-card">
+          <span class="section-label">Islamic Mode</span>
+          <div class="mode-grid" id="modeGrid"></div>
+        </div>
+        <div class="section-card">
+          <span class="section-label">Answer Depth</span>
+          <select id="answerDepth" onchange="updateComposerState()" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text);">
+            <option value="auto">Auto</option>
+            <option value="quick">Quick</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="detailed">Detailed</option>
+            <option value="student">Student-friendly</option>
+            <option value="evidence">Evidence-heavy</option>
+          </select>
+        </div>
+        <div class="section-card">
           <span class="section-label">Recent Conversations</span>
           <div id="recentChats" class="hint">No recent chats yet</div>
         </div>
-        <div class="section-card" id="chatControls">
-          <span class="section-label">Islamic Mode</span>
-          <div class="grid-2" id="modeGrid" style="gap:8px; grid-template-columns: 1fr 1fr;"></div>
-          <span class="section-label" style="margin-top:16px;">Answer Depth</span>
-          <select id="answerDepth" onchange="updateComposerState()" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text);">
-            <option value="concise">Concise</option>
-            <option value="standard" selected>Standard</option>
-            <option value="detailed">Detailed</option>
-            <option value="research">Research</option>
-          </select>
-        </div>
       </div>
       <div class="status-card">
-        <div style="display:flex; align-items:center; gap:10px; font-size:12px; font-weight:700;">
-          <div class="status-dot online" id="statusDot"></div>
-          <span id="statusText">System Ready</span>
+        <div class="status-row">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Checking...</span>
         </div>
-        <div style="font-size:10px; color:var(--soft);">v0.2.0 • Local RAG Engine</div>
+        <div class="status-sub" id="statusSub">v0.2.0 • RAG: Backend pending</div>
       </div>
     </aside>
     <div class="resizer" id="sidebarResizer"></div>
@@ -253,44 +277,90 @@
           <div class="welcome-card" id="welcome">
             <div class="welcome-glow"></div>
             <div class="welcome-logo-large">
-              <img src="logo-icon.png" alt="IslamicGPT Icon" class="icon">
-              <img src="logo-horizontal.png" alt="IslamicGPT Text" class="text">
+              <img src="logo-horizontal.png" alt="IslamicGPT">
             </div>
-            <p>Your source-first Islamic research assistant. We search approved Quran, Hadith, and scholarly sources before answering.</p>
-            <div class="workflow-steps">
-              <div class="step active">Source-first</div>
-              <div class="step">Search Database</div>
-              <div class="step">Verified Answer</div>
+            <h1>IslamicGPT</h1>
+            <p>Your source-first Islamic research assistant. Normal chat is allowed. Islamic answers require approved sources.</p>
+            
+            <div class="trust-badges">
+              <div class="trust-badge">✓ Source-first</div>
+              <div class="trust-badge">✓ Approved sources</div>
+              <div class="trust-badge">✓ No source, no answer</div>
             </div>
+            
             <div class="prompt-grid">
               <button class="prompt-chip" onclick="setExample('What is the importance of prayer?')">Importance of prayer</button>
               <button class="prompt-chip" onclick="setExample('Give me a hadith about intention.')">Hadith about intention</button>
               <button class="prompt-chip" onclick="setExample('Explain this ayah simply.')">Explain an ayah simply</button>
               <button class="prompt-chip" onclick="setExample('What are the basics of wudu?')">Basics of wudu</button>
+              <button class="prompt-chip" onclick="setExample('Explain tawheed simply.')">Explain tawheed simply</button>
+              <button class="prompt-chip" onclick="setExample('Give me a student-friendly Islamic reminder.')">Student-friendly reminder</button>
             </div>
           </div>
           <div id="progressTracker" class="hidden"></div>
           <div id="messages"></div>
           <div id="sources" class="grid-2" style="width:100%; margin-top:20px;"></div>
         </div>
+        
         <div id="sourcesView" class="content-inner hidden">
-          <div class="dashboard-header"><h1>Approved Sources</h1><p>Explore verified database.</p></div>
+          <div class="dashboard-header">
+            <h1>Approved Sources</h1>
+            <p>Grounding IslamicGPT in verified knowledge.</p>
+          </div>
+          <div class="full-card" style="margin-bottom:20px;">
+            <div style="display:flex; gap:12px;">
+              <input id="sourceSearch" placeholder="Search approved sources..." style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
+              <select id="sourceTypeFilter" style="width:180px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
+                <option value="all">All Types</option>
+                <option value="quran">Quran</option>
+                <option value="hadith">Hadith</option>
+                <option value="tafsir">Tafsir</option>
+                <option value="scholars">Scholars</option>
+              </select>
+            </div>
+          </div>
           <div id="sourceResults" class="grid-2"></div>
         </div>
+
         <div id="settingsView" class="content-inner hidden">
-          <div class="dashboard-header"><h1>Settings</h1><p>Manage preferences.</p></div>
-          <div class="grid-2">
-            <div class="full-card"><span class="section-label">Interface</span><label><input type="checkbox" id="showAdminTools" onchange="toggleAdminNav()"> Show Admin Tools</label></div>
+          <div class="dashboard-header">
+            <h1>Settings</h1>
+            <p>Manage your AI workspace preferences.</p>
+          </div>
+          
+          <div class="full-card">
+            <div class="settings-section">
+              <span class="settings-label">AI Provider & Routing</span>
+              <div class="settings-item"><span>AI Provider Mode</span><select><option>Local Ollama (Recommended)</option><option>Cloud Fallback</option></select></div>
+              <div class="settings-item"><span>Local AI Endpoint</span><input type="text" value="http://localhost:11434" disabled></div>
+              <div class="settings-item"><span>Speed Mode</span><select><option>Fast</option><option selected>Balanced</option><option>Quality</option></select></div>
+              <div class="settings-item"><span>Timeout (ms)</span><input type="text" value="30000"></div>
+            </div>
+
+            <div class="settings-section">
+              <span class="settings-label">Source & Citation Settings</span>
+              <div class="settings-item"><label><input type="checkbox" id="requireSources" checked> Require approved sources for Islamic questions</label></div>
+              <div class="settings-item"><label><input type="checkbox" checked> Show source cards automatically</label></div>
+              <div class="settings-item"><label><input type="checkbox"> Fallback to search-only if model fails</label></div>
+            </div>
+
+            <div class="settings-section">
+              <span class="settings-label">Chat Interface</span>
+              <div class="settings-item"><label><input type="checkbox" id="showAdminTools" onchange="toggleAdminNav()"> Show Admin Tools</label></div>
+              <div class="settings-item"><label><input type="checkbox"> Compact Message Mode</label></div>
+              <div class="settings-item"><label><input type="checkbox" checked> Show Progress Tracker</label></div>
+            </div>
           </div>
         </div>
       </div>
+      
       <div class="composer-container">
         <div class="composer-box">
-          <textarea id="input" placeholder="Ask a question..." oninput="autoResize(this)"></textarea>
+          <textarea id="input" placeholder="Ask a question or search sources..." oninput="autoResize(this)"></textarea>
           <div class="composer-footer">
             <div class="composer-badges">
               <div class="badge" id="activeModeBadge">General Mode</div>
-              <div class="badge" id="activeDepthBadge">Standard Depth</div>
+              <div class="badge" id="activeDepthBadge">Balanced Depth</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
               <button id="clearBtn" class="hidden" onclick="clearInput()" style="font-size:11px; color:var(--soft); font-weight:800;">Clear</button>
@@ -298,14 +368,25 @@
             </div>
           </div>
         </div>
-        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">IslamicGPT is an AI assistant. Always consult scholars.</div>
+        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">IslamicGPT is an AI assistant. Always consult scholars for personal religious rulings.</div>
       </div>
     </main>
   </div>
   <script>
     let currentView = 'chat';
     let currentMode = 'islamic_search_mode';
-    const MODES = [{id:'islamic_search_mode',label:'General'},{id:'quran_mode',label:'Quran'},{id:'hadith_mode',label:'Hadith'},{id:'fiqh_mode',label:'Fiqh'}];
+    const MODES = [
+      {id:'islamic_search_mode',label:'Search / General'},
+      {id:'quran_mode',label:'Quran'},
+      {id:'hadith_mode',label:'Hadith'},
+      {id:'tafsir_mode',label:'Tafsir'},
+      {id:'fiqh_mode',label:'Fiqh'},
+      {id:'aqidah_mode',label:'Aqidah'},
+      {id:'arabic_mode',label:'Arabic'},
+      {id:'student_explanation_mode',label:'Student'},
+      {id:'compare_opinions_mode',label:'Compare Sources'},
+      {id:'explain_simply_mode',label:'Explain Simply'}
+    ];
     const STAGES = [{id:'classified_question',label:'Classifying request'},{id:'searched_approved_sources',label:'Searching approved sources'},{id:'built_source_context',label:'Building source context'},{id:'called_local_model',label:'Generating verified answer'},{id:'validated_citations',label:'Validating citations'},{id:'prepared_answer',label:'Finalizing response'}];
 
     function switchView(view) {
@@ -343,7 +424,7 @@
       const grid = document.getElementById('modeGrid');
       MODES.forEach(m => {
         const btn = document.createElement('button');
-        btn.className = m.id === currentMode ? 'badge active' : 'badge';
+        btn.className = m.id === currentMode ? 'mode-btn active' : 'mode-btn';
         btn.textContent = m.label;
         btn.onclick = () => {
           currentMode = m.id;
@@ -357,7 +438,11 @@
 
     function clearInput() { const i = document.getElementById('input'); i.value = ''; autoResize(i); }
     function setExample(t) { const i = document.getElementById('input'); i.value = t; autoResize(i); sendMessage(); }
-    function updateComposerState() { const d = document.getElementById('answerDepth').value; document.getElementById('activeDepthBadge').textContent = d.charAt(0).toUpperCase() + d.slice(1) + ' Depth'; }
+    function updateComposerState() { 
+      const d = document.getElementById('answerDepth').value; 
+      const label = d.charAt(0).toUpperCase() + d.slice(1);
+      document.getElementById('activeDepthBadge').textContent = label + ' Depth'; 
+    }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
     async function sendMessage() {
@@ -370,7 +455,7 @@
       messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${text}</div></div>`;
       updateProgress(['classified_question']);
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value === 'research' ? 'balanced' : 'fast' }) });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value }) });
         const data = await res.json();
         if (data.loadingStagesCompleted) { updateProgress(data.loadingStagesCompleted); setTimeout(() => document.getElementById('progressTracker').classList.add('hidden'), 1000); }
         messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${data.answer}</div></div>`;
@@ -383,13 +468,36 @@
     async function checkHealth() {
       const pill = document.getElementById('backendStatusPill');
       const dot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      const statusSub = document.getElementById('statusSub');
       try {
         const res = await fetch('/health');
-        const ok = res.ok;
-        pill.textContent = ok ? 'Connected' : 'Offline';
-        pill.className = ok ? 'action-pill status' : 'action-pill status error';
-        dot.className = ok ? 'status-dot online' : 'status-dot';
-      } catch (e) { pill.textContent = 'Offline'; dot.className = 'status-dot'; }
+        const data = await res.json();
+        const ok = data.ok;
+        const aiOnline = data.services.local_ai.status === 'online';
+        const ragReady = data.services.rag.status === 'ready';
+        
+        pill.textContent = aiOnline ? 'AI Connected' : 'AI Offline';
+        pill.className = aiOnline ? 'action-pill status' : 'action-pill status error';
+        dot.className = aiOnline ? 'status-dot online' : 'status-dot';
+        
+        if (aiOnline && ragReady) {
+          statusText.textContent = 'System Ready';
+          statusSub.textContent = `v0.2.0 • Local RAG: ${data.services.rag.count} sources`;
+        } else if (aiOnline) {
+          statusText.textContent = 'AI Ready · RAG Pending';
+          statusSub.textContent = 'v0.2.0 • Sources not yet indexed';
+        } else {
+          statusText.textContent = 'App Ready · AI Offline';
+          statusSub.textContent = 'Source library and settings may still work';
+        }
+      } catch (e) { 
+        pill.textContent = 'Offline'; 
+        pill.className = 'action-pill status error';
+        dot.className = 'status-dot'; 
+        statusText.textContent = 'App Offline';
+        statusSub.textContent = 'Check backend connection';
+      }
     }
 
     window.onload = () => { initModes(); checkHealth(); setInterval(checkHealth, 30000); };

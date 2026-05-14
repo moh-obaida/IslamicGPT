@@ -1,6 +1,6 @@
 const http = require('http');
 const crypto = require('crypto');
-const { callOllama } = require('./src/ollamaClient');
+const { callOllama, checkOllamaHealth } = require('./src/ollamaClient');
 const { resolveModelMode, modelTimeoutMs } = require('./src/modelRouter');
 const { searchIslamicKnowledgeBase } = require('./src/retrieval');
 const { formatSourceCards } = require('./src/sourceCards');
@@ -30,6 +30,7 @@ const SUPPORTED_MODES = new Set([
   'arabic_mode',
   'student_explanation_mode',
   'compare_opinions_mode',
+  'explain_simply_mode',
 ]);
 
 const isCasualChat = (q = '') => /^(hello|hi|hey|salam|assalamu alaikum|thanks|thank you|good morning|good evening|test|how are you\??)$/i.test(q.trim().toLowerCase());
@@ -536,7 +537,32 @@ http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204, {});
 
   if (url.pathname === '/health' && req.method === 'GET') {
-    return send(res, 200, { ok: true, timestamp: Date.now() });
+    const ollama = await checkOllamaHealth();
+    const sources = listAllSourceRecords({ includeSourceMeta: false });
+    return send(res, 200, {
+      ok: true,
+      timestamp: Date.now(),
+      version: '0.2.0',
+      services: {
+        backend: { status: 'online' },
+        local_ai: { status: ollama.ok ? 'online' : 'offline', details: ollama.error || null },
+        rag: { status: sources.records.length > 0 ? 'ready' : 'empty', count: sources.records.length }
+      }
+    });
+  }
+
+  if (url.pathname === '/api/local-ai/health' && req.method === 'GET') {
+    const ollama = await checkOllamaHealth();
+    return send(res, 200, ollama);
+  }
+
+  if (url.pathname === '/api/rag/status' && req.method === 'GET') {
+    const sources = listAllSourceRecords({ includeSourceMeta: false });
+    return send(res, 200, {
+      status: sources.records.length > 0 ? 'ready' : 'empty',
+      count: sources.records.length,
+      warnings: sources.warnings
+    });
   }
 
   if (url.pathname === '/api/sources' && req.method === 'GET') {

@@ -29,4 +29,14 @@ async function callOllama({ model, prompt, timeout }) {
   }
 }
 
-module.exports = { callOllama };
+async function checkOllamaHealth() {
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    if (response.ok) return { ok: true };
+    return { ok: false, error: `HTTP ${response.status}` };
+  } catch (error) {
+    return { ok: false, error: 'ollama_unavailable' };
+  }
+}
+
+module.exports = { callOllama, checkOllamaHealth };
