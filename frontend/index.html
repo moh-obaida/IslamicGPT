@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>IslamicGPT</title>
+  <meta name="theme-color" content="#12c8b2">
   <style>
     :root {
       --sidebarWidth: 280px;
@@ -26,207 +27,98 @@
       --shadow: 0 8px 32px rgba(0,0,0,0.25);
       --shadowSoft: 0 4px 12px rgba(0,0,0,0.1);
     }
-    body[data-theme=light] {
-      --bg: #fbfaf8;
-      --side: #f6f3ee;
-      --main: #fff;
-      --card: #fff;
-      --card2: #fbfaf8;
-      --line: #e8e0d6;
-      --text: #20201e;
-      --muted: #91887d;
-      --soft: #aaa198;
-      --black: #111512;
-      --turq: #11b8a1;
-      --turq2: #0d9488;
-      --softTurq: #e7faf7;
-      --bad: #d95f54;
-      --badBg: #fff0ee;
+    body[data-theme="light"] {
+      --bg: #f8f9fa;
+      --side: #ffffff;
+      --main: #ffffff;
+      --card: #ffffff;
+      --card2: #f1f3f5;
+      --line: #e9ecef;
+      --text: #212529;
+      --muted: #495057;
+      --soft: #adb5bd;
+      --black: #000000;
+      --turq: #0ca678;
+      --turq2: #099268;
+      --softTurq: rgba(12, 166, 120, 0.1);
+      --bad: #fa5252;
+      --badBg: rgba(250, 82, 82, 0.1);
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      height: 100vh;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      font-size: 14px;
-      -webkit-font-smoothing: antialiased;
-    }
-    button, input, select, textarea { font: inherit; }
-    button { cursor: pointer; transition: all 0.2s ease; border: none; background: none; color: inherit; }
-    
-    /* Layout Structure */
-    .app {
-      height: 100vh;
-      display: grid;
-      grid-template-columns: var(--sidebarWidth) 1px minmax(0, 1fr);
-    }
-    
-    /* Sidebar - Modern Rail Style */
-    .side {
-      background: var(--side);
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      padding: 16px 12px;
-      gap: 16px;
-    }
-    .resizer {
-      background: var(--line);
-      cursor: col-resize;
-      width: 1px;
-    }
-    .resizer:hover { background: var(--turq); width: 2px; }
+    body { margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; border: none; background: transparent; }
 
-    .sideHead {
-      padding: 8px 4px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+    .app { height: 100vh; display: grid; grid-template-columns: var(--sidebarWidth) 1px 1fr; }
+    .side { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+    .resizer { width: 1px; background: var(--line); cursor: col-resize; }
+    .main { display: flex; flex-direction: column; background: var(--main); overflow: hidden; }
+
+    /* Sidebar Header */
+    .sideHead { padding: 24px; display: flex; flex-direction: column; gap: 4px; }
     .brand-logo { width: 100%; display: flex; flex-direction: column; gap: 4px; }
     .brand-logo img { width: 100%; max-width: 170px; height: auto; max-height: 32px; object-fit: contain; object-position: left; }
     .brand-subtitle { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--soft); font-weight: 800; }
 
     .new-chat-btn {
-      width: 100%;
+      margin: 0 16px 20px;
+      background: var(--card2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
       padding: 12px 16px;
-      background: linear-gradient(135deg, var(--black), var(--turq2));
-      color: white;
-      border-radius: var(--radius);
-      font-weight: 800;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 12px rgba(18, 200, 178, 0.2);
+      gap: 12px;
+      transition: all 0.2s;
     }
-    .new-chat-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(18, 200, 178, 0.3); }
+    .new-chat-btn:hover { background: var(--softTurq); border-color: var(--turq); }
+    .new-chat-btn span { font-size: 18px; color: var(--turq); }
 
-    .nav-group {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
+    .nav-group { padding: 0 16px; display: flex; flex-direction: column; gap: 4px; }
     .nav-item {
       padding: 10px 12px;
       border-radius: 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: left;
       color: var(--muted);
-      position: relative;
+      transition: all 0.2s;
     }
-    .nav-item:hover { background: var(--softTurq); color: var(--turq); }
-    .nav-item.active { background: var(--softTurq); color: var(--turq); font-weight: 800; }
-    .nav-item.active::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 25%;
-      bottom: 25%;
-      width: 3px;
-      background: var(--turq);
-      border-radius: 0 4px 4px 0;
-    }
+    .nav-item:hover { background: var(--card2); color: var(--text); }
+    .nav-item.active { background: var(--softTurq); color: var(--turq); font-weight: 700; }
 
-    .sidebar-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-    .section-card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 12px;
-    }
-    .section-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--soft);
-      font-weight: 800;
-      margin-bottom: 10px;
-      display: block;
-    }
+    .sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; }
+    .section-card { margin-bottom: 24px; }
+    .section-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; display: block; padding-left: 4px; }
 
-    .status-card {
-      background: var(--card2);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    .status-card { padding: 16px; border-top: 1px solid var(--line); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
     .status-dot.online { background: var(--turq); box-shadow: 0 0 8px var(--turq); }
 
-    /* Main Workspace Header */
-    .main {
-      display: flex;
-      flex-direction: column;
-      background: var(--main);
-      position: relative;
-    }
-    .workspace-header {
-      height: 64px;
-      padding: 0 24px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--main);
-      z-index: 10;
-    }
-    .header-title { display: flex; flex-direction: column; }
+    /* Workspace Header */
+    .workspace-header { height: 72px; padding: 0 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
     .header-title h2 { margin: 0; font-size: 16px; font-weight: 800; }
-    .header-title span { font-size: 11px; color: var(--muted); }
+    .header-title span { font-size: 12px; color: var(--soft); }
+    .header-actions { display: flex; gap: 12px; }
+    .action-pill { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line); font-size: 12px; font-weight: 700; background: var(--card2); }
+    .action-pill.status { color: var(--turq); border-color: var(--softTurq); background: var(--softTurq); }
+    .action-pill.status.error { color: var(--bad); border-color: var(--badBg); background: var(--badBg); }
 
-    .header-actions { display: flex; align-items: center; gap: 12px; }
-    .action-pill {
-      padding: 6px 12px;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      font-size: 12px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .action-pill.status { border-color: var(--softTurq); color: var(--turq); background: var(--softTurq); }
+    /* Workspace Content */
+    .workspace-content { flex: 1; overflow-y: auto; position: relative; }
+    .content-inner { max-width: 888px; margin: 0 auto; padding: 40px 24px; }
 
-    /* Chat Workspace */
-    .workspace-content {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 24px;
-    }
-    .content-inner { width: 100%; max-width: 840px; display: flex; flex-direction: column; gap: 24px; }
-
-    /* Welcome Card */
-    .welcome-card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 48px 32px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-    }
+    .welcome-card { text-align: center; padding: 40px 0; position: relative; }
     .welcome-glow {
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
       background: radial-gradient(circle, var(--softTurq) 0%, transparent 60%);
       pointer-events: none;
       opacity: 0.5;
@@ -236,19 +128,12 @@
     .welcome-logo-large img.text { width: 200px; height: auto; object-fit: contain; }
     .welcome-card p { font-size: 16px; color: var(--muted); max-width: 480px; margin: 0 auto 32px; line-height: 1.6; }
 
-    .workflow-steps {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 32px;
-    }
+    .workflow-steps { display: flex; justify-content: center; gap: 32px; margin-bottom: 48px; }
     .step {
-      padding: 8px 16px;
-      background: var(--card2);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       color: var(--soft);
       display: flex;
       align-items: center;
@@ -256,166 +141,50 @@
     }
     .step.active { color: var(--turq); border-color: var(--turq); }
 
-    .prompt-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .prompt-chip {
-      padding: 12px 16px;
-      background: var(--card2);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      text-align: left;
-      font-size: 13px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 600px; margin: 0 auto; }
+    .prompt-chip { padding: 12px 16px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; text-align: left; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
     .prompt-chip:hover { border-color: var(--turq); background: var(--softTurq); }
+
+    /* Progress Tracker */
+    .progress-tracker { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeIn 0.3s ease; }
+    .progress-step { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); transition: all 0.3s ease; }
+    .progress-step.active { color: var(--text); font-weight: 700; }
+    .progress-step.done { color: var(--turq); }
+    .step-icon { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+    .progress-step.active .step-icon { border-color: var(--turq); color: var(--turq); animation: pulse 1.5s infinite; }
+    .progress-step.done .step-icon { background: var(--turq); border-color: var(--turq); color: white; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18, 200, 178, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(18, 200, 178, 0); } 100% { box-shadow: 0 0 0 0 rgba(18, 200, 178, 0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* Messages */
     #messages { display: flex; flex-direction: column; gap: 24px; }
     .message { display: flex; gap: 16px; max-width: 100%; }
     .message.user { align-self: flex-end; flex-direction: row-reverse; }
-    .avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      flex-shrink: 0;
-    }
+    .avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
     .avatar.ai { background: var(--softTurq); color: var(--turq); }
     .avatar.user { background: var(--black); color: white; }
-    
-    .bubble {
-      padding: 16px 20px;
-      border-radius: 20px;
-      line-height: 1.6;
-      max-width: 85%;
-      position: relative;
-    }
+    .bubble { padding: 16px 20px; border-radius: 20px; line-height: 1.6; max-width: 85%; position: relative; }
     .message.ai .bubble { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadowSoft); }
     .message.user .bubble { background: var(--softTurq); border: 1px solid rgba(18, 200, 178, 0.2); }
 
     /* Composer */
-    .composer-container {
-      padding: 0 24px 32px;
-      width: 100%;
-      max-width: 888px;
-      margin: 0 auto;
-    }
-    .composer-box {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 8px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
+    .composer-container { padding: 0 24px 32px; width: 100%; max-width: 888px; margin: 0 auto; }
+    .composer-box { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s; }
     .composer-box:focus-within { border-color: var(--turq); box-shadow: 0 0 0 4px rgba(18, 200, 178, 0.1); }
-    
-    /* Progress Tracker */
-    .progress-tracker {
-      width: 100%;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      animation: fadeIn 0.3s ease;
-    }
-    .progress-step {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 13px;
-      color: var(--muted);
-      transition: all 0.3s ease;
-    }
-    .progress-step.active { color: var(--text); font-weight: 700; }
-    .progress-step.done { color: var(--turq); }
-    .step-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 2px solid var(--line);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      flex-shrink: 0;
-    }
-    .progress-step.active .step-icon { border-color: var(--turq); color: var(--turq); animation: pulse 1.5s infinite; }
-    .progress-step.done .step-icon { background: var(--turq); border-color: var(--turq); color: white; }
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18, 200, 178, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(18, 200, 178, 0); } 100% { box-shadow: 0 0 0 0 rgba(18, 200, 178, 0); } }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .composer-box textarea {
-      width: 100%;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      padding: 12px 16px;
-      font-size: 15px;
-      line-height: 1.5;
-      resize: none;
-      outline: none;
-      min-height: 52px;
-      max-height: 200px;
-    }
-    
-    .composer-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 8px 4px 16px;
-    }
+    .composer-box textarea { width: 100%; border: none; background: transparent; color: var(--text); padding: 12px 16px; font-size: 15px; line-height: 1.5; resize: none; outline: none; min-height: 52px; max-height: 200px; }
+    .composer-footer { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 4px 16px; }
     .composer-badges { display: flex; gap: 6px; }
-    .badge {
-      padding: 4px 10px;
-      background: var(--card2);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      font-size: 10px;
-      font-weight: 800;
-      color: var(--soft);
-      text-transform: uppercase;
-    }
-    
-    .send-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: var(--turq);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
+    .badge { padding: 4px 10px; background: var(--card2); border: 1px solid var(--line); border-radius: 8px; font-size: 10px; font-weight: 800; color: var(--soft); text-transform: uppercase; }
+    .badge.active { background: var(--softTurq); color: var(--turq); border-color: var(--turq); }
+    .send-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--turq); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; }
     .send-btn:disabled { background: var(--line); opacity: 0.5; cursor: not-allowed; }
 
-    /* Sources & Settings Dashboards */
+    /* Sources & Settings */
     .dashboard-header { margin-bottom: 24px; }
     .dashboard-header h1 { margin: 0 0 8px; font-size: 24px; font-weight: 900; }
     .dashboard-header p { margin: 0; color: var(--muted); }
-
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .full-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
-    
-    /* Utility */
     .hidden { display: none !important; }
     .hint { font-size: 12px; color: var(--soft); text-align: center; padding: 20px; }
 
@@ -428,7 +197,6 @@
 </head>
 <body data-theme="dark">
   <div class="app" id="app">
-    <!-- Sidebar -->
     <aside class="side">
       <div class="sideHead">
         <div class="brand-logo">
@@ -436,30 +204,23 @@
           <span class="brand-subtitle">Source-first AI Assistant</span>
         </div>
       </div>
-      
-      <button class="new-chat-btn" onclick="newChat()">
-        <span>+</span> New Chat
-      </button>
-      
+      <button class="new-chat-btn" onclick="newChat()"><span>+</span> New Chat</button>
       <nav class="nav-group">
         <button class="nav-item active" data-view="chat" onclick="switchView('chat')">Chat</button>
         <button class="nav-item" data-view="sources" onclick="switchView('sources')">Sources</button>
         <button class="nav-item" data-view="settings" onclick="switchView('settings')">Settings</button>
         <button class="nav-item hidden" id="navAdmin" data-view="admin" onclick="switchView('admin')">Admin</button>
       </nav>
-      
       <div class="sidebar-scroll">
         <div class="section-card">
           <span class="section-label">Recent Conversations</span>
           <div id="recentChats" class="hint">No recent chats yet</div>
         </div>
-        
         <div class="section-card" id="chatControls">
           <span class="section-label">Islamic Mode</span>
           <div class="grid-2" id="modeGrid" style="gap:8px; grid-template-columns: 1fr 1fr;"></div>
-          
           <span class="section-label" style="margin-top:16px;">Answer Depth</span>
-          <select id="answerDepth" onchange="updateComposerState()">
+          <select id="answerDepth" onchange="updateComposerState()" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text);">
             <option value="concise">Concise</option>
             <option value="standard" selected>Standard</option>
             <option value="detailed">Detailed</option>
@@ -467,7 +228,6 @@
           </select>
         </div>
       </div>
-      
       <div class="status-card">
         <div style="display:flex; align-items:center; gap:10px; font-size:12px; font-weight:700;">
           <div class="status-dot online" id="statusDot"></div>
@@ -476,30 +236,19 @@
         <div style="font-size:10px; color:var(--soft);">v0.2.0 • Local RAG Engine</div>
       </div>
     </aside>
-
     <div class="resizer" id="sidebarResizer"></div>
-
-    <!-- Main Workspace -->
     <main class="main">
       <header class="workspace-header">
         <div class="header-title">
           <h2 id="pageTitle">New Islamic chat</h2>
           <span id="pageSubtitle">Ready to search approved Islamic sources</span>
         </div>
-        
         <div class="header-actions">
           <div class="action-pill status" id="backendStatusPill">Checking...</div>
           <button class="action-pill" onclick="toggleTheme()" id="themeToggle">Light Mode</button>
         </div>
       </header>
-
-      <div class="banner hidden" id="offlineBanner" style="background:var(--badBg); border-bottom:1px solid var(--line); padding:10px; text-align:center; font-size:12px;">
-        <b>AI server offline</b> · Source library and settings still work. 
-        <button onclick="checkHealth()" style="color:var(--turq); font-weight:800; margin-left:8px;">Reconnect</button>
-      </div>
-
       <div class="workspace-content" id="work">
-        <!-- Chat View -->
         <div id="chatView" class="content-inner">
           <div class="welcome-card" id="welcome">
             <div class="welcome-glow"></div>
@@ -508,128 +257,63 @@
               <img src="logo-horizontal.png" alt="IslamicGPT Text" class="text">
             </div>
             <p>Your source-first Islamic research assistant. We search approved Quran, Hadith, and scholarly sources before answering.</p>
-            
             <div class="workflow-steps">
               <div class="step active">Source-first</div>
               <div class="step">Search Database</div>
               <div class="step">Verified Answer</div>
             </div>
-            
             <div class="prompt-grid">
               <button class="prompt-chip" onclick="setExample('What is the importance of prayer?')">Importance of prayer</button>
               <button class="prompt-chip" onclick="setExample('Give me a hadith about intention.')">Hadith about intention</button>
               <button class="prompt-chip" onclick="setExample('Explain this ayah simply.')">Explain an ayah simply</button>
               <button class="prompt-chip" onclick="setExample('What are the basics of wudu?')">Basics of wudu</button>
-              <button class="prompt-chip" onclick="setExample('Explain tawheed simply.')">Explain tawheed simply</button>
-              <button class="prompt-chip" onclick="setExample('Give me a student-friendly Islamic reminder.')">Student-friendly reminder</button>
             </div>
           </div>
-
           <div id="progressTracker" class="hidden"></div>
-          <div id="status"></div>
           <div id="messages"></div>
           <div id="sources" class="grid-2" style="width:100%; margin-top:20px;"></div>
         </div>
-
-        <!-- Sources View -->
         <div id="sourcesView" class="content-inner hidden">
-          <div class="dashboard-header">
-            <h1>Approved Sources</h1>
-            <p>Explore the verified database used to ground IslamicGPT answers.</p>
-          </div>
-          
-          <div class="full-card" style="margin-bottom:24px;">
-            <div style="display:flex; gap:12px;">
-              <input id="sourceSearch" placeholder="Search approved sources..." style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
-              <select id="sourceTypeFilter" style="width:180px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
-                <option value="all">All Types</option>
-                <option value="quran">Quran</option>
-                <option value="hadith">Hadith</option>
-                <option value="tafsir">Tafsir</option>
-                <option value="scholars">Scholars</option>
-              </select>
-            </div>
-          </div>
-          
+          <div class="dashboard-header"><h1>Approved Sources</h1><p>Explore verified database.</p></div>
           <div id="sourceResults" class="grid-2"></div>
         </div>
-
-        <!-- Settings View -->
         <div id="settingsView" class="content-inner hidden">
-          <div class="dashboard-header">
-            <h1>Settings</h1>
-            <p>Manage your AI workspace preferences and connection status.</p>
-          </div>
-          
+          <div class="dashboard-header"><h1>Settings</h1><p>Manage preferences.</p></div>
           <div class="grid-2">
-            <div class="full-card">
-              <span class="section-label">Source & Citation</span>
-              <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
-                <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
-                  <input type="checkbox" id="requireSources" checked> Require approved sources
-                </label>
-                <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
-                  <input type="checkbox" id="showSourceCards" checked> Show source cards
-                </label>
-              </div>
-            </div>
-            
-            <div class="full-card">
-              <span class="section-label">Interface</span>
-              <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
-                <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
-                  <input type="checkbox" id="showAdminTools" onchange="toggleAdminNav()"> Show Admin Tools
-                </label>
-                <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
-                  <input type="checkbox" id="compactMode"> Compact Mode
-                </label>
-              </div>
-            </div>
+            <div class="full-card"><span class="section-label">Interface</span><label><input type="checkbox" id="showAdminTools" onchange="toggleAdminNav()"> Show Admin Tools</label></div>
           </div>
         </div>
       </div>
-
-      <!-- Composer Area -->
       <div class="composer-container">
         <div class="composer-box">
-          <textarea id="input" placeholder="Ask a question or search sources..." oninput="autoResize(this)"></textarea>
+          <textarea id="input" placeholder="Ask a question..." oninput="autoResize(this)"></textarea>
           <div class="composer-footer">
             <div class="composer-badges">
               <div class="badge" id="activeModeBadge">General Mode</div>
               <div class="badge" id="activeDepthBadge">Standard Depth</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
-              <button id="clearBtn" class="hidden" onclick="clearInput()" style="font-size:11px; color:var(--soft); font-weight:800; padding:0 8px;">Clear</button>
+              <button id="clearBtn" class="hidden" onclick="clearInput()" style="font-size:11px; color:var(--soft); font-weight:800;">Clear</button>
               <button class="send-btn" id="sendBtn" onclick="sendMessage()">→</button>
             </div>
           </div>
         </div>
-        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">
-          IslamicGPT is an AI assistant. Always consult qualified scholars for personal religious rulings.
-        </div>
+        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">IslamicGPT is an AI assistant. Always consult scholars.</div>
       </div>
     </main>
   </div>
-
   <script>
-    // Essential logic remains the same but wired to new UI
     let currentView = 'chat';
     let currentMode = 'islamic_search_mode';
-    const MODES = [
-      { id: 'islamic_search_mode', label: 'General' },
-      { id: 'quran_mode', label: 'Quran' },
-      { id: 'hadith_mode', label: 'Hadith' },
-      { id: 'fiqh_mode', label: 'Fiqh' }
-    ];
+    const MODES = [{id:'islamic_search_mode',label:'General'},{id:'quran_mode',label:'Quran'},{id:'hadith_mode',label:'Hadith'},{id:'fiqh_mode',label:'Fiqh'}];
+    const STAGES = [{id:'classified_question',label:'Classifying request'},{id:'searched_approved_sources',label:'Searching approved sources'},{id:'built_source_context',label:'Building source context'},{id:'called_local_model',label:'Generating verified answer'},{id:'validated_citations',label:'Validating citations'},{id:'prepared_answer',label:'Finalizing response'}];
 
     function switchView(view) {
-      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.content-inner').forEach(p => p.classList.add('hidden'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      
       document.getElementById(view + 'View').classList.remove('hidden');
       document.querySelector(`[data-view="${view}"]`).classList.add('active');
-      
-      const titles = { chat: 'New Islamic chat', sources: 'Approved Sources', settings: 'Settings', admin: 'Admin Panel' };
+      const titles = {chat:'New Islamic chat',sources:'Approved Sources',settings:'Settings',admin:'Admin Panel'};
       document.getElementById('pageTitle').textContent = titles[view];
       currentView = view;
     }
@@ -645,27 +329,13 @@
       document.getElementById('clearBtn').classList.toggle('hidden', !el.value);
     }
 
-    const STAGES = [
-      { id: 'classified_question', label: 'Classifying request' },
-      { id: 'searched_approved_sources', label: 'Searching approved sources' },
-      { id: 'built_source_context', label: 'Building source context' },
-      { id: 'called_local_model', label: 'Generating verified answer' },
-      { id: 'validated_citations', label: 'Validating citations' },
-      { id: 'prepared_answer', label: 'Finalizing response' }
-    ];
-
     function updateProgress(completedStages) {
       const tracker = document.getElementById('progressTracker');
       tracker.classList.remove('hidden');
       tracker.innerHTML = '<div class="progress-tracker">' + STAGES.map((s, i) => {
         const isDone = completedStages.includes(s.id);
         const isActive = !isDone && (i === 0 || completedStages.includes(STAGES[i-1].id));
-        return `
-          <div class="progress-step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}">
-            <div class="step-icon">${isDone ? '✓' : i + 1}</div>
-            <span>${s.label}</span>
-          </div>
-        `;
+        return `<div class="progress-step ${isDone?'done':''} ${isActive?'active':''}"><div class="step-icon">${isDone?'✓':i+1}</div><span>${s.label}</span></div>`;
       }).join('') + '</div>';
     }
 
@@ -685,91 +355,31 @@
       });
     }
 
-    function clearInput() {
-      const input = document.getElementById('input');
-      input.value = '';
-      autoResize(input);
-    }
-
-    function setExample(text) {
-      const input = document.getElementById('input');
-      input.value = text;
-      autoResize(input);
-      sendMessage();
-    }
-
-    function updateComposerState() {
-      const depth = document.getElementById('answerDepth').value;
-      document.getElementById('activeDepthBadge').textContent = depth.charAt(0).toUpperCase() + depth.slice(1) + ' Depth';
-    }
-
-    function toggleTheme() {
-      const body = document.body;
-      const theme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      body.setAttribute('data-theme', theme);
-      document.getElementById('themeToggle').textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
-    }
+    function clearInput() { const i = document.getElementById('input'); i.value = ''; autoResize(i); }
+    function setExample(t) { const i = document.getElementById('input'); i.value = t; autoResize(i); sendMessage(); }
+    function updateComposerState() { const d = document.getElementById('answerDepth').value; document.getElementById('activeDepthBadge').textContent = d.charAt(0).toUpperCase() + d.slice(1) + ' Depth'; }
+    function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
     async function sendMessage() {
       const input = document.getElementById('input');
       const text = input.value.trim();
       if (!text) return;
-
-      input.value = '';
-      autoResize(input);
+      input.value = ''; autoResize(input);
       document.getElementById('welcome').classList.add('hidden');
-      
       const messages = document.getElementById('messages');
-      messages.innerHTML += `
-        <div class="message user">
-          <div class="avatar user">U</div>
-          <div class="bubble">${text}</div>
-        </div>
-      `;
-
+      messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${text}</div></div>`;
       updateProgress(['classified_question']);
-      
       try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            message: text, 
-            mode: currentMode,
-            modelMode: document.getElementById('answerDepth').value === 'research' ? 'balanced' : 'fast'
-          })
-        });
-        
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value === 'research' ? 'balanced' : 'fast' }) });
         const data = await res.json();
-        if (data.loadingStagesCompleted) {
-          updateProgress(data.loadingStagesCompleted);
-          setTimeout(() => document.getElementById('progressTracker').classList.add('hidden'), 1000);
-        }
-
-        messages.innerHTML += `
-          <div class="message ai">
-            <div class="avatar ai">IG</div>
-            <div class="bubble">${data.answer}</div>
-          </div>
-        `;
-        
+        if (data.loadingStagesCompleted) { updateProgress(data.loadingStagesCompleted); setTimeout(() => document.getElementById('progressTracker').classList.add('hidden'), 1000); }
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${data.answer}</div></div>`;
         if (data.sourceCards && data.sourceCards.length) {
-          const sources = document.getElementById('sources');
-          sources.innerHTML = data.sourceCards.map(s => `
-            <div class="full-card">
-              <div class="badge">${s.type}</div>
-              <h4 style="margin:10px 0 5px;">${s.title}</h4>
-              <div style="font-size:12px; color:var(--muted);">${s.reference}</div>
-              <p style="font-size:13px; margin-top:10px;">${s.preview}</p>
-            </div>
-          `).join('');
+          document.getElementById('sources').innerHTML = data.sourceCards.map(s => `<div class="full-card"><div class="badge">${s.type}</div><h4 style="margin:10px 0 5px;">${s.title}</h4><div style="font-size:12px; color:var(--muted);">${s.reference}</div><p style="font-size:13px; margin-top:10px;">${s.preview}</p></div>`).join('');
         }
-      } catch (e) {
-        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">Sorry, I encountered an error.</div></div>`;
-      }
+      } catch (e) { messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">Error occurred.</div></div>`; }
     }
 
-    // Placeholder for health check and other logic
     async function checkHealth() {
       const pill = document.getElementById('backendStatusPill');
       const dot = document.getElementById('statusDot');
@@ -779,17 +389,11 @@
         pill.textContent = ok ? 'Connected' : 'Offline';
         pill.className = ok ? 'action-pill status' : 'action-pill status error';
         dot.className = ok ? 'status-dot online' : 'status-dot';
-      } catch (e) {
-        pill.textContent = 'Offline';
-        dot.className = 'status-dot';
-      }
+      } catch (e) { pill.textContent = 'Offline'; dot.className = 'status-dot'; }
     }
 
-    window.onload = () => {
-      initModes();
-      checkHealth();
-      setInterval(checkHealth, 30000);
-    };
+    window.onload = () => { initModes(); checkHealth(); setInterval(checkHealth, 30000); };
+    function newChat() { document.getElementById('messages').innerHTML = ''; document.getElementById('sources').innerHTML = ''; document.getElementById('welcome').classList.remove('hidden'); }
   </script>
 </body>
 </html>
