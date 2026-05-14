@@ -16,13 +16,14 @@
     .trust{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.trust span{font-size:12px;background:#0b1310;border:1px solid rgba(15,143,95,.35);padding:6px 10px;border-radius:999px}
     .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}
     label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-    select,textarea,button{width:100%;border-radius:12px;border:1px solid var(--border)}
-    select,textarea{background:#0b1310;color:var(--ink);padding:12px}
+    select,textarea,input,button{width:100%;border-radius:12px;border:1px solid var(--border)}
+    select,textarea,input{background:#0b1310;color:var(--ink);padding:12px}
     textarea{min-height:130px;resize:vertical}
     button{background:linear-gradient(145deg,var(--emerald-dark),var(--emerald));color:#fff;padding:12px;font-weight:700;cursor:pointer}
     button:hover{filter:brightness(1.05)}
     .hint{font-size:12px;color:var(--muted);margin-top:4px}
-    .examples{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}.chip{border:1px solid rgba(15,143,95,.4);background:#0b1310;color:#d7e7de;border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer}
+    .api-row{display:grid;grid-template-columns:1fr 130px;gap:10px;margin:12px 0}.api-row button{padding:10px}
+    .examples{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}.chip{border:1px solid rgba(15,143,95,.4);background:#0b1310;color:#d7e7de;border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer;width:auto}
     .status{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.status .chip{cursor:default;border-color:rgba(214,168,79,.45)}
     .answer{background:var(--ivory);color:#1f2937;border-radius:14px;padding:14px;margin-top:10px}
     .answer h3{margin:0 0 8px}
@@ -34,7 +35,7 @@
     details{margin-top:10px} pre{white-space:pre-wrap;background:#0b1310;color:#d1d5db;padding:10px;border-radius:10px;border:1px solid #202c27}
     .empty{margin-top:12px;color:var(--muted);font-size:14px}
     .disclaimer{font-size:12px;color:var(--muted);margin-top:14px}
-    @media (max-width:760px){.hero{grid-template-columns:1fr}.controls{grid-template-columns:1fr}}
+    @media (max-width:760px){.hero{grid-template-columns:1fr}.controls,.api-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -69,6 +70,15 @@
         </div>
       </div>
 
+      <details>
+        <summary>Backend API URL</summary>
+        <div class="api-row">
+          <input id="apiUrl" placeholder="http://localhost:3001 or https://your-vm-domain" />
+          <button onclick="saveApiUrl()">Save URL</button>
+        </div>
+        <div class="hint">For Vercel Option A, keep this frontend on Vercel and point this URL to your VM backend running <code>backend/server.js</code>.</div>
+      </details>
+
       <textarea id="q" placeholder="Ask about Quran, Hadith, tafsir, fiqh, or Islamic topics..."></textarea>
       <div class="examples">
         <button class="chip" onclick="setExample('What is the importance of prayer?')">What is the importance of prayer?</button>
@@ -89,10 +99,21 @@
   </main>
 
   <script>
+    const DEFAULT_API_BASE_URL = 'http://localhost:3001';
     const debugEnabled = new URLSearchParams(location.search).get('debug') === '1';
     if (debugEnabled) document.getElementById('debugPanel').style.display = 'block';
     const statusEl = document.getElementById('status');
+    const apiInput = document.getElementById('apiUrl');
+    apiInput.value = getApiBaseUrl();
 
+    function getApiBaseUrl(){
+      return (window.ISLAMICGPT_API_URL || localStorage.getItem('ISLAMICGPT_API_URL') || DEFAULT_API_BASE_URL).replace(/\/$/, '');
+    }
+    function saveApiUrl(){
+      const value = apiInput.value.trim().replace(/\/$/, '');
+      if(value) localStorage.setItem('ISLAMICGPT_API_URL', value);
+      renderStatus(['Backend API URL saved']);
+    }
     function setExample(text){ document.getElementById('q').value=text; }
     function copyText(text){ navigator.clipboard.writeText(text||''); }
     function renderStatus(stages=[], error=null){
@@ -103,9 +124,10 @@
 
     async function sendMsg(){
       const q=document.getElementById('q').value; const mode=document.getElementById('mode').value; const modelMode=document.getElementById('modelMode').value;
+      const apiBaseUrl = getApiBaseUrl();
       renderStatus(['Classifying question','Searching approved Islamic sources','Building source context','Calling local AI model','Validating citations','Preparing answer']);
       try{
-        const r=await fetch('http://localhost:3001/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode,modelMode,debug:debugEnabled})});
+        const r=await fetch(`${apiBaseUrl}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode,modelMode,debug:debugEnabled})});
         const d=await r.json();
         document.getElementById('empty').style.display='none';
         document.getElementById('answerWrap').style.display='block';
@@ -114,7 +136,7 @@
         document.getElementById('warnings').innerHTML=(d.warnings||[]).map(w=>`<div>⚠️ ${w}</div>`).join('');
         renderSourceCards(d.sourceCards||[]);
         if (debugEnabled) {
-          document.getElementById('debug').textContent=JSON.stringify({isIslamicQuestion:d.isIslamicQuestion,mode:d.mode,requestedModelMode:d.modelMode,resolvedModelMode:d.resolvedModelMode,modelUsed:d.modelUsed,modelSelectionReason:d.modelSelectionReason,llmCalled:d.llmCalled,validation:d.validation,loadingStagesCompleted:d.loadingStagesCompleted,debug:d.debug||{}},null,2);
+          document.getElementById('debug').textContent=JSON.stringify({apiBaseUrl,isIslamicQuestion:d.isIslamicQuestion,mode:d.mode,requestedModelMode:d.modelMode,resolvedModelMode:d.resolvedModelMode,modelUsed:d.modelUsed,modelSelectionReason:d.modelSelectionReason,llmCalled:d.llmCalled,validation:d.validation,loadingStagesCompleted:d.loadingStagesCompleted,debug:d.debug||{}},null,2);
         }
       }catch(e){ renderStatus([], 'backend_unavailable'); }
     }
