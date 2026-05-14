@@ -38,12 +38,18 @@ function noSourceResponse(mode, modelMode) {
 }
 
 function send(res, status, data) {
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Max-Age': '86400',
+  });
   res.end(JSON.stringify(data));
 }
 
 http.createServer((req, res) => {
-  if (req.method === 'OPTIONS') return send(res, 200, {});
+  if (req.method === 'OPTIONS') return send(res, 204, {});
   if (req.url !== '/api/chat' || req.method !== 'POST') return send(res, 404, { error: 'Not found' });
 
   let body = '';
