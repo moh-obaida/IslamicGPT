@@ -350,6 +350,7 @@ async function handleChat(payload, res) {
     const loading = ['classified_question'];
 
     if (isCasualChat(question)) {
+      loading.push('prepared_answer');
       return send(res, 200, {
         answer: "Wa Alaikum Assalam! How can I help you today with Islamic research or app usage?",
         mode,
@@ -364,6 +365,7 @@ async function handleChat(payload, res) {
     }
 
     if (isAppHelp(question)) {
+      loading.push('prepared_answer');
       return send(res, 200, {
         answer: "I am IslamicGPT, a source-first Islamic AI assistant. I only provide religious answers if I can find evidence in my approved database of Quran, Hadith, and scholarly works. You can search sources directly in the Sources tab or ask me questions here.",
         mode,
@@ -532,6 +534,10 @@ async function handleChat(payload, res) {
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (req.method === 'OPTIONS') return send(res, 204, {});
+
+  if (url.pathname === '/health' && req.method === 'GET') {
+    return send(res, 200, { ok: true, timestamp: Date.now() });
+  }
 
   if (url.pathname === '/api/sources' && req.method === 'GET') {
     return send(res, 200, publicSourcesResponse(url));
