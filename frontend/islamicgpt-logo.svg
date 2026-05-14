@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="IslamicGPT logo">
+  <rect width="320" height="96" rx="14" fill="#060d0c"/>
+  <g fill="none" stroke="#12c8b2" stroke-width="4">
+    <path d="M26 52l12-12V26h16l10-10 10 10h16v14l12 12-12 12v14H74V64L64 72 54 64v-12z"/>
+    <path d="M64 28c0 8-14 12-14 24v14l14 10 14-10V52c0-12-14-16-14-24z"/>
+  </g>
+  <text x="116" y="58" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="36" fill="#eaf7f4">Islamic<tspan fill="#12c8b2">GPT</tspan></text>
+</svg>
