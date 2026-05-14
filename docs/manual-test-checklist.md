@@ -1,12 +1,16 @@
 # IslamicGPT Manual Acceptance Checklist
 
-1. `node scripts/ingest-islamic-sources.js`
-2. `node backend/server.js`
-3. By default test sources are blocked (`ALLOW_TEST_SOURCES=false`).
-4. Set `ALLOW_TEST_SOURCES=true` only for metadata-only development testing.
-5. No-source query must return refusal with `llmCalled:false`.
-6. Auto mode simple query should resolve to fast.
-7. Compare opinions mode should resolve to strong.
-8. Legacy `deep` request should map to strong.
-9. Confirm open web remains disabled.
-10. Confirm unapproved uploads remain rejected.
+## Normal mode (default)
+1. `ALLOW_TEST_SOURCES=false node scripts/ingest-islamic-sources.js`
+2. `ALLOW_TEST_SOURCES=false node backend/server.js`
+3. No-source query must return refusal with `llmCalled:false`.
+4. Auto mode simple query should resolve to fast.
+5. Compare opinions mode should resolve to strong.
+6. Legacy `deep` request should map to strong.
+7. Confirm open web remains disabled.
+8. Confirm unapproved uploads remain rejected.
+
+## Metadata-only development mode
+1. `ALLOW_TEST_SOURCES=true node scripts/ingest-islamic-sources.js`
+2. `ALLOW_TEST_SOURCES=true node backend/server.js`
+3. Confirm test records can be retrieved only in this mode.

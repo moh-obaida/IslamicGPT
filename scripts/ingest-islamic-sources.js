@@ -44,6 +44,7 @@ function validateSource(s, warnings) {
   return s.verified_by_admin && s.approved_for_answers;
 }
 
+const allowTestSources = String(process.env.ALLOW_TEST_SOURCES || 'false').toLowerCase() === 'true';
 const warnings = [];
 const indexed = [];
 
@@ -54,6 +55,10 @@ for (const folder of FOLDERS) {
 
     for (const source of records) {
       const canInclude = validateSource(source, warnings);
+      if (source.is_test_record === true && !allowTestSources) {
+        warn(warnings, `${source.id || 'unknown'}: test record excluded from compiled index because ALLOW_TEST_SOURCES=false`);
+        continue;
+      }
       if (canInclude) indexed.push(source);
       else warn(warnings, `${source.id || 'unknown'}: excluded from answer index (not approved/verified)`);
     }
