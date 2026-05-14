@@ -1,0 +1,18 @@
+[
+  {
+    "id": "hadith-meta-test-1",
+    "source_type": "hadith",
+    "source_name": "Testing Hadith Metadata",
+    "title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "language": "ar",
+    "reliability_level": 2,
+    "verified_by_admin": true,
+    "approved_for_answers": true,
+    "approved_for_fatwa": false,
+    "collection_name": "Metadata Example Collection",
+    "hadith_number_unavailable": true,
+    "grade": "unknown",
+    "translation_text": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "is_test_record": true
+  }
+]
