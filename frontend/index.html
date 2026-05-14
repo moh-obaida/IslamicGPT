@@ -9,7 +9,7 @@
 <option value="fiqh_mode">Fiqh Mode</option><option value="aqidah_mode">Aqidah Mode</option><option value="arabic_mode">Arabic Mode</option>
 <option value="student_explanation_mode">Student Explanation Mode</option><option value="compare_opinions_mode">Compare Opinions Mode</option>
 <option value="islamic_search_mode" selected>Islamic Search Mode</option>
-</select> <select id="modelMode"><option value="fast">Fast</option><option value="balanced" selected>Balanced</option><option value="deep">Deep</option></select>
+</select> <select id="modelMode"><option value="auto" selected>Auto</option><option value="fast">Fast</option><option value="strong">Strong</option></select> <small>Auto: IslamicGPT chooses model. Fast: Llama 7B/8B. Strong: Qwen 14B.</small>
 <div><textarea id="q" rows="4" style="width:100%" placeholder="Ask a question..."></textarea><button onclick="sendMsg()">Send</button></div>
 <pre id="status"></pre><pre id="answer"></pre><div id="warnings" style="color:#92400e"></div><div id="sources"></div>
 <details id="debugPanel" style="display:none"><summary>Source Debug Panel</summary><pre id="debug"></pre></details>
@@ -28,7 +28,7 @@ async function sendMsg(){
   document.getElementById('status').textContent=(d.loadingStagesCompleted||[]).join('\n')+(d.errorState?`\nError: ${d.errorState}`:'');
   document.getElementById('warnings').innerHTML=(d.warnings||[]).map(w=>`<div>⚠️ ${w}</div>`).join('');
   renderSourceCards(d.sourceCards||[]);
-  if (debugEnabled) document.getElementById('debug').textContent=JSON.stringify({isIslamicQuestion:d.isIslamicQuestion,mode:d.mode,modelMode:d.modelMode,modelUsed:d.modelUsed,llmCalled:d.llmCalled,validation:d.validation,loadingStagesCompleted:d.loadingStagesCompleted,debug:d.debug||{}},null,2);
+  if (debugEnabled) document.getElementById('debug').textContent=JSON.stringify({isIslamicQuestion:d.isIslamicQuestion,mode:d.mode,requestedModelMode:d.modelMode,resolvedModelMode:d.resolvedModelMode,modelUsed:d.modelUsed,modelSelectionReason:d.modelSelectionReason,llmCalled:d.llmCalled,validation:d.validation,loadingStagesCompleted:d.loadingStagesCompleted,debug:d.debug||{}},null,2);
  }catch(e){document.getElementById('status').textContent='Error: backend_unavailable';}
 }
 function card(title,badge,html,cite){

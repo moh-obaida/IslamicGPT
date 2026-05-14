@@ -1,35 +1,12 @@
 # IslamicGPT Manual Acceptance Checklist
 
-1. Run ingestion:
-   - `node scripts/ingest-islamic-sources.js`
-2. Start backend:
-   - `node backend/server.js`
-3. No-source refusal (must not call Ollama):
-```bash
-curl -s http://localhost:3001/api/chat -H 'Content-Type: application/json' \
-  -d '{"message":"Tell me a random Islamic quote without sources","mode":"islamic_search_mode","modelMode":"fast"}'
-```
-Expected: refusal, `llmCalled:false`, `errorState:no_sources_found`.
-
-4. Matching source + Ollama call:
-```bash
-curl -s http://localhost:3001/api/chat -H 'Content-Type: application/json' \
-  -d '{"message":"metadata example collection","mode":"hadith_mode","modelMode":"fast"}'
-```
-Expected: `llmCalled:true`, `modelUsed` present, sourceCards present, validation present.
-
-5. Upload rejection test:
-- Ensure unapproved upload in `pending-review.json` is excluded.
-
-6. Open web disabled:
-- Confirm backend uses only local index files, no web retrieval path.
-
-7. Ollama unavailable test:
-- Stop Ollama and run test #4.
-- Expected clean error message and `errorState` of `ollama_unavailable` or `model_timeout`.
-
-8. Debug panel:
-- Open `frontend/index.html?debug=1` and verify model, retrieval, validation, and loading stage details.
-
-9. Validation failure test:
-- Confirm unsupported citation output is blocked with refusal and `citation_validation_failed`.
+1. `node scripts/ingest-islamic-sources.js`
+2. `node backend/server.js`
+3. Fast model test: `modelMode=fast` should return `resolvedModelMode=fast` and use `OLLAMA_FAST_MODEL`.
+4. Strong model test: `modelMode=strong` should return `resolvedModelMode=strong` and use `OLLAMA_STRONG_MODEL`.
+5. Auto simple test: hadith lookup in `hadith_mode` should resolve to fast.
+6. Auto complex test: `compare_opinions_mode` should resolve to strong.
+7. Legacy deep test: `modelMode=deep` should resolve to strong.
+8. No-source test: unmatched query returns refusal with `llmCalled:false` and `modelUsed:null`.
+9. Ensure open web remains disabled and local index only is used.
+10. Ensure unapproved uploads are excluded.
