@@ -6,12 +6,27 @@ const { formatSourceCards } = require('./src/sourceCards');
 const { validateIslamicCitations } = require('./src/citationValidation');
 
 const REFUSAL_MESSAGE = 'I could not find enough reliable evidence in the approved sources.';
-const DEBUG_SOURCES = String(process.env.VITE_DEBUG_SOURCES || 'false').toLowerCase() === 'true';
+const DEBUG_SOURCES = String(process.env.ISLAMICGPT_DEBUG_SOURCES || process.env.DEBUG_SOURCES || process.env.VITE_DEBUG_SOURCES || 'false').toLowerCase() === 'true';
+const MAX_REQUEST_BYTES = Number(process.env.MAX_CHAT_REQUEST_BYTES || 64 * 1024);
+const DEFAULT_MODE = 'islamic_search_mode';
+const SUPPORTED_MODES = new Set([
+  DEFAULT_MODE,
+  'quran_mode',
+  'hadith_mode',
+  'tafsir_mode',
+  'fiqh_mode',
+  'aqidah_mode',
+  'arabic_mode',
+  'student_explanation_mode',
+  'compare_opinions_mode',
+]);
 
-const classifyIslamicQuestion = (q = '') => /(allah|quran|hadith|sunnah|fiqh|fatwa|tafsir|islam|prophet|dua|aqidah|zakat|salah|ramadan|umrah|hajj|bukhari|muslim|تفسير|حديث|القران|القرآن|فقه|فتوى)/i.test(q);
+const classifyIslamicQuestion = (q = '') => /(allah|quran|hadith|sunnah|fiqh|fatwa|tafsir|islam|prophet|prayer|dua|aqidah|zakat|salah|ramadan|umrah|hajj|bukhari|muslim|تفسير|حديث|القران|القرآن|فقه|فتوى|صلاة|دعاء)/i.test(q);
 const detectLanguage = (m = '') => /[\u0600-\u06FF]/.test(m) ? 'arabic' : /[a-zA-Z]/.test(m) ? 'english' : 'auto';
 const fatwaRisk = (q = '') => /(divorce|marriage dispute|inheritance|contract|medical|oath|takfir|apostasy|legal|custody)/i.test(q);
 const wantsExplanation = (q = '') => /(explain|why|how|detail|detailed|compare|analyze|meaning|lesson|benefit|شرح|لماذا|كيف|تفصيل|قارن|معنى)/i.test(q);
+const isSupportedMode = (mode) => SUPPORTED_MODES.has(mode);
+const normalizeMode = (mode) => isSupportedMode(mode) ? mode : DEFAULT_MODE;
 
 function buildPrompt({ question, mode, language, sources }) {
   const context = sources.map((s) => `SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nSURAH:${s.surah_name_en || ''}\nSURAH NUMBER:${s.surah_number || ''}\nAYAH:${s.ayah_number || s.ayah_range || ''}\nCOLLECTION:${s.collection_name || ''}\nHADITH NUMBER:${s.hadith_number || (s.hadith_number_unavailable ? 'Hadith number not available in this source.' : '')}\nSCHOLAR:${s.scholar_name || ''}\nREFERENCE:${s.reference_number || s.fatwa_number || s.page_number || s.timestamp || s.local_reference || s.url || ''}\nARABIC:${s.arabic_text || ''}\nTRANSLATION:${s.translation_text || ''}`).join('\n\n');
@@ -111,18 +126,54 @@ http.createServer((req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (req.url !== '/api/chat' || req.method !== 'POST') return send(res, 404, { error: 'Not found' });
 
+  const declaredLength = Number(req.headers['content-length'] || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
+    req.resume();
+    return send(res, 413, {
+      answer: 'Request is too large. Please shorten the message and try again.',
+      errorState: 'request_too_large',
+    });
+  }
+
   let body = '';
-  req.on('data', (c) => (body += c));
+  let receivedBytes = 0;
+  let requestTooLarge = false;
+  req.on('data', (c) => {
+    if (requestTooLarge) return;
+    receivedBytes += c.length;
+    if (receivedBytes > MAX_REQUEST_BYTES) {
+      requestTooLarge = true;
+      body = '';
+      send(res, 413, {
+        answer: 'Request is too large. Please shorten the message and try again.',
+        errorState: 'request_too_large',
+      });
+      return;
+    }
+    body += c;
+  });
   req.on('end', async () => {
+    if (requestTooLarge) return;
+
+    let payload;
     try {
-      const payload = JSON.parse(body || '{}');
-      const question = payload.message || '';
-      const mode = payload.mode || 'islamic_search_mode';
+      payload = JSON.parse(body || '{}');
+    } catch {
+      return send(res, 400, {
+        answer: 'Request body must be valid JSON.',
+        errorState: 'invalid_json',
+      });
+    }
+
+    try {
+      const question = String(payload.message || '').trim();
+      const requestedMode = payload.mode || DEFAULT_MODE;
+      const mode = normalizeMode(requestedMode);
       const modelMode = payload.modelMode || process.env.DEFAULT_MODEL_MODE || 'auto';
       const language = payload.language && payload.language !== 'auto' ? payload.language : detectLanguage(question);
       const loading = ['classified_question'];
 
-      const isIslamicQuestion = classifyIslamicQuestion(question) || String(mode).endsWith('_mode');
+      const isIslamicQuestion = classifyIslamicQuestion(question) || isSupportedMode(requestedMode);
       if (!isIslamicQuestion) {
         return send(res, 200, {
           answer: 'IslamicGPT is focused on Islamic knowledge from approved sources.',
@@ -265,12 +316,21 @@ http.createServer((req, res) => {
       }
 
       return send(res, 200, out);
-    } catch {
+    } catch (error) {
+      console.error('Unhandled /api/chat error:', error);
       return send(res, 500, {
         answer: 'IslamicGPT could not complete the answer because the source check failed. Please try again or check the source database.',
         errorState: 'backend_unavailable',
       });
     }
+  });
+  req.on('error', (error) => {
+    if (requestTooLarge || res.headersSent) return;
+    console.error('Request stream error:', error);
+    return send(res, 400, {
+      answer: 'Request could not be read. Please try again.',
+      errorState: 'request_read_failed',
+    });
   });
 }).listen(Number(process.env.PORT || 3001), () => {
   console.log(`IslamicGPT backend listening on http://localhost:${Number(process.env.PORT || 3001)}`);

@@ -50,7 +50,12 @@ const indexed = [];
 
 for (const folder of FOLDERS) {
   for (const file of listJsonFiles(path.join(ROOT, folder))) {
-    let records = JSON.parse(fs.readFileSync(file, 'utf8'));
+    let records;
+    try {
+      records = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (error) {
+      throw new Error(`Could not parse source file ${file}: ${error.message}`);
+    }
     if (!Array.isArray(records)) records = [records];
 
     for (const source of records) {
@@ -72,6 +77,7 @@ const output = {
 };
 
 const outPath = path.join(ROOT, 'indexes', 'compiled-sources.json');
+fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
 console.log(`Indexed ${indexed.length} approved sources -> ${outPath}`);
 if (warnings.length) {
