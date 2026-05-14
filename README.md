@@ -2,43 +2,39 @@
 
 Reliable Islamic answers from Quran, Sunnah, and approved sources.
 
-## Strict Islamic Answer Policy
+## Local setup
 
-IslamicGPT follows a strict RAG-first policy for Islamic/religious questions:
+1. Install Ollama:
+   - `curl -fsSL https://ollama.com/install.sh | sh`
+2. Pull models:
+   - `ollama pull qwen2.5:7b`
+   - `ollama pull llama3.1:8b`
+   - `ollama pull qwen2.5:14b`
+3. Configure env:
+   - `cp .env.example .env`
+4. Build approved source index:
+   - `node scripts/ingest-islamic-sources.js`
+5. Start backend:
+   - `node backend/server.js`
+6. Open UI:
+   - `frontend/index.html` (or `frontend/index.html?debug=1`)
 
-1. Classify if a question is Islamic.
-2. If Islamic, search **only approved Islamic source storage**.
-3. Open web search is disabled for Islamic answers.
-4. Build model context from retrieved approved sources only.
-5. Instruct the model to answer only from provided source context.
-6. If no source is found, return:
-   - `I could not find enough reliable evidence in the approved sources.`
-7. Validate citations after generation.
-8. Block Quran claims without surah/ayah citation metadata.
-9. Block hadith claims without collection + hadith number (or explicit unavailable notice).
-10. Block scholar claims without approved exact reference metadata.
+## API test
 
-## Knowledge Source Modes
+```bash
+curl -s http://localhost:3001/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"metadata example collection","mode":"hadith_mode","modelMode":"fast"}'
+```
 
-- `verified_local_sources_only` (default)
-- `verified_local_sources_plus_approved_online_apis`
-- `admin_review_mode`
+No-source test:
 
-## Source Storage Layout
+```bash
+curl -s http://localhost:3001/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"random unmatched Islamic claim","mode":"islamic_search_mode","modelMode":"fast"}'
+```
 
-- `data/islamic-sources/quran`
-- `data/islamic-sources/hadith`
-- `data/islamic-sources/tafsir`
-- `data/islamic-sources/scholars`
-- `data/islamic-sources/fatwas`
-- `data/islamic-sources/books`
-- `data/islamic-sources/uploads`
-- `data/islamic-sources/indexes`
-
-Uploaded files are pending review by default and are not trusted until approved.
-
-## Run locally
-
-1. `cp .env.example .env`
-2. Wire `backend/src/islamicPipeline.ts` into your API route.
-3. Ensure your local model call uses `buildIslamicAnswerContext(...)` output as the only Islamic authority context.
+Ollama unavailable test:
+- Stop Ollama and run the API test again.
+- Expected: `IslamicGPT could not reach the local AI model. Please check that Ollama is running.`

@@ -9,7 +9,7 @@
 <option value="fiqh_mode">Fiqh Mode</option><option value="aqidah_mode">Aqidah Mode</option><option value="arabic_mode">Arabic Mode</option>
 <option value="student_explanation_mode">Student Explanation Mode</option><option value="compare_opinions_mode">Compare Opinions Mode</option>
 <option value="islamic_search_mode" selected>Islamic Search Mode</option>
-</select>
+</select> <select id="modelMode"><option value="fast">Fast</option><option value="balanced" selected>Balanced</option><option value="deep">Deep</option></select>
 <div><textarea id="q" rows="4" style="width:100%" placeholder="Ask a question..."></textarea><button onclick="sendMsg()">Send</button></div>
 <pre id="status"></pre><pre id="answer"></pre><div id="warnings" style="color:#92400e"></div><div id="sources"></div>
 <details id="debugPanel" style="display:none"><summary>Source Debug Panel</summary><pre id="debug"></pre></details>
@@ -19,16 +19,16 @@ const debugEnabled = new URLSearchParams(location.search).get('debug') === '1';
 if (debugEnabled) document.getElementById('debugPanel').style.display = 'block';
 function copyText(text){ navigator.clipboard.writeText(text||''); }
 async function sendMsg(){
- const q=document.getElementById('q').value; const mode=document.getElementById('mode').value;
+ const q=document.getElementById('q').value; const mode=document.getElementById('mode').value; const modelMode=document.getElementById('modelMode').value;
  document.getElementById('status').textContent='Searching approved Islamic sources\nChecking Quran and hadith references\nValidating citations\nPreparing answer';
  try{
-  const r=await fetch('http://localhost:3001/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode})});
+  const r=await fetch('http://localhost:3001/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode,modelMode,debug:debugEnabled})});
   const d=await r.json();
   document.getElementById('answer').textContent=d.answer;
   document.getElementById('status').textContent=(d.loadingStagesCompleted||[]).join('\n')+(d.errorState?`\nError: ${d.errorState}`:'');
   document.getElementById('warnings').innerHTML=(d.warnings||[]).map(w=>`<div>⚠️ ${w}</div>`).join('');
   renderSourceCards(d.sourceCards||[]);
-  if (debugEnabled) document.getElementById('debug').textContent=JSON.stringify(d.debug||{},null,2);
+  if (debugEnabled) document.getElementById('debug').textContent=JSON.stringify({isIslamicQuestion:d.isIslamicQuestion,mode:d.mode,modelMode:d.modelMode,modelUsed:d.modelUsed,llmCalled:d.llmCalled,validation:d.validation,loadingStagesCompleted:d.loadingStagesCompleted,debug:d.debug||{}},null,2);
  }catch(e){document.getElementById('status').textContent='Error: backend_unavailable';}
 }
 function card(title,badge,html,cite){
