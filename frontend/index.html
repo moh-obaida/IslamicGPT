@@ -62,6 +62,7 @@
     .top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
     .mini-select { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 10px; padding: 7px 10px; }
     .status-pill { border: 1px solid rgba(242,127,117,.35); background: var(--dangerSoft); color: var(--danger); border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+    .status-pill.online { border-color: rgba(24,201,181,.35); background: var(--accentSoft); color: var(--accent); }
 
     .banner { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 12px; border-bottom: 1px solid rgba(242,127,117,.25); background: var(--dangerSoft); }
     .banner button { border: 0; background: none; color: var(--accent); cursor: pointer; }
@@ -75,6 +76,9 @@
     .ex { cursor: pointer; }
 
     #messages, .sources, .status { width: min(820px, 100%); }
+    .status { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+    .status .chip { border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px; padding: 4px 9px; font-size: 11px; }
+    .status .chip.error { border-color: rgba(242,127,117,.35); background: var(--dangerSoft); color: var(--danger); }
     .msg { display: flex; margin: 10px 0; }
     .msg.user { justify-content: flex-end; }
     .bubble { border: 1px solid var(--border); background: var(--card); border-radius: 14px; padding: 11px 13px; white-space: pre-wrap; }
@@ -83,6 +87,9 @@
     .sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
     .card { border: 1px solid var(--border); background: var(--card); border-radius: 12px; padding: 11px; }
     .card .type { font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+    .card .row { font-size: 12px; color: var(--muted); margin: 4px 0; }
+    .card .row b { color: var(--text); }
+    .card .copy { width: 100%; margin-top: 8px; border: 1px solid rgba(24,201,181,.38); background: var(--accentSoft); color: var(--accent); border-radius: 10px; padding: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
     .composer-wrap { padding: 12px 20px 18px; }
     .composer { max-width: 930px; margin: auto; border: 1px solid var(--border); background: var(--panel); border-radius: 16px; padding: 10px; }
@@ -90,6 +97,7 @@
     .composer-bottom { display: flex; align-items: center; }
     .mini { color: var(--muted); font-size: 12px; }
     .send { margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 999px; color: #fff; cursor: pointer; background: linear-gradient(135deg, #030606, var(--accent)); }
+    .disclaimer { max-width: 930px; margin: 8px auto 0; color: var(--muted); font-size: 11px; }
 
     .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.46); }
     .modal.open { display: flex; }
@@ -103,6 +111,7 @@
     .field { width: 100%; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px; padding: 8px 10px; }
     .field:focus, .mini-select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accentSoft); }
     .note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
     .manager-panel { width: min(1080px, 96vw); }
     .manager-grid { display: grid; gap: 14px; grid-template-columns: minmax(320px, 380px) 1fr; align-items: start; }
     .manager-grid .section { margin-bottom: 0; }
@@ -129,8 +138,14 @@
     .source-actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .source-actions .icon-btn { padding: 6px 10px; font-size: 12px; }
     .empty-sources { color: var(--muted); font-size: 13px; border: 1px dashed var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+    .toolbar-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+    pre.console { white-space: pre-wrap; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; max-height: 180px; overflow: auto; font-size: 12px; color: var(--muted); }
+    .chips-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .chips-row .icon-btn { font-size: 12px; }
     @media (max-width: 980px) {
       .manager-grid { grid-template-columns: 1fr; }
+      .toolbar-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -146,7 +161,8 @@
     </div>
     <div class="sb-bottom">
       <button class="nav-item active">Chat</button>
-      <button class="nav-item" onclick="openSourceManager()">Sources</button>
+      <button class="nav-item" onclick="openPublicSources()">Sources</button>
+      <button class="nav-item" onclick="openSourceManager()">Admin</button>
       <button class="nav-item" onclick="openSettings()">Settings</button>
       <button class="nav-item" onclick="checkServer()">AI Server Check</button>
     </div>
@@ -164,7 +180,7 @@
         <button class="icon-btn" onclick="openSettings()">Settings</button>
       </div>
     </header>
-    <div class="banner"><span>AI server offline — the rest of the app works.</span><button onclick="checkServer()">Reconnect</button></div>
+    <div class="banner" id="offlineBanner"><span>AI server offline — the rest of the app works.</span><button onclick="checkServer()">Reconnect</button></div>
     <section class="workspace">
       <div class="welcome" id="welcome">
         <div class="logo" style="margin:0 auto;">IG</div>
@@ -179,6 +195,7 @@
     </section>
     <section class="composer-wrap">
       <div class="composer"><textarea id="q" placeholder="Ask IslamicGPT to search approved Islamic sources..."></textarea><div class="composer-bottom"><div class="mini"><span id="modeLabel">Islamic Search Mode</span> · Approved sources first</div><button class="send" onclick="sendMsg()">→</button></div></div>
+      <div class="disclaimer">IslamicGPT is an AI assistant and may make mistakes. Always check the cited sources. For personal rulings, consult a qualified scholar.</div>
     </section>
   </main>
 </div>
@@ -188,8 +205,27 @@
     <div class="panel-head"><h3 style="margin:0;">Settings</h3><button class="icon-btn" onclick="closeSettings()">Close</button></div>
     <div class="section"><h4>Appearance</h4><div class="seg"><button id="themeDark" onclick="setTheme('dark')">Dark mode</button><button id="themeLight" onclick="setTheme('light')">Light mode</button></div></div>
     <div class="section"><h4>Islamic Defaults</h4><label class="note">Islamic Mode</label><select id="settingsMode" class="field" style="margin:4px 0 8px;"></select><label class="note">Answer Depth</label><select id="settingsDepth" class="field"><option value="auto">Auto</option><option value="fast">Fast</option><option value="strong">Strong</option></select></div>
-    <div class="section"><h4>Backend</h4><input id="apiUrl" class="field" /><button class="save-btn" style="margin-top:8px;" onclick="saveApiUrl()">Save</button><div id="currentApi" class="note" style="margin-top:8px;"></div></div>
+    <div class="section"><h4>Backend</h4><div id="currentApi" class="note"></div><div class="note" style="margin-top:6px;">The IslamicGPT backend URL is embedded securely and cannot be changed from the UI.</div></div>
     <div class="section"><h4>Trust and Safety</h4><div class="note">Approved sources only<br>No source, no answer<br>Open web disabled for Islamic answers<br>For personal rulings, consult a qualified scholar</div></div>
+  </div>
+</div>
+
+<div class="modal" id="publicSourcesModal">
+  <div class="panel manager-panel">
+    <div class="panel-head">
+      <h3 style="margin:0;">Approved Sources</h3>
+      <button class="icon-btn" onclick="closePublicSources()">Close</button>
+    </div>
+    <div class="section">
+      <div class="note" style="margin-bottom:8px;">Read-only catalog of approved indexed sources. This view never calls the model.</div>
+      <div class="toolbar-row">
+        <div class="field-wrap"><label>Search</label><input id="publicSourceSearch" class="field" placeholder="Search approved sources..." /></div>
+        <div class="field-wrap"><label>Type</label><select id="publicSourceType" class="field"><option value="all">All</option><option value="quran">Quran</option><option value="hadith">Hadith</option><option value="tafsir">Tafsir</option><option value="scholars">Scholars</option><option value="fatwas">Fatwas</option><option value="documents">Documents</option></select></div>
+        <button class="save-btn primary" type="button" onclick="loadPublicSources()">Search</button>
+      </div>
+      <div class="note" id="publicSourceSummary" style="margin-bottom:8px;">Open to load approved sources.</div>
+      <div class="card-grid" id="publicSourceCards"></div>
+    </div>
   </div>
 </div>
 
@@ -199,84 +235,110 @@
       <h3 style="margin:0;">Admin Source Manager</h3>
       <button class="icon-btn" onclick="closeSourceManager()">Close</button>
     </div>
-    <div class="manager-grid">
-      <div class="section">
-        <div class="section-title"><h4 id="sourceFormTitle">Add Source</h4></div>
-        <form id="sourceForm" onsubmit="saveSource(event)">
-          <div class="field-wrap">
-            <label for="source_type">Source Type</label>
-            <select id="source_type" class="field" onchange="onSourceTypeChange()"></select>
-            <div id="sourceTypeHelper" class="helper"></div>
-          </div>
-          <div class="fields-grid" id="sourceFields">
-            <div class="field-wrap" data-field="id"><label for="id">id</label><input id="id" class="field" /></div>
-            <div class="field-wrap" data-field="title"><label for="title">title</label><input id="title" class="field" /></div>
-            <div class="field-wrap" data-field="source_title"><label for="source_title">source_title</label><input id="source_title" class="field" /></div>
-            <div class="field-wrap" data-field="surah_name_en"><label for="surah_name_en">surah_name_en</label><input id="surah_name_en" class="field" /></div>
-            <div class="field-wrap" data-field="surah_name_ar"><label for="surah_name_ar">surah_name_ar</label><input id="surah_name_ar" class="field" /></div>
-            <div class="field-wrap" data-field="surah_number"><label for="surah_number">surah_number</label><input id="surah_number" type="number" class="field" /></div>
-            <div class="field-wrap" data-field="ayah_number"><label for="ayah_number">ayah_number</label><input id="ayah_number" type="number" class="field" /></div>
-            <div class="field-wrap" data-field="ayah_range"><label for="ayah_range">ayah_range</label><input id="ayah_range" class="field" placeholder="e.g. 1-7" /></div>
-            <div class="field-wrap" data-field="collection_name"><label for="collection_name">collection_name</label><input id="collection_name" class="field" /></div>
-            <div class="field-wrap" data-field="book_name"><label for="book_name">book_name</label><input id="book_name" class="field" /></div>
-            <div class="field-wrap" data-field="chapter_name"><label for="chapter_name">chapter_name</label><input id="chapter_name" class="field" /></div>
-            <div class="field-wrap" data-field="hadith_number"><label for="hadith_number">hadith_number</label><input id="hadith_number" class="field" /></div>
-            <div class="field-wrap" data-field="hadith_number_unavailable">
-              <label for="hadith_number_unavailable">hadith_number_unavailable</label>
-              <select id="hadith_number_unavailable" class="field"><option value="false">false</option><option value="true">true</option></select>
-            </div>
-            <div class="field-wrap" data-field="grade"><label for="grade">grade</label><input id="grade" class="field" /></div>
-            <div class="field-wrap" data-field="narrator_if_available"><label for="narrator_if_available">narrator_if_available</label><input id="narrator_if_available" class="field" /></div>
-            <div class="field-wrap" data-field="scholar_name"><label for="scholar_name">scholar_name</label><input id="scholar_name" class="field" /></div>
-            <div class="field-wrap" data-field="reference_number"><label for="reference_number">reference_number</label><input id="reference_number" class="field" /></div>
-            <div class="field-wrap" data-field="fatwa_number"><label for="fatwa_number">fatwa_number</label><input id="fatwa_number" class="field" /></div>
-            <div class="field-wrap" data-field="page_number"><label for="page_number">page_number</label><input id="page_number" class="field" /></div>
-            <div class="field-wrap" data-field="timestamp"><label for="timestamp">timestamp</label><input id="timestamp" class="field" placeholder="e.g. 12:40" /></div>
-            <div class="field-wrap" data-field="url"><label for="url">url</label><input id="url" class="field" placeholder="https://..." /></div>
-            <div class="field-wrap" data-field="local_reference"><label for="local_reference">local_reference</label><input id="local_reference" class="field" /></div>
-            <div class="field-wrap" data-field="document_title"><label for="document_title">document_title</label><input id="document_title" class="field" /></div>
-            <div class="field-wrap" data-field="file_name"><label for="file_name">file_name</label><input id="file_name" class="field" /></div>
-            <div class="field-wrap" data-field="section_title"><label for="section_title">section_title</label><input id="section_title" class="field" /></div>
-            <div class="field-wrap" data-field="upload_status">
-              <label for="upload_status">upload_status</label>
-              <select id="upload_status" class="field"><option value="pending_review">pending_review</option><option value="approved">approved</option><option value="rejected">rejected</option></select>
-            </div>
-            <div class="field-wrap" data-field="approved_by_admin"><label for="approved_by_admin">approved_by_admin</label><input id="approved_by_admin" class="field" /></div>
-            <div class="field-wrap wide" data-field="arabic_text"><label for="arabic_text">arabic_text</label><textarea id="arabic_text" class="field" rows="2"></textarea></div>
-            <div class="field-wrap wide" data-field="translation_text"><label for="translation_text">translation_text</label><textarea id="translation_text" class="field" rows="2"></textarea></div>
-            <div class="field-wrap wide" data-field="summary"><label for="summary">summary</label><textarea id="summary" class="field" rows="2"></textarea></div>
-            <div class="field-wrap wide" data-field="keywords"><label for="keywords">keywords (comma separated)</label><input id="keywords" class="field" /></div>
-            <div class="field-wrap" data-field="verified_by_admin">
-              <label for="verified_by_admin">verified_by_admin</label>
-              <select id="verified_by_admin" class="field"><option value="true">true</option><option value="false">false</option></select>
-            </div>
-            <div class="field-wrap" data-field="approved_for_answers">
-              <label for="approved_for_answers">approved_for_answers</label>
-              <select id="approved_for_answers" class="field"><option value="true">true</option><option value="false">false</option></select>
-            </div>
-            <div class="field-wrap" data-field="disabled">
-              <label for="disabled">disabled</label>
-              <select id="disabled" class="field"><option value="false">false</option><option value="true">true</option></select>
-            </div>
-          </div>
-          <div class="actions-row">
-            <button type="submit" class="save-btn primary" id="sourceSubmitBtn">Add Source</button>
-            <button type="button" class="save-btn warn" id="cancelEditBtn" onclick="cancelSourceEditing()" style="display:none;">Cancel Editing</button>
-          </div>
-          <div class="note" style="margin-top:10px;">Validation and API payload format are preserved for required references and approval flags.</div>
-        </form>
+    <div id="adminLoginSection" class="section">
+      <div class="section-title"><h4>Owner Login</h4></div>
+      <div class="fields-grid">
+        <div class="field-wrap"><label for="adminEmail">Email</label><input id="adminEmail" class="field" type="email" autocomplete="username" /></div>
+        <div class="field-wrap"><label for="adminPassword">Password</label><input id="adminPassword" class="field" type="password" autocomplete="current-password" /></div>
       </div>
-      <div class="section">
-        <div class="section-title"><h4>Sources</h4><span class="note" id="sourceCountLabel">0 records</span></div>
-        <div id="sourceList" class="source-list"></div>
+      <div class="actions-row">
+        <button class="save-btn primary" type="button" onclick="adminLogin()">Login</button>
+      </div>
+      <div class="helper" id="adminLoginStatus"></div>
+    </div>
+    <div id="adminManagerBody" style="display:none;">
+      <div class="chips-row">
+        <button class="icon-btn" type="button" onclick="loadAdminSources()">Refresh sources</button>
+        <button class="icon-btn" type="button" onclick="adminReindex()">Rebuild index</button>
+        <button class="icon-btn" type="button" onclick="loadAdminWarnings()">View warnings</button>
+        <button class="icon-btn" type="button" onclick="adminLogout()">Logout</button>
+      </div>
+      <div class="manager-grid">
+        <div class="section">
+          <div class="section-title"><h4 id="sourceFormTitle">Add Source</h4></div>
+          <form id="sourceForm" onsubmit="saveSource(event)">
+            <div class="field-wrap">
+              <label for="source_type">Source Type</label>
+              <select id="source_type" class="field" onchange="onSourceTypeChange()"></select>
+              <div id="sourceTypeHelper" class="helper"></div>
+            </div>
+            <div class="fields-grid" id="sourceFields">
+              <div class="field-wrap" data-field="id"><label for="id">id</label><input id="id" class="field" /></div>
+              <div class="field-wrap" data-field="title"><label for="title">title</label><input id="title" class="field" /></div>
+              <div class="field-wrap" data-field="source_title"><label for="source_title">source_title</label><input id="source_title" class="field" /></div>
+              <div class="field-wrap" data-field="surah_name_en"><label for="surah_name_en">surah_name_en</label><input id="surah_name_en" class="field" /></div>
+              <div class="field-wrap" data-field="surah_name_ar"><label for="surah_name_ar">surah_name_ar</label><input id="surah_name_ar" class="field" /></div>
+              <div class="field-wrap" data-field="surah_number"><label for="surah_number">surah_number</label><input id="surah_number" type="number" class="field" /></div>
+              <div class="field-wrap" data-field="ayah_number"><label for="ayah_number">ayah_number</label><input id="ayah_number" type="number" class="field" /></div>
+              <div class="field-wrap" data-field="ayah_range"><label for="ayah_range">ayah_range</label><input id="ayah_range" class="field" placeholder="e.g. 1-7" /></div>
+              <div class="field-wrap" data-field="collection_name"><label for="collection_name">collection_name</label><input id="collection_name" class="field" /></div>
+              <div class="field-wrap" data-field="book_name"><label for="book_name">book_name</label><input id="book_name" class="field" /></div>
+              <div class="field-wrap" data-field="chapter_name"><label for="chapter_name">chapter_name</label><input id="chapter_name" class="field" /></div>
+              <div class="field-wrap" data-field="hadith_number"><label for="hadith_number">hadith_number</label><input id="hadith_number" class="field" /></div>
+              <div class="field-wrap" data-field="hadith_number_unavailable">
+                <label for="hadith_number_unavailable">hadith_number_unavailable</label>
+                <select id="hadith_number_unavailable" class="field"><option value="false">false</option><option value="true">true</option></select>
+              </div>
+              <div class="field-wrap" data-field="grade"><label for="grade">grade</label><input id="grade" class="field" /></div>
+              <div class="field-wrap" data-field="narrator_if_available"><label for="narrator_if_available">narrator_if_available</label><input id="narrator_if_available" class="field" /></div>
+              <div class="field-wrap" data-field="scholar_name"><label for="scholar_name">scholar_name</label><input id="scholar_name" class="field" /></div>
+              <div class="field-wrap" data-field="reference_number"><label for="reference_number">reference_number</label><input id="reference_number" class="field" /></div>
+              <div class="field-wrap" data-field="fatwa_number"><label for="fatwa_number">fatwa_number</label><input id="fatwa_number" class="field" /></div>
+              <div class="field-wrap" data-field="page_number"><label for="page_number">page_number</label><input id="page_number" class="field" /></div>
+              <div class="field-wrap" data-field="timestamp"><label for="timestamp">timestamp</label><input id="timestamp" class="field" placeholder="e.g. 12:40" /></div>
+              <div class="field-wrap" data-field="url"><label for="url">url</label><input id="url" class="field" placeholder="https://..." /></div>
+              <div class="field-wrap" data-field="local_reference"><label for="local_reference">local_reference</label><input id="local_reference" class="field" /></div>
+              <div class="field-wrap" data-field="document_title"><label for="document_title">document_title</label><input id="document_title" class="field" /></div>
+              <div class="field-wrap" data-field="file_name"><label for="file_name">file_name</label><input id="file_name" class="field" /></div>
+              <div class="field-wrap" data-field="section_title"><label for="section_title">section_title</label><input id="section_title" class="field" /></div>
+              <div class="field-wrap" data-field="upload_status">
+                <label for="upload_status">upload_status</label>
+                <select id="upload_status" class="field"><option value="pending_review">pending_review</option><option value="approved">approved</option><option value="rejected">rejected</option></select>
+              </div>
+              <div class="field-wrap" data-field="approved_by_admin"><label for="approved_by_admin">approved_by_admin</label><input id="approved_by_admin" class="field" /></div>
+              <div class="field-wrap wide" data-field="arabic_text"><label for="arabic_text">arabic_text</label><textarea id="arabic_text" class="field" rows="2"></textarea></div>
+              <div class="field-wrap wide" data-field="translation_text"><label for="translation_text">translation_text</label><textarea id="translation_text" class="field" rows="2"></textarea></div>
+              <div class="field-wrap wide" data-field="summary"><label for="summary">summary</label><textarea id="summary" class="field" rows="2"></textarea></div>
+              <div class="field-wrap wide" data-field="keywords"><label for="keywords">keywords (comma separated)</label><input id="keywords" class="field" /></div>
+              <div class="field-wrap" data-field="verified_by_admin">
+                <label for="verified_by_admin">verified_by_admin</label>
+                <select id="verified_by_admin" class="field"><option value="true">true</option><option value="false">false</option></select>
+              </div>
+              <div class="field-wrap" data-field="approved_for_answers">
+                <label for="approved_for_answers">approved_for_answers</label>
+                <select id="approved_for_answers" class="field"><option value="true">true</option><option value="false">false</option></select>
+              </div>
+              <div class="field-wrap" data-field="disabled">
+                <label for="disabled">disabled</label>
+                <select id="disabled" class="field"><option value="false">false</option><option value="true">true</option></select>
+              </div>
+            </div>
+            <div class="actions-row">
+              <button type="submit" class="save-btn primary" id="sourceSubmitBtn">Add Source</button>
+              <button type="button" class="save-btn warn" id="cancelEditBtn" onclick="cancelSourceEditing()" style="display:none;">Cancel Editing</button>
+            </div>
+            <div class="helper" id="sourceFormStatus"></div>
+            <div class="note" style="margin-top:10px;">Validation and approval flags are enforced server-side. New records are unapproved by default.</div>
+          </form>
+          <div class="section" style="margin-top:12px;">
+            <div class="section-title"><h4>Tools</h4></div>
+            <div class="field-wrap"><label for="adminSearchTest">Search-test (model not called)</label><input id="adminSearchTest" class="field" placeholder="Search approved index without model" /></div>
+            <div class="actions-row"><button class="save-btn" type="button" onclick="adminSearchTest()">Run search-test</button></div>
+            <pre id="adminOutput" class="console">Ready.</pre>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title"><h4>Sources</h4><span class="note" id="sourceCountLabel">0 records</span></div>
+          <div id="sourceList" class="source-list"></div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-const DEFAULT_API='http://localhost:3001';
-const SOURCE_STORAGE_KEY='ISLAMICGPT_ADMIN_SOURCES';
+const DEFAULT_API='https://api.34.174.226.95.sslip.io';
+const ADMIN_TOKEN_KEY='ISLAMICGPT_ADMIN_TOKEN';
 const modes=[['islamic_search_mode','Search'],['quran_mode','Quran'],['hadith_mode','Hadith'],['tafsir_mode','Tafsir'],['fiqh_mode','Fiqh'],['aqidah_mode','Aqidah'],['arabic_mode','Arabic'],['student_explanation_mode','Student']];
 const sourceTypes=[
   'quran','quran_translation','tafsir',
@@ -315,29 +377,32 @@ let selectedMode=localStorage.getItem('ISLAMICGPT_MODE')||'islamic_search_mode';
 let modelMode=localStorage.getItem('ISLAMICGPT_MODEL_MODE')||'auto';
 let currentChatId=null;
 let editingSourceId=null;
+let adminSources=[];
 const chats=safeParse(localStorage.getItem('ISLAMICGPT_CHATS'),'[]');
 const messagesByChat=safeParse(localStorage.getItem('ISLAMICGPT_CHAT_MESSAGES'),'{}');
-let adminSources=safeParse(localStorage.getItem(SOURCE_STORAGE_KEY),'[]');
-const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const getApi=()=> (localStorage.getItem('ISLAMICGPT_API_URL')||DEFAULT_API).replace(/\/$/, '');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const getApi=()=> DEFAULT_API.replace(/\/$/, '');
+const adminToken=()=> sessionStorage.getItem(ADMIN_TOKEN_KEY)||'';
+const adminHeaders=(extra={})=>({...extra, Authorization:`Bearer ${adminToken()}`});
+const jsonHeaders=(extra={})=>({'Content-Type':'application/json',...extra});
 
 function safeParse(raw,fallback){
-  try{
-    return JSON.parse(raw||fallback);
-  }catch{
-    return JSON.parse(fallback);
-  }
+  try{ return JSON.parse(raw||fallback); }catch{ return JSON.parse(fallback); }
+}
+
+async function parseJson(response){
+  try{ return await response.json(); }catch{ return { error:'Invalid backend response' }; }
 }
 
 function init(){
   applyTheme(localStorage.getItem('ISLAMICGPT_THEME')||'dark');
-  document.getElementById('apiUrl').value=getApi();
-  document.getElementById('currentApi').textContent='Current: '+getApi();
+  document.getElementById('currentApi').textContent='Backend: '+getApi();
   renderModeSelects();
   renderHistory();
   initResize();
   syncDepth();
   initSourceManager();
+  initPublicSources();
   checkServer();
 }
 
@@ -403,6 +468,7 @@ function newChat(){
   messagesByChat[currentChatId]=[];
   document.getElementById('messages').innerHTML='';
   document.getElementById('sources').innerHTML='';
+  document.getElementById('status').innerHTML='';
   document.getElementById('welcome').style.display='block';
 }
 
@@ -411,6 +477,7 @@ function selectChat(id){
   document.getElementById('welcome').style.display='none';
   document.getElementById('messages').innerHTML='';
   document.getElementById('sources').innerHTML='';
+  document.getElementById('status').innerHTML='';
   (messagesByChat[id]||[]).forEach(m=>addMessage(m.role,m.text,false));
 }
 
@@ -434,18 +501,49 @@ function addMessage(role,text,save=true){
   d.innerHTML=`<div class='bubble'>${esc(text)}</div>`;
   document.getElementById('messages').appendChild(d);
   if(save&&currentChatId){
-    messagesByChat[currentChatId].push({role,text});
+    (messagesByChat[currentChatId]=messagesByChat[currentChatId]||[]).push({role,text});
     persist();
   }
+}
+
+function renderStatus(stages=[], error=null){
+  const el=document.getElementById('status');
+  el.innerHTML='';
+  stages.forEach(stage=>{
+    const chip=document.createElement('span');
+    chip.className='chip';
+    chip.textContent=String(stage).replace(/_/g,' ');
+    el.appendChild(chip);
+  });
+  if(error){
+    const chip=document.createElement('span');
+    chip.className='chip error';
+    chip.textContent='Error: '+String(error).replace(/_/g,' ');
+    el.appendChild(chip);
+  }
+}
+
+function rowHtml(label,value){
+  return value||value===0?`<div class='row'><b>${esc(label)}:</b> ${esc(value)}</div>`:'';
+}
+
+function attachCopy(button,text){
+  button.addEventListener('click', async ()=>{
+    try{ await navigator.clipboard.writeText(text||''); button.textContent='Copied'; }
+    catch{ button.textContent='Copy failed'; }
+    setTimeout(()=>{ button.textContent='Copy citation'; }, 1400);
+  });
 }
 
 function renderSourceCards(cards){
   const el=document.getElementById('sources');
   el.innerHTML='';
-  cards.forEach(c=>{
+  (cards||[]).forEach(c=>{
     const d=document.createElement('div');
     d.className='card';
-    d.innerHTML=`<div class='type'>${esc(c.badge||'Source')}</div><strong>${esc(c.type||'Source')}</strong><div>${esc(c.copyCitation||c.reference||'')}</div>`;
+    const ref=c.copyCitation||c.reference||c.surahName||c.collection||c.documentTitle||'';
+    d.innerHTML=`<div class='type'>${esc(c.badge||'Source')}</div><strong>${esc(c.type||'Source')}</strong>${rowHtml('Reference',ref)}<button class='copy' type='button'>Copy citation</button>`;
+    attachCopy(d.querySelector('.copy'), c.copyCitation||ref||'');
     el.appendChild(d);
   });
 }
@@ -455,15 +553,19 @@ async function sendMsg(){
   if(!q) return;
   ensureChatTitle(q);
   document.getElementById('welcome').style.display='none';
+  document.getElementById('sources').innerHTML='';
   addMessage('user',q);
   document.getElementById('q').value='';
+  renderStatus(['Classifying question','Searching approved sources','Calling local model']);
   try{
-    const r=await fetch(`${getApi()}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode:selectedMode,modelMode})});
-    const d=await r.json();
+    const r=await fetch(`${getApi()}/api/chat`,{method:'POST',headers:jsonHeaders(),body:JSON.stringify({message:q,mode:selectedMode,modelMode})});
+    const d=await parseJson(r);
     addMessage('assistant', d.answer||'No answer returned.');
+    renderStatus(d.loadingStagesCompleted||[], d.errorState||(!r.ok?'backend_error':null));
     renderSourceCards(d.sourceCards||[]);
   }catch{
-    addMessage('assistant','IslamicGPT could not reach the backend. Check Backend API URL and VM server.');
+    renderStatus([], 'backend_unavailable');
+    addMessage('assistant','IslamicGPT could not reach the backend. Check the VM server status.');
   }
 }
 
@@ -478,16 +580,21 @@ function toggleTheme(){ setTheme(document.body.dataset.theme==='dark'?'light':'d
 function setTheme(t){ applyTheme(t); }
 function openSettings(){ document.getElementById('settingsModal').classList.add('open'); }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
-function saveApiUrl(){ const v=document.getElementById('apiUrl').value.trim().replace(/\/$/, ''); if(v) localStorage.setItem('ISLAMICGPT_API_URL',v); document.getElementById('currentApi').textContent='Current: '+getApi(); }
 function setExample(t){ document.getElementById('q').value=t; document.getElementById('q').focus(); }
 
 async function checkServer(){
+  const pill=document.getElementById('aiPill');
+  const banner=document.getElementById('offlineBanner');
   try{
     const r=await fetch(`${getApi()}/health`);
     const ok=r.ok;
-    document.getElementById('aiPill').textContent=ok?'AI Online':'AI Offline';
+    pill.textContent=ok?'AI Online':'AI Offline';
+    pill.classList.toggle('online', ok);
+    banner.style.display=ok?'none':'flex';
   }catch{
-    document.getElementById('aiPill').textContent='AI Offline';
+    pill.textContent='AI Offline';
+    pill.classList.remove('online');
+    banner.style.display='flex';
   }
 }
 
@@ -506,6 +613,65 @@ function initResize(){
   r.onpointerup=e=>{drag=false;r.classList.remove('drag'); try{r.releasePointerCapture(e.pointerId);}catch{}};
 }
 
+function initPublicSources(){
+  document.getElementById('publicSourcesModal').addEventListener('click',(e)=>{
+    if(e.target.id==='publicSourcesModal') closePublicSources();
+  });
+}
+
+function openPublicSources(){
+  document.getElementById('publicSourcesModal').classList.add('open');
+  loadPublicSources();
+}
+
+function closePublicSources(){
+  document.getElementById('publicSourcesModal').classList.remove('open');
+}
+
+async function loadPublicSources(){
+  const q=document.getElementById('publicSourceSearch').value.trim();
+  const type=document.getElementById('publicSourceType').value;
+  const params=new URLSearchParams();
+  if(q) params.set('q',q);
+  if(type && type!=='all') params.set('type',type);
+  const summary=document.getElementById('publicSourceSummary');
+  summary.textContent='Loading approved sources...';
+  try{
+    const r=await fetch(`${getApi()}/api/sources/search?${params.toString()}`);
+    const d=await parseJson(r);
+    summary.textContent=`${d.total||0} approved source records`;
+    renderPublicSources(d.sources||[]);
+  }catch{
+    summary.textContent='Could not load approved sources.';
+    renderPublicSources([]);
+  }
+}
+
+function renderPublicSources(sources){
+  const el=document.getElementById('publicSourceCards');
+  el.innerHTML='';
+  if(!sources.length){
+    el.innerHTML='<div class="card"><div class="row">No approved sources found.</div></div>';
+    return;
+  }
+  sources.forEach(s=>{
+    const hadithRef=s.collection_name?`${s.collection_name} ${s.hadith_number?`#${s.hadith_number}`:(s.hadith_number_unavailable?'#N/A':'')}`:'';
+    const quranRef=s.surah_number?`${s.surah_name_en||s.surah_name_ar||''} ${s.surah_number}:${s.ayah_number||s.ayah_range||''}`:'';
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<div class='type'>${esc(s.source_type||'source')}</div><strong>${esc(s.title||s.id||'')}</strong>`+
+      rowHtml('Quran',quranRef)+
+      rowHtml('Hadith',hadithRef)+
+      rowHtml('Scholar',s.scholar_name)+
+      rowHtml('Reference',s.exact_reference||s.copyCitation)+
+      rowHtml('Grade',s.grade)+
+      rowHtml('Status',s.approved_status)+
+      `<button class='copy' type='button'>Copy citation</button>`;
+    attachCopy(card.querySelector('.copy'), s.copyCitation||s.exact_reference||'');
+    el.appendChild(card);
+  });
+}
+
 function initSourceManager(){
   const typeSelect=document.getElementById('source_type');
   typeSelect.innerHTML='';
@@ -522,6 +688,7 @@ function initSourceManager(){
   document.getElementById('sourceManagerModal').addEventListener('click',(e)=>{
     if(e.target.id==='sourceManagerModal') closeSourceManager();
   });
+  renderAdminGate();
 }
 
 function getSourceGroup(sourceType){
@@ -542,12 +709,58 @@ function onSourceTypeChange(){
 }
 
 function openSourceManager(){
-  renderSourceList();
   document.getElementById('sourceManagerModal').classList.add('open');
+  renderAdminGate();
+  if(adminToken()) loadAdminSources();
 }
 
 function closeSourceManager(){
   document.getElementById('sourceManagerModal').classList.remove('open');
+}
+
+function renderAdminGate(){
+  const loggedIn=!!adminToken();
+  document.getElementById('adminLoginSection').style.display=loggedIn?'none':'block';
+  document.getElementById('adminManagerBody').style.display=loggedIn?'block':'none';
+}
+
+async function adminLogin(){
+  const email=document.getElementById('adminEmail').value;
+  const password=document.getElementById('adminPassword').value;
+  const status=document.getElementById('adminLoginStatus');
+  status.textContent='Logging in...';
+  try{
+    const r=await fetch(`${getApi()}/api/admin/login`,{method:'POST',headers:jsonHeaders(),body:JSON.stringify({email,password})});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error(d.error||'Login failed');
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, d.token);
+    status.textContent='';
+    document.getElementById('adminPassword').value='';
+    renderAdminGate();
+    loadAdminSources();
+  }catch(e){
+    status.textContent=e.message||'Login failed';
+  }
+}
+
+function adminLogout(){
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  adminSources=[];
+  renderSourceList();
+  renderAdminGate();
+}
+
+async function loadAdminSources(){
+  if(!adminToken()) return;
+  try{
+    const r=await fetch(`${getApi()}/api/admin/sources`,{headers:adminHeaders()});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error(d.error||'Could not load sources');
+    adminSources=d.sources||[];
+    renderSourceList();
+  }catch(e){
+    document.getElementById('adminOutput').textContent=e.message||'Failed to load sources';
+  }
 }
 
 function resetSourceForm(sourceType='quran'){
@@ -559,6 +772,7 @@ function resetSourceForm(sourceType='quran'){
   document.getElementById('disabled').value='false';
   document.getElementById('upload_status').value='pending_review';
   onSourceTypeChange();
+  document.getElementById('sourceFormStatus').textContent='';
 }
 
 function setEditMode(isEditing){
@@ -628,35 +842,34 @@ function validateSource(source){
   return errors;
 }
 
-function saveAdminSources(){
-  localStorage.setItem(SOURCE_STORAGE_KEY,JSON.stringify(adminSources));
-}
-
-function saveSource(event){
+async function saveSource(event){
   event.preventDefault();
+  if(!adminToken()){
+    document.getElementById('sourceFormStatus').textContent='Login required to save sources.';
+    return;
+  }
   const source=createSourceFromForm();
   const errors=validateSource(source);
-  if(editingSourceId!==source.id && adminSources.some(s=>s.id===source.id)){
-    errors.push('A source with this id already exists.');
-  }
   if(errors.length){
-    window.alert(errors.join('\n'));
+    document.getElementById('sourceFormStatus').textContent=errors.join('\n');
     return;
   }
 
-  if(editingSourceId){
-    const index=adminSources.findIndex((s)=>s.id===editingSourceId);
-    if(index>=0){
-      adminSources[index]={...adminSources[index],...source};
-    }else{
-      adminSources.unshift(source);
-    }
-  }else{
-    adminSources.unshift(source);
+  const isUpdating=Boolean(editingSourceId);
+  const path=isUpdating?`/api/admin/sources/${encodeURIComponent(editingSourceId)}`:'/api/admin/sources';
+  const method=isUpdating?'PUT':'POST';
+  document.getElementById('sourceFormStatus').textContent='Saving...';
+  try{
+    const r=await fetch(`${getApi()}${path}`,{method,headers:adminHeaders(jsonHeaders()),body:JSON.stringify(source)});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error((d.errors||[d.error||'Save failed']).join('; '));
+    document.getElementById('sourceFormStatus').textContent='';
+    document.getElementById('adminOutput').textContent='Source saved. Rebuild the index after approving records.';
+    cancelSourceEditing();
+    loadAdminSources();
+  }catch(e){
+    document.getElementById('sourceFormStatus').textContent=e.message||'Save failed';
   }
-  saveAdminSources();
-  renderSourceList();
-  cancelSourceEditing();
 }
 
 function renderSourceList(){
@@ -669,6 +882,7 @@ function renderSourceList(){
   list.innerHTML=adminSources.map((source)=>{
     const title=source.title||source.source_title||source.document_title||source.collection_name||source.scholar_name||'Untitled source';
     const summary=source.summary||source.local_reference||source.url||'No summary';
+    const managed=source.admin_managed!==false;
     return `
       <article class="source-item">
         <div class="source-item-head">
@@ -682,13 +896,14 @@ function renderSourceList(){
           <span class="status-chip ${source.approved_for_answers?'ok':''}">approved_for_answers: ${source.approved_for_answers===true?'true':'false'}</span>
           <span class="status-chip ${source.verified_by_admin?'ok':''}">verified_by_admin: ${source.verified_by_admin===true?'true':'false'}</span>
           <span class="status-chip ${source.disabled?'':'ok'}">disabled: ${source.disabled===true?'true':'false'}</span>
+          <span class="status-chip">${managed?'admin managed':'seed read-only'}</span>
         </div>
         <div class="source-meta">${esc(summary)}</div>
         <div class="source-actions">
-          <button class="icon-btn" type="button" data-action="edit" data-id="${esc(source.id)}">Edit</button>
-          <button class="icon-btn" type="button" data-action="delete" data-id="${esc(source.id)}">Delete</button>
-          <button class="icon-btn" type="button" data-action="toggle-approve" data-id="${esc(source.id)}">${source.approved_for_answers?'Unapprove':'Approve'}</button>
-          <button class="icon-btn" type="button" data-action="toggle-verify" data-id="${esc(source.id)}">${source.verified_by_admin?'Unverify':'Verify'}</button>
+          ${managed?`
+            <button class="icon-btn" type="button" data-action="edit" data-id="${esc(source.id)}">Edit</button>
+            <button class="icon-btn" type="button" data-action="delete" data-id="${esc(source.id)}">Delete</button>
+          `:'<span class="note">Seed record is read-only here.</span>'}
         </div>
       </article>
     `;
@@ -702,8 +917,6 @@ function onSourceActionClick(event){
   const action=btn.dataset.action;
   if(action==='edit') startSourceEditing(sourceId);
   if(action==='delete') deleteSource(sourceId);
-  if(action==='toggle-approve') toggleSourceFlag(sourceId,'approved_for_answers');
-  if(action==='toggle-verify') toggleSourceFlag(sourceId,'verified_by_admin');
 }
 
 function startSourceEditing(sourceId){
@@ -724,28 +937,57 @@ function startSourceEditing(sourceId){
       el.value=Array.isArray(value)?value.join(', '):(value||'');
       return;
     }
-    el.value=value===undefined?'':String(value);
+    el.value=value===undefined||value===null?'':String(value);
   });
   document.getElementById('id').focus();
 }
 
-function deleteSource(sourceId){
+async function deleteSource(sourceId){
   if(!window.confirm(`Delete source "${sourceId}"?`)) return;
-  adminSources=adminSources.filter((source)=>source.id!==sourceId);
-  saveAdminSources();
-  if(editingSourceId===sourceId){
-    cancelSourceEditing();
+  try{
+    const r=await fetch(`${getApi()}/api/admin/sources/${encodeURIComponent(sourceId)}`,{method:'DELETE',headers:adminHeaders()});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error((d.errors||[d.error||'Delete failed']).join('; '));
+    if(editingSourceId===sourceId) cancelSourceEditing();
+    document.getElementById('adminOutput').textContent='Source deleted.';
+    loadAdminSources();
+  }catch(e){
+    document.getElementById('adminOutput').textContent=e.message||'Delete failed';
   }
-  renderSourceList();
 }
 
-function toggleSourceFlag(sourceId,flag){
-  adminSources=adminSources.map((source)=>{
-    if(source.id!==sourceId) return source;
-    return { ...source, [flag]: source[flag]!==true };
-  });
-  saveAdminSources();
-  renderSourceList();
+async function adminReindex(){
+  try{
+    const r=await fetch(`${getApi()}/api/admin/sources/reindex`,{method:'POST',headers:adminHeaders()});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error(d.error||'Reindex failed');
+    document.getElementById('adminOutput').textContent=JSON.stringify(d,null,2);
+  }catch(e){
+    document.getElementById('adminOutput').textContent=e.message||'Reindex failed';
+  }
+}
+
+async function adminSearchTest(){
+  try{
+    const q=document.getElementById('adminSearchTest').value;
+    const r=await fetch(`${getApi()}/api/admin/sources/search-test`,{method:'POST',headers:adminHeaders(jsonHeaders()),body:JSON.stringify({q,mode:'islamic_search_mode'})});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error(d.error||'Search-test failed');
+    document.getElementById('adminOutput').textContent=JSON.stringify({llmCalled:d.llmCalled,matches:(d.matches||[]).map(s=>({id:s.id,type:s.source_type,title:s.title||s.source_title||s.collection_name}))},null,2);
+  }catch(e){
+    document.getElementById('adminOutput').textContent=e.message||'Search-test failed';
+  }
+}
+
+async function loadAdminWarnings(){
+  try{
+    const r=await fetch(`${getApi()}/api/admin/sources/warnings`,{headers:adminHeaders()});
+    const d=await parseJson(r);
+    if(!r.ok) throw new Error(d.error||'Warnings failed');
+    document.getElementById('adminOutput').textContent=JSON.stringify(d.warnings||[],null,2);
+  }catch(e){
+    document.getElementById('adminOutput').textContent=e.message||'Warnings failed';
+  }
 }
 
 init();

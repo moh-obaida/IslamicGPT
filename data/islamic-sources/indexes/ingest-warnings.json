@@ -1,0 +1,7 @@
+[
+  "quran-meta-test-1: test record excluded from compiled index because ALLOW_TEST_SOURCES=false",
+  "hadith-meta-test-1: test record excluded from compiled index because ALLOW_TEST_SOURCES=false",
+  "upload-approved-test-1: test record excluded from compiled index because ALLOW_TEST_SOURCES=false",
+  "upload-sample-1: Uploaded document missing approved_by_admin",
+  "upload-sample-1: test record excluded from compiled index because ALLOW_TEST_SOURCES=false"
+]

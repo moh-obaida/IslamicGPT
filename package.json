@@ -5,6 +5,8 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
-    "ingest": "node scripts/ingest-islamic-sources.js"
+    "ingest": "node scripts/ingest-islamic-sources.js",
+    "test": "node --test",
+    "check": "node --check backend/server.js && node --check scripts/ingest-islamic-sources.js"
   }
 }
