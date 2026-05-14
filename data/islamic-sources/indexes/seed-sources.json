@@ -13,7 +13,8 @@
     "surah_name_en": "Al-Fatihah",
     "surah_number": 1,
     "ayah_number": 1,
-    "local_reference": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    "local_reference": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "is_test_record": true
   },
   {
     "id": "hadith-sample-1",
@@ -29,6 +30,7 @@
     "hadith_number": "1",
     "hadith_numbering_source": "approved database sample",
     "grade": "Sahih",
-    "local_reference": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    "local_reference": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "is_test_record": true
   }
 ]

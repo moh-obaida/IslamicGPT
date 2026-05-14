@@ -12,6 +12,7 @@
     "approved_by_admin": "test-admin",
     "file_name": "approved-testing.pdf",
     "upload_status": "approved",
-    "document_title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    "document_title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "is_test_record": true
   }
 ]

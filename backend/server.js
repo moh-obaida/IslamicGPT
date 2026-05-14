@@ -1,19 +1,203 @@
-const http=require('http');const fs=require('fs');const path=require('path');
-const REFUSAL_MESSAGE='I could not find enough reliable evidence in the approved sources.';const DEBUG_SOURCES=String(process.env.VITE_DEBUG_SOURCES||'false').toLowerCase()==='true';const OLLAMA_BASE_URL=process.env.OLLAMA_BASE_URL||'http://localhost:11434';
-const normalizeArabic=s=>(s||'').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim();const normalizeEnglish=s=>(s||'').toLowerCase().replace(/\s+/g,' ').trim();const normalizeText=s=>`${normalizeArabic(String(s))} ${normalizeEnglish(String(s))}`.trim();
-const detectLanguage=m=>/[\u0600-\u06FF]/.test(m||'')?'arabic':(/[a-zA-Z]/.test(m||'')?'english':'auto');
-const classifyIslamicQuestion=q=>/(allah|quran|hadith|sunnah|fiqh|fatwa|tafsir|islam|prophet|dua|aqidah|zakat|salah|ramadan|umrah|hajj|bukhari|muslim|تفسير|حديث|القران|القرآن|فقه|فتوى)/i.test(q||'');
-const fatwaRisk=q=>/(divorce|marriage dispute|inheritance|contract|medical|oath|takfir|apostasy|legal|custody)/i.test(q||'');
-function resolveModelMode({requestedModelMode,islamicMode,message,sourceCount,fatwaRisk}){const requested=requestedModelMode||process.env.DEFAULT_MODEL_MODE||'auto';const norm=({deep:'strong',balanced:'auto'}[requested]||requested);const fast=process.env.OLLAMA_FAST_MODEL||'llama3.1:8b';const strong=process.env.OLLAMA_STRONG_MODEL||'qwen2.5:14b';if(norm==='fast')return{requestedModelMode:requested,resolvedModelMode:'fast',model:fast,reason:'User selected fast mode.'};if(norm==='strong')return{requestedModelMode:requested,resolvedModelMode:'strong',model:strong,reason:'User selected strong mode.'};const needsStrong=fatwaRisk||['fiqh_mode','tafsir_mode','compare_opinions_mode'].includes(islamicMode)||sourceCount>2||/(deep|detailed|compare|analyze|explain fully|worksheet|quiz|تفصيل|مقارنة|تحليل)/i.test(message||'');return{requestedModelMode:requested,resolvedModelMode:needsStrong?'strong':'fast',model:needsStrong?strong:fast,reason:needsStrong?'Auto routing chose strong model for complex/deep request.':'Auto routing chose fast model for simple request.'};}
-const timeoutMs=mode=>mode==='strong'?90000:30000;
-const loadIndexSources=()=>{const p=path.join(__dirname,'..','data','islamic-sources','indexes','compiled-sources.json');return fs.existsSync(p)?(JSON.parse(fs.readFileSync(p,'utf8')).records||[]):[]};
-const modeAllowedTypes=m=>({quran_mode:['quran','quran_translation','tafsir'],hadith_mode:['hadith','hadith_explanation'],tafsir_mode:['quran','quran_translation','tafsir'],fiqh_mode:['quran','hadith','hadith_explanation','scholar_statement','fatwa','book'],aqidah_mode:['quran','hadith','hadith_explanation','scholar_statement','book','educational_explanation'],arabic_mode:null,student_explanation_mode:['quran','hadith','tafsir','educational_explanation'],compare_opinions_mode:['scholar_statement','fatwa','book','lecture','video_transcript'],islamic_search_mode:null})[m]||null;
-function validateIslamicCitations(answer,sources){const issues=[];const ids=new Set(sources.map(s=>s.id));[...answer.matchAll(/SOURCE ID:\s*([\w:-]+)/gi)].forEach(m=>{if(!ids.has(m[1]))issues.push(`Unknown source id cited: ${m[1]}`)});const q=/(allah says|quran|surah|ayah|قال الله|آية)/i.test(answer),h=/(the prophet ﷺ said|the prophet said|hadith|قال الرسول)/i.test(answer),sc=/(ibn baz|khamees|ibn uthaymeen|فتوى|ابن باز|العثيمين)/i.test(answer);const hasQ=sources.some(s=>s.source_type==='quran'&&s.surah_number&&(s.ayah_number||s.ayah_range));const hasH=sources.some(s=>s.source_type==='hadith'&&s.collection_name&&(s.hadith_number||s.hadith_number_unavailable===true));const hasS=sources.some(s=>['scholar_statement','fatwa','lecture','book','video_transcript'].includes(s.source_type)&&s.scholar_name&&(s.reference_number||s.fatwa_number||s.page_number||s.timestamp||s.local_reference||s.url));if(q&&!hasQ)issues.push('Quran claim without Quran source');if(h&&!hasH)issues.push('Hadith claim without hadith source');if(sc&&!hasS)issues.push('Scholar claim without exact reference');if(/page\s+\d+/i.test(answer)&&!sources.some(s=>s.page_number))issues.push('Page claim without metadata');if(/\b\d{1,2}:\d{2}(:\d{2})?\b/.test(answer)&&!sources.some(s=>s.timestamp||s.source_type==='video_transcript'))issues.push('Timestamp claim without metadata');return{passed:issues.length===0,issues};}
-function searchIslamicKnowledgeBase(question,mode){const debug={query:question,normalizedQuery:normalizeText(question),totalSearched:0,matchedApproved:0,rejected:[],modeFilter:mode,openWebDisabled:true};const all=loadIndexSources();debug.totalSearched=all.length;const allowed=modeAllowedTypes(mode);const approved=all.filter(s=>{if(!s.verified_by_admin||!s.approved_for_answers){debug.rejected.push(`${s.id}:not approved`);return false;}if((s.source_type==='uploaded_document'||s.source_type==='approved_pdf')&&s.upload_status!=='approved'){debug.rejected.push(`${s.id}:upload not approved`);return false;}if(allowed&&!allowed.includes(s.source_type)){debug.rejected.push(`${s.id}:mode excluded`);return false;}return true;});const toks=normalizeText(question).split(' ').filter(Boolean);const score=s=>{const txt=normalizeText([s.title,s.source_name,s.topic,s.scholar_name,s.collection_name,s.book_name,s.translation_text,s.arabic_text,s.summary,s.source_title,JSON.stringify(s)].filter(Boolean).join(' '));return toks.reduce((a,t)=>a+(txt.includes(t)?1:0),0)};const ranked=approved.map(s=>({s,sc:score(s)})).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,8).map(x=>x.s);debug.matchedApproved=ranked.length;debug.matchedSourceIds=ranked.map(r=>r.id);return{matches:ranked,debug};}
-const formatSourceCards=sources=>sources.map(s=>s.source_type==='quran'?{type:'quran',badge:'Quran',surahName:s.surah_name_en||s.surah_name_ar,surahNumber:s.surah_number,ayah:s.ayah_number||s.ayah_range,arabic:s.arabic_text,translation:s.translation_text,usedFor:'Islamic evidence',copyCitation:`${s.surah_name_en||s.surah_name_ar} (${s.surah_number}:${s.ayah_number||s.ayah_range})`}:s.source_type==='hadith'?{type:'hadith',badge:'Hadith',collection:s.collection_name,bookChapter:[s.book_name,s.chapter_name].filter(Boolean).join(' / '),hadithNumber:s.hadith_number||'Hadith number not available in this source.',grade:s.grade,arabic:s.arabic_text,translation:s.translation_text,usedFor:'Islamic evidence',weakWarning:String(s.grade||'').toLowerCase().includes('weak')?'This hadith is graded weak in the approved source. It should not be used as main evidence for a ruling.':null,copyCitation:`${s.collection_name} #${s.hadith_number||'N/A'}`}:(['scholar_statement','fatwa','book','lecture','video_transcript'].includes(s.source_type)?{type:'scholar',badge:'Scholar / Fatwa / Explanation',scholar:s.scholar_name,sourceTitle:s.source_title||s.title,reference:s.reference_number||s.fatwa_number||s.page_number||s.timestamp||s.url||s.local_reference,quoteOrSummary:s.original_text||s.summary,usedFor:'Scholarly explanation',copyCitation:`${s.scholar_name||'Scholar'} - ${s.source_title||s.title||''}`}:{type:'document',badge:'Approved Document',documentTitle:s.document_title||s.title,fileName:s.file_name,pageNumber:s.page_number,section:s.section_title,approvalStatus:s.upload_status||'approved',usedFor:'Approved supporting document',copyCitation:`${s.document_title||s.title||'Document'}`}));
-const buildPrompt=({question,mode,language,sources})=>`SYSTEM:\nYou are IslamicGPT, a reliable Islamic knowledge assistant. Use only approved source context. If insufficient, return exactly: ${REFUSAL_MESSAGE}\n\nUSER QUESTION:\n${question}\nMODE:${mode}\nLANGUAGE:${language}\n\nAPPROVED SOURCE CONTEXT:\n${sources.map(s=>`SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nSURAH:${s.surah_name_en||''}\nSURAH NUMBER:${s.surah_number||''}\nAYAH:${s.ayah_number||s.ayah_range||''}\nCOLLECTION:${s.collection_name||''}\nHADITH NUMBER:${s.hadith_number|| (s.hadith_number_unavailable?'Hadith number not available in this source.':'')}\nSCHOLAR:${s.scholar_name||''}\nREFERENCE:${s.reference_number||s.fatwa_number||s.page_number||s.timestamp||s.local_reference||s.url||''}\nARABIC:${s.arabic_text||''}\nTRANSLATION:${s.translation_text||''}`).join('\n\n')}\n\nREQUIRED ANSWER FORMAT: Answer / Evidence from Quran / Evidence from Hadith / Scholarly Explanation / Explanation / Confidence`;
-async function callOllama({model,prompt,timeout}){const c=new AbortController();const t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(`${OLLAMA_BASE_URL}/api/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,prompt,stream:false}),signal:c.signal});const d=await r.json();if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);return{ok:true,text:d.response||''};}catch(e){return{ok:false,error:e.name==='AbortError'?'model_timeout':'ollama_unavailable'};}finally{clearTimeout(t);}}
-const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(data));};
-const noSource=(mode,modelMode)=>({answer:REFUSAL_MESSAGE,mode,modelMode,resolvedModelMode:null,modelUsed:null,modelSelectionReason:'No approved sources found.',isIslamicQuestion:true,confidence:'not_enough_evidence',sources:[],sourceCards:[],warnings:[],errorState:'no_sources_found',llmCalled:false,validation:{passed:false,attempts:0,issues:['no_sources_found']},loadingStagesCompleted:['classified_question','searched_approved_sources']});
+const http = require('http');
+const { callOllama } = require('./src/ollamaClient');
+const { resolveModelMode, modelTimeoutMs } = require('./src/modelRouter');
+const { searchIslamicKnowledgeBase } = require('./src/retrieval');
+const { formatSourceCards } = require('./src/sourceCards');
+const { validateIslamicCitations } = require('./src/citationValidation');
 
-http.createServer((req,res)=>{if(req.method==='OPTIONS')return send(res,200,{});if(req.url==='/api/chat'&&req.method==='POST'){let b='';req.on('data',c=>b+=c);req.on('end',async()=>{try{const p=JSON.parse(b||'{}');const question=p.message||'';const mode=p.mode||'islamic_search_mode';const modelMode=p.modelMode||process.env.DEFAULT_MODEL_MODE||'auto';const language=p.language&&p.language!=='auto'?p.language:detectLanguage(question);const loading=['classified_question'];const islamic=classifyIslamicQuestion(question)||String(mode).endsWith('_mode');if(!islamic)return send(res,200,{answer:'IslamicGPT is focused on Islamic knowledge from approved sources.',mode,modelMode,resolvedModelMode:null,modelUsed:null,modelSelectionReason:'Non-Islamic request.',isIslamicQuestion:false,confidence:'not_enough_evidence',sources:[],sourceCards:[],warnings:[],errorState:null,llmCalled:false,validation:{passed:true,attempts:0,issues:[]},loadingStagesCompleted:loading});const {matches,debug}=searchIslamicKnowledgeBase(question,mode);loading.push('searched_approved_sources');if(!matches.length){const r=noSource(mode,modelMode);if(DEBUG_SOURCES||p.debug)r.debug=debug;return send(res,200,r);}const fatwa=fatwaRisk(question);const sel=resolveModelMode({requestedModelMode:modelMode,islamicMode:mode,message:question,sourceCount:matches.length,fatwaRisk:fatwa});const cards=formatSourceCards(matches);loading.push('built_source_context');const prompt=buildPrompt({question,mode,language,sources:matches});const first=await callOllama({model:sel.model,prompt,timeout:timeoutMs(sel.resolvedModelMode)});loading.push('called_local_model');if(!first.ok)return send(res,503,{answer:'IslamicGPT could not reach the local AI model. Please check that Ollama is running.',mode,modelMode,resolvedModelMode:sel.resolvedModelMode,modelUsed:sel.model,modelSelectionReason:sel.reason,isIslamicQuestion:true,confidence:'not_enough_evidence',sources:[],sourceCards:[],warnings:[],errorState:first.error,llmCalled:true,validation:{passed:false,attempts:1,issues:[first.error]},loadingStagesCompleted:loading});let attempts=1,val=validateIslamicCitations(first.text,matches),text=first.text;if(!val.passed){const second=await callOllama({model:sel.model,prompt:prompt+`\n\nYour previous answer included unsupported or invalid citations. Rewrite the answer using only the provided source IDs. If you cannot, return exactly: ${REFUSAL_MESSAGE}`,timeout:timeoutMs(sel.resolvedModelMode)});attempts=2;if(second.ok){text=second.text;val=validateIslamicCitations(second.text,matches);}}loading.push('validated_citations');if(!val.passed){const out={answer:REFUSAL_MESSAGE,mode,modelMode,resolvedModelMode:sel.resolvedModelMode,modelUsed:sel.model,modelSelectionReason:sel.reason,isIslamicQuestion:true,confidence:'not_enough_evidence',sources:[],sourceCards:[],warnings:[],errorState:'citation_validation_failed',llmCalled:true,validation:{passed:false,attempts,issues:val.issues},loadingStagesCompleted:[...loading,'prepared_answer']};if(DEBUG_SOURCES||p.debug)out.debug={...debug,requestedModelMode:modelMode,resolvedModelMode:sel.resolvedModelMode,modelUsed:sel.model,modelSelectionReason:sel.reason,llmCalled:true,validation:out.validation,openWebDisabled:true};return send(res,200,out);}const warnings=matches.filter(m=>m.source_type==='hadith'&&String(m.grade||'').toLowerCase().includes('weak')).map(()=> 'This hadith is graded weak in the approved source. It should not be used as main evidence for a ruling.');const out={answer:text,mode,modelMode,resolvedModelMode:sel.resolvedModelMode,modelUsed:sel.model,modelSelectionReason:sel.reason,isIslamicQuestion:true,confidence:matches.length>2?'high':'medium',sources:matches,sourceCards:cards,warnings,errorState:null,llmCalled:true,validation:{passed:true,attempts,issues:[]},loadingStagesCompleted:[...loading,'prepared_answer']};if(DEBUG_SOURCES||p.debug)out.debug={...debug,requestedModelMode:modelMode,resolvedModelMode:sel.resolvedModelMode,modelUsed:sel.model,modelSelectionReason:sel.reason,llmCalled:true,validation:out.validation,openWebDisabled:true};return send(res,200,out);}catch{return send(res,500,{answer:'IslamicGPT could not complete the answer because the source check failed. Please try again or check the source database.',errorState:'backend_unavailable'});}});return;}send(res,404,{error:'Not found'});}).listen(Number(process.env.PORT||3001),()=>console.log('IslamicGPT backend listening on http://localhost:'+Number(process.env.PORT||3001)));
+const REFUSAL_MESSAGE = 'I could not find enough reliable evidence in the approved sources.';
+const DEBUG_SOURCES = String(process.env.VITE_DEBUG_SOURCES || 'false').toLowerCase() === 'true';
+
+const classifyIslamicQuestion = (q = '') => /(allah|quran|hadith|sunnah|fiqh|fatwa|tafsir|islam|prophet|dua|aqidah|zakat|salah|ramadan|umrah|hajj|bukhari|muslim|تفسير|حديث|القران|القرآن|فقه|فتوى)/i.test(q);
+const detectLanguage = (m = '') => /[\u0600-\u06FF]/.test(m) ? 'arabic' : /[a-zA-Z]/.test(m) ? 'english' : 'auto';
+const fatwaRisk = (q = '') => /(divorce|marriage dispute|inheritance|contract|medical|oath|takfir|apostasy|legal|custody)/i.test(q);
+
+function buildPrompt({ question, mode, language, sources }) {
+  const context = sources.map((s) => `SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nSURAH:${s.surah_name_en || ''}\nSURAH NUMBER:${s.surah_number || ''}\nAYAH:${s.ayah_number || s.ayah_range || ''}\nCOLLECTION:${s.collection_name || ''}\nHADITH NUMBER:${s.hadith_number || (s.hadith_number_unavailable ? 'Hadith number not available in this source.' : '')}\nSCHOLAR:${s.scholar_name || ''}\nREFERENCE:${s.reference_number || s.fatwa_number || s.page_number || s.timestamp || s.local_reference || s.url || ''}\nARABIC:${s.arabic_text || ''}\nTRANSLATION:${s.translation_text || ''}`).join('\n\n');
+  return `SYSTEM:\nYou are IslamicGPT, a reliable Islamic knowledge assistant. Use only approved source context. If insufficient, return exactly: ${REFUSAL_MESSAGE}\n\nUSER QUESTION:\n${question}\nMODE:${mode}\nLANGUAGE:${language}\n\nAPPROVED SOURCE CONTEXT:\n${context}\n\nREQUIRED ANSWER FORMAT: Answer / Evidence from Quran / Evidence from Hadith / Scholarly Explanation / Explanation / Confidence`;
+}
+
+function noSourceResponse(mode, modelMode) {
+  return {
+    answer: REFUSAL_MESSAGE,
+    mode,
+    modelMode,
+    resolvedModelMode: null,
+    modelUsed: null,
+    modelSelectionReason: 'No approved sources found.',
+    isIslamicQuestion: true,
+    confidence: 'not_enough_evidence',
+    sources: [],
+    sourceCards: [],
+    warnings: [],
+    errorState: 'no_sources_found',
+    llmCalled: false,
+    validation: { passed: false, attempts: 0, issues: ['no_sources_found'] },
+    loadingStagesCompleted: ['classified_question', 'searched_approved_sources'],
+  };
+}
+
+function send(res, status, data) {
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify(data));
+}
+
+http.createServer((req, res) => {
+  if (req.method === 'OPTIONS') return send(res, 200, {});
+  if (req.url !== '/api/chat' || req.method !== 'POST') return send(res, 404, { error: 'Not found' });
+
+  let body = '';
+  req.on('data', (c) => (body += c));
+  req.on('end', async () => {
+    try {
+      const payload = JSON.parse(body || '{}');
+      const question = payload.message || '';
+      const mode = payload.mode || 'islamic_search_mode';
+      const modelMode = payload.modelMode || process.env.DEFAULT_MODEL_MODE || 'auto';
+      const language = payload.language && payload.language !== 'auto' ? payload.language : detectLanguage(question);
+      const loading = ['classified_question'];
+
+      const isIslamicQuestion = classifyIslamicQuestion(question) || String(mode).endsWith('_mode');
+      if (!isIslamicQuestion) {
+        return send(res, 200, {
+          answer: 'IslamicGPT is focused on Islamic knowledge from approved sources.',
+          mode,
+          modelMode,
+          resolvedModelMode: null,
+          modelUsed: null,
+          modelSelectionReason: 'Non-Islamic request.',
+          isIslamicQuestion: false,
+          confidence: 'not_enough_evidence',
+          sources: [],
+          sourceCards: [],
+          warnings: [],
+          errorState: null,
+          llmCalled: false,
+          validation: { passed: true, attempts: 0, issues: [] },
+          loadingStagesCompleted: loading,
+        });
+      }
+
+      const { matches, debug } = searchIslamicKnowledgeBase(question, mode);
+      loading.push('searched_approved_sources');
+      if (!matches.length) {
+        const out = noSourceResponse(mode, modelMode);
+        if (DEBUG_SOURCES || payload.debug) out.debug = debug;
+        return send(res, 200, out);
+      }
+
+      const selection = resolveModelMode({
+        requestedModelMode: modelMode,
+        islamicMode: mode,
+        message: question,
+        sourceCount: matches.length,
+        fatwaRisk: fatwaRisk(question),
+      });
+
+      const sourceCards = formatSourceCards(matches);
+      loading.push('built_source_context');
+      const prompt = buildPrompt({ question, mode, language, sources: matches });
+
+      const first = await callOllama({ model: selection.model, prompt, timeout: modelTimeoutMs(selection.resolvedModelMode) });
+      loading.push('called_local_model');
+      if (!first.ok) {
+        return send(res, 503, {
+          answer: 'IslamicGPT could not reach the local AI model. Please check that Ollama is running.',
+          mode,
+          modelMode,
+          resolvedModelMode: selection.resolvedModelMode,
+          modelUsed: selection.model,
+          modelSelectionReason: selection.reason,
+          isIslamicQuestion: true,
+          confidence: 'not_enough_evidence',
+          sources: [],
+          sourceCards: [],
+          warnings: [],
+          errorState: first.error,
+          llmCalled: true,
+          validation: { passed: false, attempts: 1, issues: [first.error] },
+          loadingStagesCompleted: loading,
+        });
+      }
+
+      let answer = first.text;
+      let attempts = 1;
+      let validation = validateIslamicCitations(answer, matches);
+
+      if (!validation.passed) {
+        const repairPrompt = `${prompt}\n\nYour previous answer included unsupported or invalid citations. Rewrite the answer using only the provided source IDs. If you cannot, return exactly: ${REFUSAL_MESSAGE}`;
+        const second = await callOllama({ model: selection.model, prompt: repairPrompt, timeout: modelTimeoutMs(selection.resolvedModelMode) });
+        attempts = 2;
+        if (second.ok) {
+          answer = second.text;
+          validation = validateIslamicCitations(answer, matches);
+        }
+      }
+
+      loading.push('validated_citations');
+      if (!validation.passed) {
+        return send(res, 200, {
+          answer: REFUSAL_MESSAGE,
+          mode,
+          modelMode,
+          resolvedModelMode: selection.resolvedModelMode,
+          modelUsed: selection.model,
+          modelSelectionReason: selection.reason,
+          isIslamicQuestion: true,
+          confidence: 'not_enough_evidence',
+          sources: [],
+          sourceCards: [],
+          warnings: [],
+          errorState: 'citation_validation_failed',
+          llmCalled: true,
+          validation: { passed: false, attempts, issues: validation.issues },
+          loadingStagesCompleted: [...loading, 'prepared_answer'],
+        });
+      }
+
+      const warnings = matches
+        .filter((m) => m.source_type === 'hadith' && String(m.grade || '').toLowerCase().includes('weak'))
+        .map(() => 'This hadith is graded weak in the approved source. It should not be used as main evidence for a ruling.');
+
+      const out = {
+        answer,
+        mode,
+        modelMode,
+        resolvedModelMode: selection.resolvedModelMode,
+        modelUsed: selection.model,
+        modelSelectionReason: selection.reason,
+        isIslamicQuestion: true,
+        confidence: matches.length > 2 ? 'high' : 'medium',
+        sources: matches,
+        sourceCards,
+        warnings,
+        errorState: null,
+        llmCalled: true,
+        validation: { passed: true, attempts, issues: [] },
+        loadingStagesCompleted: [...loading, 'prepared_answer'],
+      };
+
+      if (DEBUG_SOURCES || payload.debug) {
+        out.debug = {
+          ...debug,
+          requestedModelMode: modelMode,
+          resolvedModelMode: selection.resolvedModelMode,
+          modelUsed: selection.model,
+          modelSelectionReason: selection.reason,
+          llmCalled: true,
+          validation: out.validation,
+          openWebDisabled: true,
+        };
+      }
+
+      return send(res, 200, out);
+    } catch {
+      return send(res, 500, {
+        answer: 'IslamicGPT could not complete the answer because the source check failed. Please try again or check the source database.',
+        errorState: 'backend_unavailable',
+      });
+    }
+  });
+}).listen(Number(process.env.PORT || 3001), () => {
+  console.log(`IslamicGPT backend listening on http://localhost:${Number(process.env.PORT || 3001)}`);
+});

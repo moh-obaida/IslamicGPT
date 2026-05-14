@@ -12,6 +12,7 @@
     "collection_name": "Metadata Example Collection",
     "hadith_number_unavailable": true,
     "grade": "unknown",
-    "translation_text": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    "translation_text": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "is_test_record": true
   }
 ]

@@ -13,6 +13,7 @@
     "file_name": "sample.pdf",
     "file_hash": "sample-hash",
     "local_reference": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
-    "upload_status": "pending_review"
+    "upload_status": "pending_review",
+    "is_test_record": true
   }
 ]

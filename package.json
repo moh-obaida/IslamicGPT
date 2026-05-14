@@ -1,0 +1,10 @@
+{
+  "name": "islamicgpt",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "ingest": "node scripts/ingest-islamic-sources.js"
+  }
+}

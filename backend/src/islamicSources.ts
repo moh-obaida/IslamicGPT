@@ -44,6 +44,7 @@ export interface IslamicSourceChunk {
   book_name?: string;
   chapter_name?: string;
   hadith_number?: string;
+  hadith_number_unavailable?: boolean;
   hadith_numbering_source?: string;
   grade?: string;
   grader?: string;
@@ -72,6 +73,8 @@ export interface IslamicSourceChunk {
   extracted_text?: string;
   file_name?: string;
   file_hash?: string;
+  upload_status?: 'pending_review' | 'approved' | 'rejected';
+  is_test_record?: boolean;
 }
 
 export const REFUSAL_MESSAGE = 'I could not find enough reliable evidence in the approved sources.';
