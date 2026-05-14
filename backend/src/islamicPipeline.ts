@@ -76,6 +76,8 @@ export function validateIslamicCitations(answer: string, sources: IslamicSourceC
   const mentionsAllahOrQuran = /allah says|quran|surah|ayah/i.test(answer);
   const mentionsProphetOrHadith = /the prophet ﷺ said|the prophet said|hadith/i.test(answer);
   const mentionsScholar = /(ibn baz|ibn uthaymeen|al-albani|al-fawzan|mohammad othman al-khamees|scholar|fatwa)/i.test(answer);
+  const mentionsPage = /page\s+\d+/i.test(answer);
+  const mentionsTimestamp = /\b\d{1,2}:\d{2}(:\d{2})?\b/.test(answer);
 
   const hasQuranCitation = sources.some((s) => s.source_type === 'quran' && !!s.surah_number && !!(s.ayah_number || s.ayah_range));
   const hasHadithCitation = sources.some((s) => s.source_type === 'hadith' && !!s.collection_name && (!!s.hadith_number || s.hadith_number === 'Hadith number not available in this source.'));
@@ -84,6 +86,17 @@ export function validateIslamicCitations(answer: string, sources: IslamicSourceC
   if (mentionsAllahOrQuran && !hasQuranCitation) return false;
   if (mentionsProphetOrHadith && !hasHadithCitation) return false;
   if (mentionsScholar && !hasScholarCitation) return false;
+
+  if (mentionsPage) {
+    const hasPageRef = sources.some((s) => !!s.page_number);
+    if (!hasPageRef) return false;
+  }
+
+  if (mentionsTimestamp) {
+    const hasTimestampRef = sources.some((s) => !!s.timestamp || s.source_type === 'video_transcript');
+    if (!hasTimestampRef) return false;
+  }
+
   return true;
 }
 
@@ -111,7 +124,11 @@ export async function generateIslamicAnswer(request: IslamicAnswerRequest): Prom
   const context = buildIslamicAnswerContext(request.question, sortedSources);
 
   // Placeholder model output; real runtime should pass `context` to local model.
-  const draftAnswer = `Based on the retrieved source context, here is the answer:\n${context.slice(0, 200)}...`;
+  const warning = detectPersonalFatwaRisk(request.question)
+    ? ' This may require a qualified scholar who can review the full details. I can provide general information from approved sources, but I cannot issue a personal fatwa.'
+    : '';
+
+  const draftAnswer = `Based on the retrieved source context, here is the answer. ${warning}\n${context.slice(0, 200)}...`;
   const valid = validateIslamicCitations(draftAnswer, sortedSources);
 
   if (!valid) {

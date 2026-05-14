@@ -48,6 +48,7 @@ export interface IslamicSourceChunk {
   grade?: string;
   grader?: string;
   chain_or_narrator_if_available?: string;
+  narrator_if_available?: string;
   source_url?: string;
 
   scholar_name?: string;
