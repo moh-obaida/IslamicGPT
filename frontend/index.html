@@ -56,8 +56,8 @@
 
     /* Sidebar Header */
     .sideHead { padding: 24px 20px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--line); }
-    .brand-logo { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-    .brand-logo img { width: 100%; max-width: 190px; height: auto; max-height: 40px; object-fit: contain; object-position: left; }
+    .brand-logo { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+    .brand-logo span { color: var(--turq); }
     .brand-subtitle { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--soft); font-weight: 800; }
 
     .new-chat-btn {
@@ -125,10 +125,8 @@
       pointer-events: none;
       opacity: 0.5;
     }
-    .welcome-logo-large { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 24px; }
-    .welcome-logo-large img { width: 100%; max-width: 240px; height: auto; object-fit: contain; }
-    
-    .welcome-card h1 { font-size: 28px; font-weight: 900; margin-bottom: 12px; }
+    .welcome-card h1 { font-size: 48px; font-weight: 900; margin-bottom: 12px; letter-spacing: -0.04em; }
+    .welcome-card h1 span { color: var(--turq); }
     .welcome-card p { font-size: 15px; color: var(--muted); max-width: 520px; margin: 0 auto 32px; line-height: 1.6; }
 
     .trust-badges { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
@@ -219,10 +217,8 @@
   <div class="app" id="app">
     <aside class="side">
       <div class="sideHead">
-        <div class="brand-logo">
-          <img src="logo-horizontal.png" alt="IslamicGPT">
-          <span class="brand-subtitle">Source-first AI Assistant</span>
-        </div>
+        <div class="brand-logo">Islamic<span>GPT</span></div>
+        <span class="brand-subtitle">Source-first AI Assistant</span>
       </div>
       <button class="new-chat-btn" onclick="newChat()"><span>+</span> New Chat</button>
       <nav class="nav-group">
@@ -276,10 +272,7 @@
         <div id="chatView" class="content-inner">
           <div class="welcome-card" id="welcome">
             <div class="welcome-glow"></div>
-            <div class="welcome-logo-large">
-              <img src="logo-horizontal.png" alt="IslamicGPT">
-            </div>
-            <h1>IslamicGPT</h1>
+            <h1>Islamic<span>GPT</span></h1>
             <p>Your source-first Islamic research assistant. Normal chat is allowed. Islamic answers require approved sources.</p>
             
             <div class="trust-badges">
@@ -345,10 +338,22 @@
             </div>
 
             <div class="settings-section">
-              <span class="settings-label">Chat Interface</span>
+              <span class="settings-label">Developer & Diagnostics</span>
               <div class="settings-item"><label><input type="checkbox" id="showAdminTools" onchange="toggleAdminNav()"> Show Admin Tools</label></div>
               <div class="settings-item"><label><input type="checkbox"> Compact Message Mode</label></div>
               <div class="settings-item"><label><input type="checkbox" checked> Show Progress Tracker</label></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="adminView" class="content-inner hidden">
+          <div class="dashboard-header">
+            <h1>Admin Panel</h1>
+            <p>Manage sources and system configuration.</p>
+          </div>
+          <div class="full-card">
+            <div id="adminContent">
+              <p>Admin tools are hidden. Enable them from Developer & Diagnostics.</p>
             </div>
           </div>
         </div>
@@ -390,6 +395,12 @@
     const STAGES = [{id:'classified_question',label:'Classifying request'},{id:'searched_approved_sources',label:'Searching approved sources'},{id:'built_source_context',label:'Building source context'},{id:'called_local_model',label:'Generating verified answer'},{id:'validated_citations',label:'Validating citations'},{id:'prepared_answer',label:'Finalizing response'}];
 
     function switchView(view) {
+      const adminEnabled = localStorage.getItem('ISLAMICGPT_ADMIN_ENABLED') === 'true';
+      if (view === 'admin' && !adminEnabled) {
+        alert('Admin tools are hidden. Enable them from Developer & Diagnostics.');
+        return switchView('chat');
+      }
+
       document.querySelectorAll('.content-inner').forEach(p => p.classList.add('hidden'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(view + 'View').classList.remove('hidden');
@@ -401,7 +412,9 @@
 
     function toggleAdminNav() {
       const show = document.getElementById('showAdminTools').checked;
+      localStorage.setItem('ISLAMICGPT_ADMIN_ENABLED', show ? 'true' : 'false');
       document.getElementById('navAdmin').classList.toggle('hidden', !show);
+      if (!show && currentView === 'admin') switchView('chat');
     }
 
     function autoResize(el) {
@@ -500,7 +513,14 @@
       }
     }
 
-    window.onload = () => { initModes(); checkHealth(); setInterval(checkHealth, 30000); };
+    window.onload = () => { 
+      initModes(); 
+      checkHealth(); 
+      setInterval(checkHealth, 30000); 
+      const adminEnabled = localStorage.getItem('ISLAMICGPT_ADMIN_ENABLED') === 'true';
+      document.getElementById('showAdminTools').checked = adminEnabled;
+      document.getElementById('navAdmin').classList.toggle('hidden', !adminEnabled);
+    };
     function newChat() { document.getElementById('messages').innerHTML = ''; document.getElementById('sources').innerHTML = ''; document.getElementById('welcome').classList.remove('hidden'); }
   </script>
 </body>
