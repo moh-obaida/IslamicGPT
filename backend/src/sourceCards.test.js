@@ -15,6 +15,8 @@ test('formats tafsir and Quran translation records as Quran-family source cards'
 
   assert.strictEqual(tafsir.type, 'tafsir');
   assert.strictEqual(tafsir.badge, 'Tafsir');
+  assert.strictEqual(tafsir.title, 'Al-Fatihah (1:1)');
+  assert.strictEqual(tafsir.preview, 'Testing explanation');
   assert.strictEqual(tafsir.copyCitation, 'Al-Fatihah (1:1)');
 });
 
@@ -30,6 +32,7 @@ test('formats hadith explanation records as hadith source cards', () => {
 
   assert.strictEqual(hadith.type, 'hadith_explanation');
   assert.strictEqual(hadith.badge, 'Hadith');
-  assert.strictEqual(hadith.hadithNumber, 'Hadith number not available in this source.');
+  assert.strictEqual(hadith.title, 'Sahih Example #N/A');
+  assert.strictEqual(hadith.preview, 'Testing explanation');
   assert.strictEqual(hadith.copyCitation, 'Sahih Example #N/A');
 });
