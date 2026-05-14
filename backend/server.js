@@ -32,6 +32,8 @@ const SUPPORTED_MODES = new Set([
   'compare_opinions_mode',
 ]);
 
+const isCasualChat = (q = '') => /^(hello|hi|hey|salam|assalamu alaikum|thanks|thank you|good morning|good evening|test|how are you\??)$/i.test(q.trim().toLowerCase());
+const isAppHelp = (q = '') => /^(who are you\??|what can you do\??|how does this app work\??|how do i add sources\??|what modes do you have\??|why is the ai offline\??|what is source-first\??|how do i use settings\??|how do i search sources\??)$/i.test(q.trim().toLowerCase());
 const classifyIslamicQuestion = (q = '') => /(allah|quran|hadith|sunnah|fiqh|fatwa|tafsir|islam|prophet|prayer|dua|aqidah|zakat|salah|ramadan|umrah|hajj|bukhari|muslim|تفسير|حديث|القران|القرآن|فقه|فتوى|صلاة|دعاء)/i.test(q);
 const detectLanguage = (m = '') => /[\u0600-\u06FF]/.test(m) ? 'arabic' : /[a-zA-Z]/.test(m) ? 'english' : 'auto';
 const fatwaRisk = (q = '') => /(divorce|marriage dispute|inheritance|contract|medical|oath|takfir|apostasy|legal|custody)/i.test(q);
@@ -347,10 +349,40 @@ async function handleChat(payload, res) {
     const language = payload.language && payload.language !== 'auto' ? payload.language : detectLanguage(question);
     const loading = ['classified_question'];
 
+    if (isCasualChat(question)) {
+      loading.push('prepared_answer');
+      return send(res, 200, {
+        answer: "Wa Alaikum Assalam! How can I help you today with Islamic research or app usage?",
+        mode,
+        modelMode,
+        resolvedModelMode: 'casual_chat',
+        isIslamicQuestion: false,
+        confidence: 'high',
+        sources: [],
+        sourceCards: [],
+        loadingStagesCompleted: loading,
+      });
+    }
+
+    if (isAppHelp(question)) {
+      loading.push('prepared_answer');
+      return send(res, 200, {
+        answer: "I am IslamicGPT, a source-first Islamic AI assistant. I only provide religious answers if I can find evidence in my approved database of Quran, Hadith, and scholarly works. You can search sources directly in the Sources tab or ask me questions here.",
+        mode,
+        modelMode,
+        resolvedModelMode: 'app_help',
+        isIslamicQuestion: false,
+        confidence: 'high',
+        sources: [],
+        sourceCards: [],
+        loadingStagesCompleted: loading,
+      });
+    }
+
     const isIslamicQuestion = classifyIslamicQuestion(question) || isSupportedMode(requestedMode);
     if (!isIslamicQuestion) {
       return send(res, 200, {
-        answer: 'IslamicGPT is focused on Islamic knowledge from approved sources.',
+        answer: 'IslamicGPT is focused on Islamic knowledge from approved sources. For non-religious questions, I may not be the best assistant.',
         mode,
         modelMode,
         resolvedModelMode: null,
@@ -502,6 +534,10 @@ async function handleChat(payload, res) {
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (req.method === 'OPTIONS') return send(res, 204, {});
+
+  if (url.pathname === '/health' && req.method === 'GET') {
+    return send(res, 200, { ok: true, timestamp: Date.now() });
+  }
 
   if (url.pathname === '/api/sources' && req.method === 'GET') {
     return send(res, 200, publicSourcesResponse(url));
