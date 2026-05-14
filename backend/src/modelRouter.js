@@ -1,8 +1,8 @@
 function resolveModelMode({ requestedModelMode, islamicMode, message, sourceCount, fatwaRisk }) {
   const requested = requestedModelMode || process.env.DEFAULT_MODEL_MODE || 'auto';
   const normalized = ({ deep: 'strong', balanced: 'auto' }[requested] || requested);
-  const fastModel = process.env.OLLAMA_FAST_MODEL || 'llama3.1:8b';
-  const strongModel = process.env.OLLAMA_STRONG_MODEL || 'qwen2.5:14b';
+  const fastModel = process.env.OLLAMA_FAST_MODEL || 'IslamicGPT-fast';
+  const strongModel = process.env.OLLAMA_STRONG_MODEL || 'IslamicGPT-thinking';
 
   if (normalized === 'fast') {
     return { requestedModelMode: requested, resolvedModelMode: 'fast', model: fastModel, reason: 'User selected fast mode.' };
@@ -26,7 +26,7 @@ function resolveModelMode({ requestedModelMode, islamicMode, message, sourceCoun
 }
 
 function modelTimeoutMs(resolvedModelMode) {
-  return resolvedModelMode === 'strong' ? 90000 : 30000;
+  return resolvedModelMode === 'strong' ? 90000 : 45000;
 }
 
 module.exports = { resolveModelMode, modelTimeoutMs };
