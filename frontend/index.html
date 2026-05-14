@@ -66,16 +66,16 @@
 <body data-theme="dark">
   <div class="app" id="app">
     <aside class="side">
-      <div class="sideHead"><div class="logo"><img src="https://raw.githubusercontent.com/moh-obaida/IslamicGPT/main/frontend/logo.png" alt="IslamicGPT" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='IG'"></div><div class="brand"><b>IslamicGPT</b><span>Source-first Islamic assistant</span></div><button class="collapse" type="button">‹</button></div>
+      <div class="sideHead"><div class="logo"><img src="logo.png" alt="IslamicGPT" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='IG'"></div><div class="brand"><b>IslamicGPT</b><span>Source-first Islamic assistant</span></div><button class="collapse" type="button">‹</button></div>
       <button class="new" type="button" onclick="newChat()">+ New Islamic chat</button>
       <div class="scroll">
         <div class="box">
           <div class="label">Main</div>
           <div class="nav" id="nav">
-            <button class="active" type="button" data-view="chat"><span>💬</span><span>Chat</span></button>
-            <button type="button" data-view="sources"><span>📚</span><span>Sources</span></button>
-            <button type="button" data-view="settings"><span>⚙️</span><span>Settings</span></button>
-            <button type="button" data-view="admin" id="navAdmin" class="hidden"><span>🛡️</span><span>Admin</span></button>
+            <button class="active" type="button" data-view="chat"><span></span><span>Chat</span></button>
+            <button type="button" data-view="sources"><span></span><span>Sources</span></button>
+            <button type="button" data-view="settings"><span></span><span>Settings</span></button>
+            <button type="button" data-view="admin" id="navAdmin" class="hidden"><span></span><span>Admin</span></button>
           </div>
         </div>
         <div class="box"><div class="label">Recent Chats</div><div id="recentChats" class="hint">No recent chats yet</div></div><div class="box" id="chatControls">
@@ -92,7 +92,7 @@
       <div class="foot">
         <div class="offline" id="backendStatusPanel">
           <span id="backendStatusText">Checking connection</span>
-          <button class="secondary" id="backendReconnect" type="button" title="Reconnect">🔄</button>
+          <button class="secondary" id="backendReconnect" type="button">Reconnect</button>
         </div>
         <div class="sub" style="margin-top: 10px; text-align: center; font-size: 10px; opacity: 0.6;">
           v0.2.0 • Source-first Islamic AI
@@ -109,7 +109,7 @@
       <section class="work" id="work">
         <div id="chatView" class="page">
           <div class="welcome" id="welcome"><div class="welcomeGlow"></div>
-            <div class="big"><img src="https://raw.githubusercontent.com/moh-obaida/IslamicGPT/main/frontend/logo.png" alt="IslamicGPT" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='IG'"></div>
+            <div class="big"><img src="logo.png" alt="IslamicGPT" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='IG'"></div>
             <h1>Welcome to IslamicGPT</h1>
             <p>Search approved Quran, Hadith, scholar, and document sources before answering.</p>
             <div class="sub">Source-first Islamic assistant.</div>
@@ -260,14 +260,49 @@
     const SETTINGS_KEY='ISLAMICGPT_SETTINGS';
     const defaultSettings={theme:'system',lang:'English',dir:'auto',answerDepth:'auto',defaultMode:'islamic_search_mode',requireSource:true,refuseNoSource:true,showSourceCards:true,showArabic:true,showTranslation:true,showHadithNumber:true,showHadithGrade:true,showMetadata:true,preferVerified:true,warnIncomplete:true,responseStyle:'Direct',safety:'Standard',format:'Paragraphs',caution:'Always remind user to consult a qualified scholar for personal rulings',provider:'Auto',speed:'Balanced',localEndpoint:'',timeout:'60000',retry:false,fallback:true,maxSources:'5',compact:false,timestamps:false,showModeBadge:true,showDepthBadge:true,showSourceBadge:true,autofocus:true,fillOnly:true};
     let appSettings={...defaultSettings};
-    function loadSettings(){try{appSettings={...defaultSettings,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}}catch{} selectedMode=appSettings.defaultMode||selectedMode;}
+    function loadSettings(){
+      try {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+          appSettings = {...defaultSettings, ...JSON.parse(saved)};
+        }
+      } catch(e) {
+        console.error('Failed to load settings:', e);
+      }
+      selectedMode = appSettings.defaultMode || 'islamic_search_mode';
+    }
     function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings));}
     function safePending(n){alert(n+': Backend integration pending.');}
     function testLocalAiConnection(){document.getElementById('localAiStatus').textContent='Backend integration pending';}
     function exportSettings(){navigator.clipboard.writeText(JSON.stringify(appSettings,null,2));}
     function resetSettings(){if(confirm('Reset all settings to defaults?')){appSettings={...defaultSettings};saveSettings();initSettingsUI();}}
     function toggleCheck(id,key){const el=document.getElementById(id);if(!el)return;el.checked=!!appSettings[key];el.onchange=()=>{appSettings[key]=el.checked;saveSettings();};}
-    function initSettingsUI(){const modeSel=document.getElementById('st_defaultMode');if(modeSel&&!modeSel.options.length){modes.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;modeSel.appendChild(o)})}
+    function initSettingsUI(){
+      const modeSel=document.getElementById('st_defaultMode');
+      if(modeSel&&!modeSel.options.length){
+        modes.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;modeSel.appendChild(o)});
+      }
+
+      const sourceChecks = document.getElementById('sourceSettingChecks');
+      if (sourceChecks && !sourceChecks.children.length) {
+        [['st_requireSource','requireSource','Require source'],['st_refuseNoSource','refuseNoSource','Refuse if no source'],['st_showSourceCards','showSourceCards','Show source cards'],['st_showArabic','showArabic','Show Arabic text'],['st_showTranslation','showTranslation','Show translation'],['st_showHadithNumber','showHadithNumber','Show Hadith number'],['st_showHadithGrade','showHadithGrade','Show Hadith grade'],['st_showMetadata','showMetadata','Show metadata'],['st_preferVerified','preferVerified','Prefer verified sources'],['st_warnIncomplete','warnIncomplete','Warn if incomplete']].forEach(([id, key, label]) => {
+          const l = document.createElement('label'); l.className = 'fieldCheck';
+          l.innerHTML = `<input type="checkbox" id="${id}"> ${label}`;
+          sourceChecks.appendChild(l);
+          toggleCheck(id, key);
+        });
+      }
+
+      const chatChecks = document.getElementById('chatChecks');
+      if (chatChecks && chatChecks.children.length <= 1) {
+        [['st_compact','compact','Compact view'],['st_timestamps','timestamps','Show timestamps'],['st_showModeBadge','showModeBadge','Show mode badge'],['st_showDepthBadge','showDepthBadge','Show depth badge'],['st_showSourceBadge','showSourceBadge','Show source-backed badge'],['st_autofocus','autofocus','Autofocus input'],['st_fillOnly','fillOnly','Fill suggestions only (no auto-send)']].forEach(([id, key, label]) => {
+          const l = document.createElement('label'); l.className = 'fieldCheck';
+          l.innerHTML = `<input type="checkbox" id="${id}"> ${label}`;
+          chatChecks.insertBefore(l, chatChecks.firstChild);
+          toggleCheck(id, key);
+        });
+      }
+
       const bind=(id,key)=>{const el=document.getElementById(id);if(!el)return;el.value=appSettings[key]??el.value;el.onchange=()=>{appSettings[key]=el.value;if(key==='theme'){if(el.value==='system'){document.body.dataset.theme=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}else{document.body.dataset.theme=el.value;} }saveSettings();};};
       [['st_theme','theme'],['st_lang','lang'],['st_dir','dir'],['st_answerDepth','answerDepth'],['st_defaultMode','defaultMode'],['st_style','responseStyle'],['st_safety','safety'],['st_format','format'],['st_caution','caution'],['st_provider','provider'],['st_speed','speed'],['st_local_endpoint','localEndpoint'],['st_timeout','timeout'],['st_max_sources','maxSources']].forEach(x=>bind(x[0],x[1]));
       [['st_retry','retry'],['st_fallback','fallback'],['st_showAdmin','showAdmin']].forEach(x=>toggleCheck(x[0],x[1]));
@@ -287,7 +322,7 @@
 
     let selectedMode='islamic_search_mode',editingSourceId=null,adminSources=[],backendReachable=false;
     const statusEl=document.getElementById('status'),messagesEl=document.getElementById('messages'),apiInput=document.getElementById('apiUrl'),backendStatusText=document.getElementById('backendStatusText'),backendStatusPill=document.getElementById('backendStatusPill'),backendStatusPanel=document.getElementById('backendStatusPanel'),offlineBanner=document.getElementById('offlineBanner'),offlineBannerRetry=document.getElementById('offlineBannerRetry'),backendReconnect=document.getElementById('backendReconnect');
-    initTheme();initSidebarResize();if(apiInput)apiInput.value=getApiBaseUrl();bindBackendStatusControls();checkBackendStatus();renderModeButtons();bindNav();initSourceForm();renderAdmin();
+    loadSettings();initTheme();initSidebarResize();if(apiInput)apiInput.value=getApiBaseUrl();bindBackendStatusControls();checkBackendStatus();renderModeButtons();bindNav();initSourceForm();renderAdmin();
     function getApiBaseUrl(){return DEFAULT_API_BASE_URL.replace(/\/$/,'')}
     function saveApiUrl(){renderStatus(['Backend API URL is embedded securely'])}
     function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
