@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>IslamicGPT</title></head>
+<body style="font-family: sans-serif; max-width: 900px; margin: 20px auto;">
+<h1>IslamicGPT</h1>
+<p>Reliable Islamic answers from Quran, Sunnah, and approved sources.</p>
+<select id="mode">
+<option value="quran_mode">Quran Mode</option><option value="hadith_mode">Hadith Mode</option><option value="tafsir_mode">Tafsir Mode</option>
+<option value="fiqh_mode">Fiqh Mode</option><option value="aqidah_mode">Aqidah Mode</option><option value="arabic_mode">Arabic Mode</option>
+<option value="student_explanation_mode">Student Explanation Mode</option><option value="compare_opinions_mode">Compare Opinions Mode</option>
+<option value="islamic_search_mode" selected>Islamic Search Mode</option>
+</select>
+<div><textarea id="q" rows="4" style="width:100%" placeholder="Ask a question..."></textarea><button onclick="sendMsg()">Send</button></div>
+<pre id="status"></pre><pre id="answer"></pre><div id="sources"></div>
+<p style="font-size:12px;color:#6b7280">IslamicGPT is an AI assistant and may make mistakes. Always check the cited sources. For personal rulings, consult a qualified scholar.</p>
+<script>
+async function sendMsg(){
+ const q=document.getElementById('q').value; const mode=document.getElementById('mode').value;
+ document.getElementById('status').textContent='Searching approved Islamic sources\nChecking Quran and hadith references\nValidating citations\nPreparing answer';
+ try{
+  const r=await fetch('http://localhost:3001/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode})});
+  const d=await r.json(); document.getElementById('answer').textContent=d.answer;
+  renderSources(d.sources||[]); if(d.errorState){document.getElementById('status').textContent='Error: '+d.errorState;}
+ }catch(e){document.getElementById('status').textContent='Error: backend_unavailable';}
+}
+function renderSources(s){
+ const el=document.getElementById('sources'); el.innerHTML='';
+ s.forEach(x=>{const c=document.createElement('div'); c.style='border:1px solid #ddd;padding:8px;margin-top:6px';
+   if(x.source_type==='quran'){c.innerHTML='<b>Quran Source Card</b><br>Surah: '+(x.surah_name_en||x.surah_name_ar||'')+' ('+(x.surah_number||'')+') Ayah: '+(x.ayah_number||x.ayah_range||'');}
+   else if(x.source_type==='hadith'){c.innerHTML='<b>Hadith Source Card</b><br>Collection: '+(x.collection_name||'')+' Hadith No: '+(x.hadith_number||'Hadith number not available in this source.');}
+   else if(['scholar_statement','fatwa','book','lecture','video_transcript'].includes(x.source_type)){c.innerHTML='<b>Scholar Source Card</b><br>Scholar: '+(x.scholar_name||'')+' Ref: '+(x.reference_number||x.fatwa_number||x.page_number||x.timestamp||x.local_reference||'');}
+   else if(['approved_pdf','uploaded_document'].includes(x.source_type)){c.innerHTML='<b>Approved Document Source Card</b><br>Title: '+(x.document_title||x.title||'')+' File: '+(x.file_name||'')+' Approved: '+(x.approved_for_answers?'Yes':'No');}
+   else {c.innerHTML='<b>Source Card</b><br>Type: '+x.source_type;}
+   el.appendChild(c);
+ });
+}
+</script></body></html>
