@@ -2,66 +2,211 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IslamicGPT</title>
   <style>
-    :root{--sidebarWidth:300px;--bg:#070909;--sidebar:#0b0e0e;--panel:#101515;--card:#141a1a;--border:#1e2b2a;--text:#ecf6f5;--muted:#93a3a1;--accent:#16c8b3;--accentSoft:rgba(22,200,179,.12);--danger:#ff7870;--dangerSoft:rgba(255,120,112,.12)}
-    body[data-theme="light"]{--bg:#f8faf9;--sidebar:#eef2f1;--panel:#ffffff;--card:#ffffff;--border:#dde7e4;--text:#172120;--muted:#677471;--accent:#0db7a3;--accentSoft:#e7fbf7;--danger:#d85f57;--dangerSoft:#ffeceb}
-    *{box-sizing:border-box} body{margin:0;font:14px Inter,system-ui;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
-    .app{display:grid;grid-template-columns:var(--sidebarWidth) 6px 1fr;height:100vh}
-    .sidebar{background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column}
-    .sb-head{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);gap:10px}.logo{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#020303,var(--accent));display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px}.sb-title b{display:block}.sb-title span{font-size:11px;color:var(--muted)}
-    .icon-btn{border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:10px;padding:7px 10px;cursor:pointer}
-    .new-chat{margin:12px;border:0;background:linear-gradient(135deg,#040606,var(--accent));color:#fff;border-radius:12px;padding:10px 12px;font-weight:600;text-align:left;cursor:pointer}
-    .sb-scroll{overflow:auto;padding:0 10px 10px}.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:10px 8px}
-    .row-btn,.history-item{display:block;width:100%;text-align:left;padding:9px 10px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--text);cursor:pointer}
-    .row-btn:hover,.history-item:hover,.active{background:var(--accentSoft);border-color:rgba(22,200,179,.3);color:var(--accent)}
-    .muted-box{padding:10px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:12px;line-height:1.45;margin:0 4px 12px}
-    .chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.chips button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:10px;padding:8px 6px;font-size:12px;cursor:pointer}.chips button.active{background:var(--accentSoft);color:var(--accent);border-color:rgba(22,200,179,.35)}
-    .bottom{margin-top:auto;padding:10px;border-top:1px solid var(--border)}
-    .offline{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid rgba(255,120,112,.35);background:var(--dangerSoft);color:var(--danger);border-radius:10px;font-size:12px}
-    .resizer{cursor:col-resize;position:relative}.resizer:after{content:"";position:absolute;left:2px;top:0;bottom:0;width:1px;background:var(--border)}.resizer.drag:after{width:3px;left:1px;background:var(--accent)}
-    .main{display:grid;grid-template-rows:68px 34px 1fr auto;background:var(--bg)}
-    .top{display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--border);background:var(--panel)}
-    .title b{display:block}.title span{display:block;color:var(--muted);font-size:12px}.top .right{margin-left:auto;display:flex;gap:8px;align-items:center}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,120,112,.35);background:var(--dangerSoft);color:var(--danger);font-size:12px}
-    .banner{display:flex;justify-content:center;gap:10px;align-items:center;font-size:12px;color:var(--muted);border-bottom:1px solid rgba(255,120,112,.2);background:var(--dangerSoft)}
-    .banner button{border:0;background:none;color:var(--accent);cursor:pointer}
-    .workspace{overflow:auto;padding:18px 24px;display:flex;flex-direction:column;align-items:center}
-    .welcome{text-align:center;max-width:760px;margin:auto 0}.welcome h1{margin:8px 0}.welcome p{color:var(--muted)}
-    .badges,.examples{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.badge,.ex{border:1px solid var(--border);background:var(--card);padding:7px 11px;border-radius:999px;font-size:12px}.badge.primary{background:var(--accentSoft);color:var(--accent)}
-    #messages,.sources,.status{width:min(820px,100%)} .msg{display:flex;gap:8px;margin:10px 0}.msg.user{justify-content:flex-end}.bubble{background:var(--card);border:1px solid var(--border);padding:11px 13px;border-radius:14px;white-space:pre-wrap}.msg.user .bubble{background:var(--accentSoft);border-color:rgba(22,200,179,.35)}
-    .sources{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:10px}.card{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:11px}.card .type{font-size:11px;color:var(--accent)}
-    .composer-wrap{padding:14px 20px 18px}.composer{max-width:930px;margin:auto;border:1px solid var(--border);background:var(--panel);border-radius:16px;padding:10px}
-    textarea{width:100%;min-height:60px;border:0;outline:0;background:transparent;color:var(--text);resize:vertical}.composer-bottom{display:flex;align-items:center}.mini{color:var(--muted);font-size:12px}.send{margin-left:auto;border:0;background:linear-gradient(135deg,#020404,var(--accent));color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center}.modal.open{display:flex}.panel{width:min(760px,94vw);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    :root {
+      --sidebarWidth: 290px;
+      --bg: #070909;
+      --sidebar: #0b0f0f;
+      --panel: #101616;
+      --card: #131a1a;
+      --border: #20302d;
+      --text: #ecf6f5;
+      --muted: #94a5a2;
+      --accent: #18c9b5;
+      --accentSoft: rgba(24, 201, 181, 0.12);
+      --danger: #f27f75;
+      --dangerSoft: rgba(242, 127, 117, 0.14);
+    }
+    body[data-theme="light"] {
+      --bg: #f7faf9;
+      --sidebar: #edf2f0;
+      --panel: #ffffff;
+      --card: #ffffff;
+      --border: #d7e3df;
+      --text: #172221;
+      --muted: #5f6f6c;
+      --accent: #0fb7a4;
+      --accentSoft: #e7fbf7;
+      --danger: #c95e56;
+      --dangerSoft: #ffeceb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px Inter, system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+    button, input, textarea, select { font: inherit; }
+
+    .app { display: grid; grid-template-columns: var(--sidebarWidth) 6px 1fr; height: 100vh; }
+    .sidebar { background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sb-head { display: flex; align-items: center; gap: 10px; padding: 14px; border-bottom: 1px solid var(--border); }
+    .logo { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 12px; color: #fff; background: linear-gradient(135deg, #030606, var(--accent)); }
+    .sb-title b { display: block; }
+    .sb-title span { color: var(--muted); font-size: 11px; }
+    .icon-btn { border: 1px solid var(--border); background: var(--panel); color: var(--muted); border-radius: 10px; padding: 7px 10px; cursor: pointer; }
+    .new-chat { margin: 12px; border: 0; border-radius: 12px; padding: 10px 12px; text-align: left; color: #fff; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #030606, var(--accent)); }
+    .sb-content { padding: 0 10px 10px; overflow: auto; }
+    .label { margin: 10px 8px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .history-item, .nav-item { width: 100%; border: 1px solid transparent; background: transparent; color: var(--text); border-radius: 10px; padding: 9px 10px; text-align: left; cursor: pointer; }
+    .history-item:hover, .nav-item:hover, .nav-item.active { background: var(--accentSoft); border-color: rgba(24, 201, 181, 0.28); color: var(--accent); }
+    .muted-box { margin: 0 4px 12px; border: 1px dashed var(--border); border-radius: 12px; padding: 10px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .sb-bottom { margin-top: auto; border-top: 1px solid var(--border); padding: 10px; }
+
+    .resizer { cursor: col-resize; position: relative; }
+    .resizer:after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+    .resizer.drag:after { left: 1px; width: 3px; background: var(--accent); }
+
+    .main { display: grid; grid-template-rows: 70px 30px 1fr auto; background: var(--bg); }
+    .top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border); background: var(--panel); }
+    .title b { display: block; }
+    .title span { display: block; color: var(--muted); font-size: 12px; }
+    .top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .mini-select { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 10px; padding: 7px 10px; }
+    .status-pill { border: 1px solid rgba(242,127,117,.35); background: var(--dangerSoft); color: var(--danger); border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+
+    .banner { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 12px; border-bottom: 1px solid rgba(242,127,117,.25); background: var(--dangerSoft); }
+    .banner button { border: 0; background: none; color: var(--accent); cursor: pointer; }
+
+    .workspace { overflow: auto; padding: 18px 24px; display: flex; flex-direction: column; align-items: center; }
+    .welcome { text-align: center; max-width: 760px; margin: auto 0; }
+    .welcome p { color: var(--muted); }
+    .badges, .examples { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+    .badge, .ex { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 999px; padding: 7px 11px; font-size: 12px; }
+    .badge.primary { color: var(--accent); background: var(--accentSoft); }
+    .ex { cursor: pointer; }
+
+    #messages, .sources, .status { width: min(820px, 100%); }
+    .msg { display: flex; margin: 10px 0; }
+    .msg.user { justify-content: flex-end; }
+    .bubble { border: 1px solid var(--border); background: var(--card); border-radius: 14px; padding: 11px 13px; white-space: pre-wrap; }
+    .msg.user .bubble { border-color: rgba(24, 201, 181, 0.3); background: var(--accentSoft); }
+
+    .sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
+    .card { border: 1px solid var(--border); background: var(--card); border-radius: 12px; padding: 11px; }
+    .card .type { font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+
+    .composer-wrap { padding: 12px 20px 18px; }
+    .composer { max-width: 930px; margin: auto; border: 1px solid var(--border); background: var(--panel); border-radius: 16px; padding: 10px; }
+    textarea { width: 100%; min-height: 56px; border: 0; outline: 0; resize: vertical; color: var(--text); background: transparent; }
+    .composer-bottom { display: flex; align-items: center; }
+    .mini { color: var(--muted); font-size: 12px; }
+    .send { margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 999px; color: #fff; cursor: pointer; background: linear-gradient(135deg, #030606, var(--accent)); }
+
+    .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.46); }
+    .modal.open { display: flex; }
+    .panel { width: min(460px, 92vw); max-height: 90vh; overflow: auto; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); padding: 16px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .section { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 12px; margin-bottom: 10px; }
+    .section h4 { margin: 0 0 8px; font-size: 13px; }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .seg button, .save-btn { border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+    .seg button.active { border-color: rgba(24,201,181,.45); background: var(--accentSoft); color: var(--accent); }
+    .field { width: 100%; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px; padding: 8px 10px; }
+    .field:focus, .mini-select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accentSoft); }
+    .note { color: var(--muted); font-size: 12px; line-height: 1.5; }
   </style>
 </head>
 <body data-theme="dark">
-<div class="app"><aside class="sidebar" id="sidebar"><div class="sb-head"><div class="logo">IG</div><div class="sb-title"><b>IslamicGPT</b><span>AI workspace</span></div><button class="icon-btn" id="collapseBtn">-</button></div><button class="new-chat" onclick="newChat()">New Chat</button><div class="sb-scroll"><div class="label">Conversations</div><div id="history"></div><div class="muted-box" id="emptyHistory">No conversations yet<br/>Start a new chat to begin</div><div class="label">Workspace</div><button class="row-btn active">Chat</button><button class="row-btn">Sources</button><button class="row-btn">Citations</button><button class="row-btn" onclick="openSettings()">Settings</button><div class="label">Islamic Mode</div><div class="chips" id="modes"></div><div class="label">Answer Depth</div><div class="chips" id="depth"><button data-depth="auto" class="active">Auto</button><button data-depth="fast">Fast</button><button data-depth="strong">Strong</button></div></div><div class="bottom"><button class="row-btn" onclick="openSettings()">Settings</button><button class="row-btn">Sources / Knowledge</button><button class="row-btn" onclick="checkServer()">AI Server Check</button><button class="row-btn" onclick="openSettings()">Backend API URL</button></div></aside><div class="resizer" id="resizer"></div><main class="main"><header class="top"><button class="icon-btn" id="menuBtn">Menu</button><div class="title"><b>New Islamic chat</b><span>Ready to search Quran, Hadith, tafsir, and approved sources</span></div><div class="right"><button class="icon-btn" onclick="toggleTheme()">Theme</button><span class="pill" id="aiPill">AI Offline</span><button class="icon-btn" onclick="openSettings()">Settings</button></div></header><div class="banner"><span>AI server offline — the rest of the app works.</span><button onclick="checkServer()">Reconnect</button></div><section class="workspace"><div class="welcome" id="welcome"><div class="logo" style="margin:0 auto">IG</div><h1>Welcome to IslamicGPT</h1><p>Ask in chat. IslamicGPT answers from approved Quran, Hadith, scholar, and document sources.</p><div class="badges"><span class="badge primary">Local-source AI</span><span class="badge">No source, no answer</span><span class="badge">Hadith numbered</span></div><div class="examples"><button class="ex" onclick="setExample('Importance of prayer')">Importance of prayer</button><button class="ex" onclick="setExample('Hadith about intention')">Hadith about intention</button><button class="ex" onclick="setExample('Explain an ayah simply')">Explain an ayah simply</button><button class="ex" onclick="setExample('Compare scholarly views')">Compare scholarly views</button></div></div><div class="status" id="status"></div><div id="messages"></div><div class="sources" id="sources"></div></section><section class="composer-wrap"><div class="composer"><textarea id="q" placeholder="Ask IslamicGPT to search approved Islamic sources..."></textarea><div class="composer-bottom"><div class="mini"><span id="modeLabel">Islamic Search Mode</span> · Approved sources first</div><button class="send" onclick="sendMsg()">></button></div></div></section></main></div>
-<div class="modal" id="settingsModal"><div class="panel"><h2>Settings</h2><div class="label">Appearance</div><div class="grid2"><button class="row-btn" onclick="setTheme('dark')">Dark mode</button><button class="row-btn" onclick="setTheme('light')">Light mode</button></div><div class="label">Backend API URL</div><input id="apiUrl" /><button class="row-btn" onclick="saveApiUrl()">Save URL</button><div id="currentApi" class="muted-box"></div><div class="label">Model Depth</div><div class="grid2"><button class="row-btn" onclick="setDepth('auto')">Auto</button><button class="row-btn" onclick="setDepth('fast')">Fast</button><button class="row-btn" onclick="setDepth('strong')">Strong</button></div><div class="label">Islamic Mode default</div><div class="chips" id="settingsModes"></div><div class="label">Trust / Safety</div><div class="muted-box">Approved sources only<br/>No source, no answer<br/>Open web disabled for Islamic answers<br/>For personal rulings, consult a qualified scholar</div><button class="row-btn" onclick="closeSettings()">Close</button></div></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-head"><div class="logo">IG</div><div class="sb-title"><b>IslamicGPT</b><span>AI workspace</span></div></div>
+    <button class="new-chat" onclick="newChat()">New Chat</button>
+    <div class="sb-content">
+      <div class="label">Conversations</div>
+      <div id="history"></div>
+      <div class="muted-box" id="emptyHistory">No conversations yet<br>Start a new chat to begin</div>
+    </div>
+    <div class="sb-bottom">
+      <button class="nav-item active">Chat</button>
+      <button class="nav-item">Sources</button>
+      <button class="nav-item" onclick="openSettings()">Settings</button>
+      <button class="nav-item" onclick="checkServer()">AI Server Check</button>
+    </div>
+  </aside>
+  <div class="resizer" id="resizer"></div>
+  <main class="main">
+    <header class="top">
+      <button class="icon-btn">Menu</button>
+      <div class="title"><b>New Islamic chat</b><span>Ready to search approved Islamic sources</span></div>
+      <div class="top-right">
+        <select id="modeSelect" class="mini-select"></select>
+        <select id="depthSelect" class="mini-select"><option value="auto">Auto</option><option value="fast">Fast</option><option value="strong">Strong</option></select>
+        <button class="icon-btn" onclick="toggleTheme()">Theme</button>
+        <span class="status-pill" id="aiPill">AI Offline</span>
+        <button class="icon-btn" onclick="openSettings()">Settings</button>
+      </div>
+    </header>
+    <div class="banner"><span>AI server offline — the rest of the app works.</span><button onclick="checkServer()">Reconnect</button></div>
+    <section class="workspace">
+      <div class="welcome" id="welcome">
+        <div class="logo" style="margin:0 auto;">IG</div>
+        <h1>Welcome to IslamicGPT</h1>
+        <p>Ask in chat. IslamicGPT answers from approved Quran, Hadith, scholar, and document sources.</p>
+        <div class="badges"><span class="badge primary">Local-source AI</span><span class="badge">No source, no answer</span><span class="badge">Hadith numbered</span></div>
+        <div class="examples"><button class="ex" onclick="setExample('Importance of prayer')">Importance of prayer</button><button class="ex" onclick="setExample('Hadith about intention')">Hadith about intention</button><button class="ex" onclick="setExample('Explain an ayah simply')">Explain an ayah simply</button><button class="ex" onclick="setExample('Compare scholarly views')">Compare scholarly views</button></div>
+      </div>
+      <div class="status" id="status"></div>
+      <div id="messages"></div>
+      <div class="sources" id="sources"></div>
+    </section>
+    <section class="composer-wrap">
+      <div class="composer"><textarea id="q" placeholder="Ask IslamicGPT to search approved Islamic sources..."></textarea><div class="composer-bottom"><div class="mini"><span id="modeLabel">Islamic Search Mode</span> · Approved sources first</div><button class="send" onclick="sendMsg()">→</button></div></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="settingsModal">
+  <div class="panel">
+    <div class="panel-head"><h3 style="margin:0;">Settings</h3><button class="icon-btn" onclick="closeSettings()">Close</button></div>
+    <div class="section"><h4>Appearance</h4><div class="seg"><button id="themeDark" onclick="setTheme('dark')">Dark mode</button><button id="themeLight" onclick="setTheme('light')">Light mode</button></div></div>
+    <div class="section"><h4>Islamic Defaults</h4><label class="note">Islamic Mode</label><select id="settingsMode" class="field" style="margin:4px 0 8px;"></select><label class="note">Answer Depth</label><select id="settingsDepth" class="field"><option value="auto">Auto</option><option value="fast">Fast</option><option value="strong">Strong</option></select></div>
+    <div class="section"><h4>Backend</h4><input id="apiUrl" class="field" /><button class="save-btn" style="margin-top:8px;" onclick="saveApiUrl()">Save</button><div id="currentApi" class="note" style="margin-top:8px;"></div></div>
+    <div class="section"><h4>Trust and Safety</h4><div class="note">Approved sources only<br>No source, no answer<br>Open web disabled for Islamic answers<br>For personal rulings, consult a qualified scholar</div></div>
+  </div>
+</div>
+
 <script>
-const DEFAULT_API='http://localhost:3001'; const modes=[['islamic_search_mode','Search'],['quran_mode','Quran'],['hadith_mode','Hadith'],['tafsir_mode','Tafsir'],['fiqh_mode','Fiqh'],['aqidah_mode','Aqidah'],['arabic_mode','Arabic'],['student_explanation_mode','Student']];
-let selectedMode=localStorage.getItem('ISLAMICGPT_MODE')||'islamic_search_mode'; let modelMode=localStorage.getItem('ISLAMICGPT_MODEL_MODE')||'auto'; let currentChatId=null;
-const chats=JSON.parse(localStorage.getItem('ISLAMICGPT_CHATS')||'[]'); const messagesByChat=JSON.parse(localStorage.getItem('ISLAMICGPT_CHAT_MESSAGES')||'{}');
-function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function getApi(){return (localStorage.getItem('ISLAMICGPT_API_URL')||DEFAULT_API).replace(/\/$/,'')}
-function init(){applyTheme(localStorage.getItem('ISLAMICGPT_THEME')||'dark');document.getElementById('apiUrl').value=getApi();document.getElementById('currentApi').textContent='Current: '+getApi();renderModes();renderHistory();initResize();bindDepth();}
-function renderModes(){const a=document.getElementById('modes'),b=document.getElementById('settingsModes');a.innerHTML='';b.innerHTML='';modes.forEach(([v,l])=>{[a,b].forEach(el=>{const btn=document.createElement('button');btn.textContent=l;btn.className=v===selectedMode?'active':'';btn.onclick=()=>{selectedMode=v;localStorage.setItem('ISLAMICGPT_MODE',v);document.getElementById('modeLabel').textContent=l+' Mode';renderModes()};el.appendChild(btn)})})}
-function bindDepth(){document.querySelectorAll('#depth button').forEach(b=>{if(b.dataset.depth===modelMode)b.classList.add('active');b.onclick=()=>setDepth(b.dataset.depth)})}
-function setDepth(d){modelMode=d;localStorage.setItem('ISLAMICGPT_MODEL_MODE',d);document.querySelectorAll('#depth button').forEach(b=>b.classList.toggle('active',b.dataset.depth===d));}
-function renderHistory(){const h=document.getElementById('history');h.innerHTML='';document.getElementById('emptyHistory').style.display=chats.length?'none':'block';chats.forEach(c=>{const b=document.createElement('button');b.className='history-item';b.textContent=c.title;b.onclick=()=>selectChat(c.id);h.appendChild(b)})}
-function newChat(){currentChatId='c'+Date.now();chats.unshift({id:currentChatId,title:'New Islamic chat'});messagesByChat[currentChatId]=[];persist();renderHistory();document.getElementById('messages').innerHTML='';document.getElementById('sources').innerHTML='';document.getElementById('welcome').style.display='block'}
-function selectChat(id){currentChatId=id;document.getElementById('welcome').style.display='none';const m=messagesByChat[id]||[];const out=document.getElementById('messages');out.innerHTML='';m.forEach(x=>addMessage(x.role,x.text,false));}
-function persist(){localStorage.setItem('ISLAMICGPT_CHATS',JSON.stringify(chats));localStorage.setItem('ISLAMICGPT_CHAT_MESSAGES',JSON.stringify(messagesByChat));}
-function addMessage(role,text,save=true){const d=document.createElement('div');d.className='msg '+(role==='user'?'user':'assistant');d.innerHTML=`<div class='bubble'>${esc(text)}</div>`;document.getElementById('messages').appendChild(d);if(save&&currentChatId){messagesByChat[currentChatId].push({role,text});persist();}}
-function renderSourceCards(cards){const el=document.getElementById('sources');el.innerHTML='';cards.forEach(c=>{const d=document.createElement('div');d.className='card';d.innerHTML=`<div class='type'>${esc(c.badge||'Source')}</div><h4>${esc(c.type||'Source')}</h4><div>${esc(c.copyCitation||c.reference||'')}</div>`;el.appendChild(d)})}
-async function sendMsg(){const q=document.getElementById('q').value.trim();if(!q)return;if(!currentChatId)newChat();document.getElementById('welcome').style.display='none';addMessage('user',q);document.getElementById('q').value='';try{const r=await fetch(`${getApi()}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode:selectedMode,modelMode})});const d=await r.json();addMessage('assistant',d.answer||'No answer returned.');renderSourceCards(d.sourceCards||[])}catch(e){addMessage('assistant','IslamicGPT could not reach the backend. Check Backend API URL and VM server.');}}
-function applyTheme(t){document.body.dataset.theme=t;localStorage.setItem('ISLAMICGPT_THEME',t)} function toggleTheme(){applyTheme(document.body.dataset.theme==='dark'?'light':'dark')} function setTheme(t){applyTheme(t)}
-function openSettings(){document.getElementById('settingsModal').classList.add('open')} function closeSettings(){document.getElementById('settingsModal').classList.remove('open')} function saveApiUrl(){const v=document.getElementById('apiUrl').value.trim().replace(/\/$/,'');if(v)localStorage.setItem('ISLAMICGPT_API_URL',v);document.getElementById('currentApi').textContent='Current: '+getApi();}
-function setExample(t){document.getElementById('q').value=t;document.getElementById('q').focus()} function checkServer(){}
-function initResize(){const saved=localStorage.getItem('ISLAMICGPT_SIDEBAR_WIDTH');if(saved)document.documentElement.style.setProperty('--sidebarWidth',saved+'px');const r=document.getElementById('resizer');let drag=false;r.onpointerdown=e=>{drag=true;r.classList.add('drag');r.setPointerCapture(e.pointerId)};r.onpointermove=e=>{if(!drag)return;const w=Math.max(240,Math.min(420,e.clientX));document.documentElement.style.setProperty('--sidebarWidth',w+'px');localStorage.setItem('ISLAMICGPT_SIDEBAR_WIDTH',w)};r.onpointerup=e=>{drag=false;r.classList.remove('drag');try{r.releasePointerCapture(e.pointerId)}catch{}}}
+const DEFAULT_API='http://localhost:3001';
+const modes=[['islamic_search_mode','Search'],['quran_mode','Quran'],['hadith_mode','Hadith'],['tafsir_mode','Tafsir'],['fiqh_mode','Fiqh'],['aqidah_mode','Aqidah'],['arabic_mode','Arabic'],['student_explanation_mode','Student']];
+let selectedMode=localStorage.getItem('ISLAMICGPT_MODE')||'islamic_search_mode';
+let modelMode=localStorage.getItem('ISLAMICGPT_MODEL_MODE')||'auto';
+let currentChatId=null;
+const chats=JSON.parse(localStorage.getItem('ISLAMICGPT_CHATS')||'[]');
+const messagesByChat=JSON.parse(localStorage.getItem('ISLAMICGPT_CHAT_MESSAGES')||'{}');
+const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const getApi=()=> (localStorage.getItem('ISLAMICGPT_API_URL')||DEFAULT_API).replace(/\/$/, '');
+
+function init(){
+  applyTheme(localStorage.getItem('ISLAMICGPT_THEME')||'dark');
+  document.getElementById('apiUrl').value=getApi();
+  document.getElementById('currentApi').textContent='Current: '+getApi();
+  renderModeSelects(); renderHistory(); initResize(); syncDepth();
+}
+function renderModeSelects(){
+  const selects=['modeSelect','settingsMode'].map(id=>document.getElementById(id));
+  selects.forEach(s=>{s.innerHTML='';modes.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;s.appendChild(o)});s.value=selectedMode;s.onchange=e=>setMode(e.target.value);});
+  updateModeLabel();
+}
+function updateModeLabel(){ const m=modes.find(([v])=>v===selectedMode); document.getElementById('modeLabel').textContent=(m?m[1]:'Islamic Search')+' Mode'; }
+function setMode(v){ selectedMode=v; localStorage.setItem('ISLAMICGPT_MODE',v); document.getElementById('modeSelect').value=v; document.getElementById('settingsMode').value=v; updateModeLabel(); }
+function syncDepth(){ ['depthSelect','settingsDepth'].forEach(id=>{const el=document.getElementById(id); el.value=modelMode; el.onchange=e=>setDepth(e.target.value);}); }
+function setDepth(v){ modelMode=v; localStorage.setItem('ISLAMICGPT_MODEL_MODE',v); document.getElementById('depthSelect').value=v; document.getElementById('settingsDepth').value=v; }
+function renderHistory(){ const h=document.getElementById('history'); h.innerHTML=''; document.getElementById('emptyHistory').style.display=chats.length?'none':'block'; chats.forEach(c=>{const b=document.createElement('button'); b.className='history-item'; b.textContent=c.title; b.onclick=()=>selectChat(c.id); h.appendChild(b)}); }
+function newChat(){ currentChatId='c'+Date.now(); messagesByChat[currentChatId]=[]; document.getElementById('messages').innerHTML=''; document.getElementById('sources').innerHTML=''; document.getElementById('welcome').style.display='block'; }
+function selectChat(id){ currentChatId=id; document.getElementById('welcome').style.display='none'; document.getElementById('messages').innerHTML=''; document.getElementById('sources').innerHTML=''; (messagesByChat[id]||[]).forEach(m=>addMessage(m.role,m.text,false)); }
+function persist(){ localStorage.setItem('ISLAMICGPT_CHATS',JSON.stringify(chats)); localStorage.setItem('ISLAMICGPT_CHAT_MESSAGES',JSON.stringify(messagesByChat)); }
+function ensureChatTitle(firstMessage){ if(!currentChatId) newChat(); if(!chats.some(c=>c.id===currentChatId)){ chats.unshift({id:currentChatId,title:firstMessage.slice(0,42)}); persist(); renderHistory(); } }
+function addMessage(role,text,save=true){ const d=document.createElement('div'); d.className='msg '+(role==='user'?'user':'assistant'); d.innerHTML=`<div class='bubble'>${esc(text)}</div>`; document.getElementById('messages').appendChild(d); if(save&&currentChatId){ messagesByChat[currentChatId].push({role,text}); persist(); } }
+function renderSourceCards(cards){ const el=document.getElementById('sources'); el.innerHTML=''; cards.forEach(c=>{const d=document.createElement('div'); d.className='card'; d.innerHTML=`<div class='type'>${esc(c.badge||'Source')}</div><strong>${esc(c.type||'Source')}</strong><div>${esc(c.copyCitation||c.reference||'')}</div>`; el.appendChild(d);}); }
+async function sendMsg(){ const q=document.getElementById('q').value.trim(); if(!q) return; ensureChatTitle(q); document.getElementById('welcome').style.display='none'; addMessage('user',q); document.getElementById('q').value=''; try{ const r=await fetch(`${getApi()}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode:selectedMode,modelMode})}); const d=await r.json(); addMessage('assistant', d.answer||'No answer returned.'); renderSourceCards(d.sourceCards||[]);} catch(e){ addMessage('assistant','IslamicGPT could not reach the backend. Check Backend API URL and VM server.'); } }
+function applyTheme(t){ document.body.dataset.theme=t; localStorage.setItem('ISLAMICGPT_THEME',t); document.getElementById('themeDark').classList.toggle('active',t==='dark'); document.getElementById('themeLight').classList.toggle('active',t==='light'); }
+function toggleTheme(){ setTheme(document.body.dataset.theme==='dark'?'light':'dark'); }
+function setTheme(t){ applyTheme(t); }
+function openSettings(){ document.getElementById('settingsModal').classList.add('open'); }
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
+function saveApiUrl(){ const v=document.getElementById('apiUrl').value.trim().replace(/\/$/, ''); if(v) localStorage.setItem('ISLAMICGPT_API_URL',v); document.getElementById('currentApi').textContent='Current: '+getApi(); }
+function setExample(t){ document.getElementById('q').value=t; document.getElementById('q').focus(); }
+async function checkServer(){ try{ const r=await fetch(`${getApi()}/health`); const ok=r.ok; document.getElementById('aiPill').textContent=ok?'AI Online':'AI Offline'; } catch { document.getElementById('aiPill').textContent='AI Offline'; } }
+function initResize(){ const saved=localStorage.getItem('ISLAMICGPT_SIDEBAR_WIDTH'); if(saved) document.documentElement.style.setProperty('--sidebarWidth',saved+'px'); const r=document.getElementById('resizer'); let drag=false; r.onpointerdown=e=>{drag=true;r.classList.add('drag');r.setPointerCapture(e.pointerId)}; r.onpointermove=e=>{if(!drag) return; const w=Math.max(240,Math.min(420,e.clientX)); document.documentElement.style.setProperty('--sidebarWidth',w+'px'); localStorage.setItem('ISLAMICGPT_SIDEBAR_WIDTH',w)}; r.onpointerup=e=>{drag=false;r.classList.remove('drag'); try{r.releasePointerCapture(e.pointerId)}catch{}}; }
 init();
 </script>
 </body>
