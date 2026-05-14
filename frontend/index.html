@@ -66,15 +66,16 @@
 <body data-theme="dark">
   <div class="app" id="app">
     <aside class="side">
-      <div class="sideHead"><div class="logo">IG</div><div class="brand"><b>IslamicGPT</b><span>Source-first Islamic assistant</span></div><button class="collapse" type="button">‹</button></div>
+      <div class="sideHead"><div class="logo"><img src="logo.png" alt="IslamicGPT" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='IG'"></div><div class="brand"><b>IslamicGPT</b><span>Source-first Islamic assistant</span></div><button class="collapse" type="button">‹</button></div>
       <button class="new" type="button" onclick="newChat()">+ New Islamic chat</button>
       <div class="scroll">
         <div class="box">
-          <div class="label">Workspace</div>
+          <div class="label">Main</div>
           <div class="nav" id="nav">
             <button class="active" type="button" data-view="chat"><span></span><span>Chat</span></button>
             <button type="button" data-view="sources"><span></span><span>Sources</span></button>
-            <button type="button" data-view="admin"><span></span><span>Admin</span></button><button type="button" data-view="settings"><span></span><span>Settings</span></button>
+            <button type="button" data-view="settings"><span></span><span>Settings</span></button>
+            <button type="button" data-view="admin" id="navAdmin" class="hidden"><span></span><span>Admin</span></button>
           </div>
         </div>
         <div class="box"><div class="label">Recent Chats</div><div id="recentChats" class="hint">No recent chats yet</div></div><div class="box" id="chatControls">
@@ -88,7 +89,15 @@
           <details><summary>Backend API URL</summary><p class="hint">Backend is embedded securely.</p><input id="apiUrl" type="hidden"><button class="save" type="button" onclick="saveApiUrl()">Save URL</button></details>
         </div>
       </div>
-      <div class="foot"><div class="offline" id="backendStatusPanel"><span id="backendStatusText">Checking connection</span><button class="secondary" id="backendReconnect" type="button">Reconnect</button></div></div>
+      <div class="foot">
+        <div class="offline" id="backendStatusPanel">
+          <span id="backendStatusText">Checking connection</span>
+          <button class="secondary" id="backendReconnect" type="button">Reconnect</button>
+        </div>
+        <div class="sub" style="margin-top: 10px; text-align: center; font-size: 10px; opacity: 0.6;">
+          v0.2.0 • Source-first Islamic AI
+        </div>
+      </div>
     </aside>
     <div class="resizer" id="sidebarResizer" title="Drag to resize sidebar"></div>
     <main class="main">
@@ -100,7 +109,7 @@
       <section class="work" id="work">
         <div id="chatView" class="page">
           <div class="welcome" id="welcome"><div class="welcomeGlow"></div>
-            <div class="big">IG</div>
+            <div class="big"><img src="logo.png" alt="IslamicGPT" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='IG'"></div>
             <h1>Welcome to IslamicGPT</h1>
             <p>Search approved Quran, Hadith, scholar, and document sources before answering.</p>
             <div class="sub">Source-first Islamic assistant.</div>
@@ -147,7 +156,7 @@
             <div class="card"><h4>Search Settings</h4><div class="checkRow" id="searchChecks"></div><label>Maximum source results</label><select id="st_max_sources"><option>3</option><option selected>5</option><option>10</option><option>15</option></select></div>
           </div>
           <div class="adminLayout">
-            <div class="card"><h4>Chat Interface Settings</h4><div class="checkRow" id="chatChecks"></div></div>
+            <div class="card"><h4>Chat Interface Settings</h4><div class="checkRow" id="chatChecks"></div><div class="checkRow"><label class="fieldCheck"><input type="checkbox" id="st_showAdmin"> Show Admin Tools</label></div></div>
             <details class="card"><summary>Developer & Diagnostics</summary><div class="sub">Backend URL: <span id="diagBackendUrl"></span></div><div class="sub">Last health check: <span id="diagHealth"></span></div><div class="sub">Last source search check: <span id="diagSearch"></span></div><div class="sub">Last error: <span id="diagError"></span></div><div class="sub">App version: v0.1 placeholder</div><div class="chips"><button class="secondary" type="button" onclick="exportSettings()">Export settings</button><button class="danger" type="button" onclick="resetSettings()">Reset settings</button></div></details>
           </div>
         </div>
@@ -163,7 +172,7 @@
             <div class="sub" id="adminLoginStatus"></div>
           </div>
           <div id="adminManager" class="hidden">
-            <div class="chips"><button class="chip t" type="button" onclick="loadAdminSources()">Refresh sources</button><button class="chip" type="button" onclick="adminReindex()">Rebuild index</button><button class="chip" type="button" onclick="loadAdminWarnings()">View warnings</button><button class="chip" type="button" onclick="adminLogout()">Logout</button></div>
+            <div class="chips"><button class="chip t" type="button" onclick="loadAdminSources()">Refresh sources</button><button class="chip" type="button" onclick="adminReindex()">Rebuild index</button><button class="chip" type="button" onclick="loadAdminWarnings()">View warnings</button><button class="chip" type="button" onclick="safePending('Source Coverage')">Source Coverage</button><button class="chip" type="button" onclick="adminLogout()">Logout</button></div>
             <div class="adminLayout">
               <div>
                 <div class="card">
@@ -224,7 +233,10 @@
       </section>
       <section class="composerWrap" id="composerWrap">
         <div class="composer"><textarea id="q" placeholder="Ask IslamicGPT to search approved Islamic sources..."></textarea><div class="chips" id="composerBadges"></div><div class="composerActions"><div class="mini"><span id="activeModeLabel">Islamic Search Mode</span> · Approved sources first</div><button class="secondary hidden" id="clearBtn" type="button" onclick="document.getElementById('q').value='';updateComposerState();">Clear</button><button class="send" id="sendBtn" type="button" onclick="sendMsg()" disabled>›</button></div></div>
-        <div class="disclaimer">IslamicGPT is an AI assistant and may make mistakes. Always check the cited sources. For personal rulings, consult a qualified scholar.</div>
+        <div class="disclaimer" style="text-align: center; margin-top: 15px; border-top: 1px dashed var(--line); padding-top: 10px;">
+          <p>IslamicGPT may make mistakes. Always verify cited sources.</p>
+          <p><b>For personal rulings, consult a qualified scholar.</b></p>
+        </div>
       </section>
     </main>
   </div>
@@ -248,22 +260,69 @@
     const SETTINGS_KEY='ISLAMICGPT_SETTINGS';
     const defaultSettings={theme:'system',lang:'English',dir:'auto',answerDepth:'auto',defaultMode:'islamic_search_mode',requireSource:true,refuseNoSource:true,showSourceCards:true,showArabic:true,showTranslation:true,showHadithNumber:true,showHadithGrade:true,showMetadata:true,preferVerified:true,warnIncomplete:true,responseStyle:'Direct',safety:'Standard',format:'Paragraphs',caution:'Always remind user to consult a qualified scholar for personal rulings',provider:'Auto',speed:'Balanced',localEndpoint:'',timeout:'60000',retry:false,fallback:true,maxSources:'5',compact:false,timestamps:false,showModeBadge:true,showDepthBadge:true,showSourceBadge:true,autofocus:true,fillOnly:true};
     let appSettings={...defaultSettings};
-    function loadSettings(){try{appSettings={...defaultSettings,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}}catch{} selectedMode=appSettings.defaultMode||selectedMode;}
+    function loadSettings(){
+      try {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+          appSettings = {...defaultSettings, ...JSON.parse(saved)};
+        }
+      } catch(e) {
+        console.error('Failed to load settings:', e);
+      }
+      selectedMode = appSettings.defaultMode || 'islamic_search_mode';
+    }
     function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings));}
     function safePending(n){alert(n+': Backend integration pending.');}
     function testLocalAiConnection(){document.getElementById('localAiStatus').textContent='Backend integration pending';}
     function exportSettings(){navigator.clipboard.writeText(JSON.stringify(appSettings,null,2));}
     function resetSettings(){if(confirm('Reset all settings to defaults?')){appSettings={...defaultSettings};saveSettings();initSettingsUI();}}
     function toggleCheck(id,key){const el=document.getElementById(id);if(!el)return;el.checked=!!appSettings[key];el.onchange=()=>{appSettings[key]=el.checked;saveSettings();};}
-    function initSettingsUI(){const modeSel=document.getElementById('st_defaultMode');if(modeSel&&!modeSel.options.length){modes.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;modeSel.appendChild(o)})}
+    function initSettingsUI(){
+      const modeSel=document.getElementById('st_defaultMode');
+      if(modeSel&&!modeSel.options.length){
+        modes.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;modeSel.appendChild(o)});
+      }
+
+      const sourceChecks = document.getElementById('sourceSettingChecks');
+      if (sourceChecks && !sourceChecks.children.length) {
+        [['st_requireSource','requireSource','Require source'],['st_refuseNoSource','refuseNoSource','Refuse if no source'],['st_showSourceCards','showSourceCards','Show source cards'],['st_showArabic','showArabic','Show Arabic text'],['st_showTranslation','showTranslation','Show translation'],['st_showHadithNumber','showHadithNumber','Show Hadith number'],['st_showHadithGrade','showHadithGrade','Show Hadith grade'],['st_showMetadata','showMetadata','Show metadata'],['st_preferVerified','preferVerified','Prefer verified sources'],['st_warnIncomplete','warnIncomplete','Warn if incomplete']].forEach(([id, key, label]) => {
+          const l = document.createElement('label'); l.className = 'fieldCheck';
+          l.innerHTML = `<input type="checkbox" id="${id}"> ${label}`;
+          sourceChecks.appendChild(l);
+          toggleCheck(id, key);
+        });
+      }
+
+      const chatChecks = document.getElementById('chatChecks');
+      if (chatChecks && chatChecks.children.length <= 1) {
+        [['st_compact','compact','Compact view'],['st_timestamps','timestamps','Show timestamps'],['st_showModeBadge','showModeBadge','Show mode badge'],['st_showDepthBadge','showDepthBadge','Show depth badge'],['st_showSourceBadge','showSourceBadge','Show source-backed badge'],['st_autofocus','autofocus','Autofocus input'],['st_fillOnly','fillOnly','Fill suggestions only (no auto-send)']].forEach(([id, key, label]) => {
+          const l = document.createElement('label'); l.className = 'fieldCheck';
+          l.innerHTML = `<input type="checkbox" id="${id}"> ${label}`;
+          chatChecks.insertBefore(l, chatChecks.firstChild);
+          toggleCheck(id, key);
+        });
+      }
+
       const bind=(id,key)=>{const el=document.getElementById(id);if(!el)return;el.value=appSettings[key]??el.value;el.onchange=()=>{appSettings[key]=el.value;if(key==='theme'){if(el.value==='system'){document.body.dataset.theme=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}else{document.body.dataset.theme=el.value;} }saveSettings();};};
       [['st_theme','theme'],['st_lang','lang'],['st_dir','dir'],['st_answerDepth','answerDepth'],['st_defaultMode','defaultMode'],['st_style','responseStyle'],['st_safety','safety'],['st_format','format'],['st_caution','caution'],['st_provider','provider'],['st_speed','speed'],['st_local_endpoint','localEndpoint'],['st_timeout','timeout'],['st_max_sources','maxSources']].forEach(x=>bind(x[0],x[1]));
-      [['st_retry','retry'],['st_fallback','fallback']].forEach(x=>toggleCheck(x[0],x[1]));
+      [['st_retry','retry'],['st_fallback','fallback'],['st_showAdmin','showAdmin']].forEach(x=>toggleCheck(x[0],x[1]));
+      const adminNav = document.getElementById('navAdmin');
+      if (adminNav) {
+        adminNav.classList.toggle('hidden', !appSettings.showAdmin);
+      }
+      const showAdminCheck = document.getElementById('st_showAdmin');
+      if (showAdminCheck) {
+        showAdminCheck.onchange = (e) => {
+          appSettings.showAdmin = e.target.checked;
+          if (adminNav) adminNav.classList.toggle('hidden', !appSettings.showAdmin);
+          saveSettings();
+        };
+      }
     }
 
     let selectedMode='islamic_search_mode',editingSourceId=null,adminSources=[],backendReachable=false;
     const statusEl=document.getElementById('status'),messagesEl=document.getElementById('messages'),apiInput=document.getElementById('apiUrl'),backendStatusText=document.getElementById('backendStatusText'),backendStatusPill=document.getElementById('backendStatusPill'),backendStatusPanel=document.getElementById('backendStatusPanel'),offlineBanner=document.getElementById('offlineBanner'),offlineBannerRetry=document.getElementById('offlineBannerRetry'),backendReconnect=document.getElementById('backendReconnect');
-    initTheme();initSidebarResize();if(apiInput)apiInput.value=getApiBaseUrl();bindBackendStatusControls();checkBackendStatus();renderModeButtons();bindNav();initSourceForm();renderAdmin();
+    loadSettings();initTheme();initSidebarResize();if(apiInput)apiInput.value=getApiBaseUrl();bindBackendStatusControls();checkBackendStatus();renderModeButtons();bindNav();initSourceForm();renderAdmin();
     function getApiBaseUrl(){return DEFAULT_API_BASE_URL.replace(/\/$/,'')}
     function saveApiUrl(){renderStatus(['Backend API URL is embedded securely'])}
     function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -285,13 +344,41 @@
     function bindNav(){document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)))}
     function switchView(view){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));['chat','sources','admin','settings'].forEach(v=>document.getElementById(`${v}View`).classList.toggle('hidden',v!==view));document.getElementById('composerWrap').classList.toggle('hidden',view!=='chat');document.getElementById('chatControls').classList.toggle('hidden',view!=='chat');const titles={chat:['New Islamic chat','Ready to search approved Islamic sources'],sources:['Approved sources','Read-only source catalog'],admin:['Admin source manager','Protected owner tools'],settings:['Settings','Customize IslamicGPT behavior, sources, model routing, and safety rules.']};document.getElementById('pageTitle').textContent=titles[view][0];document.getElementById('pageSubtitle').textContent=titles[view][1];if(view==='sources')loadPublicSources();if(view==='admin')renderAdmin();if(view==='settings'){renderSettingsStatus();initSettingsUI();}}
     function renderModeButtons(){const g=document.getElementById('modeGrid');g.innerHTML='';modes.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className=v===selectedMode?'active':'';b.textContent=l;b.onclick=()=>{selectedMode=v;document.getElementById('activeModeLabel').textContent=l+' Mode';renderModeButtons();updateComposerState();saveSettings();};g.appendChild(b)})}
-    function setExample(t){switchView('chat');document.getElementById('q').value=t;if(appSettings.autofocus!==false)document.getElementById('q').focus();updateComposerState();}
+    function setExample(t){
+      switchView('chat');
+      const qInput = document.getElementById('q');
+      qInput.value = t;
+      if (!appSettings.fillOnly) {
+        sendMsg();
+      }
+      if(appSettings.autofocus!==false) qInput.focus();
+      updateComposerState();
+    }
     function newChat(){switchView('chat');messagesEl.innerHTML='';document.getElementById('sources').innerHTML='';statusEl.innerHTML='';document.getElementById('welcome').style.display='block';document.getElementById('q').value=''}
     function renderStatus(a=[],e=null){statusEl.innerHTML='';a.forEach(x=>{const s=document.createElement('span');s.className='chip';s.textContent=x;statusEl.appendChild(s)});if(e){const s=document.createElement('span');s.className='chip error';s.textContent='Error: '+e;statusEl.appendChild(s)}}
     function addUserMessage(t){const w=document.createElement('div');w.className='msg user';w.innerHTML=`<div class="bubble">${esc(t)}</div><div class="av">You</div>`;messagesEl.appendChild(w)}
     function parseAnswerSections(text=''){const sections=[];let current=null;String(text||'').split('\n').forEach(line=>{const trimmed=line.trim();if(!trimmed){if(current&&current.body)current.body+='\n';return}const match=/^(Answer|Evidence from Quran|Evidence from Hadith|Scholarly Explanation|Evidence|Arabic|Explanation|Confidence):\s*(.*)$/.exec(trimmed);if(match){current={title:match[1].replace('Evidence from Quran','Evidence').replace('Evidence from Hadith','Evidence'),body:match[2]||''};sections.push(current);return}if(!current){current={title:'Response',body:trimmed};sections.push(current);return}current.body+=`${current.body&&!current.body.endsWith('\n')?'\n':''}${trimmed}`});return sections.filter(section=>String(section.body||'').trim())}
     function directHadithSections(response){const source=(response.sources||[]).find(s=>['hadith','hadith_explanation'].includes(s.source_type));if(!source||response.resolvedModelMode!=='direct_source')return[];return[{title:'Answer',body:source.translation_text||source.summary||response.answer||'No answer returned.'},{title:'Evidence',body:`${source.collection_name||'Hadith'}${source.hadith_number?`, Hadith ${source.hadith_number}`:''}`},...(source.arabic_text?[{title:'Arabic',body:source.arabic_text}]:[]),{title:'Explanation',body:source.summary||'This hadith teaches that actions are valued according to the intention behind them. Sincere intention gives a deed its meaning and reward before Allah.'}]}
-    function renderAssistantMessage(response){const sections=directHadithSections(response);const content=(sections.length?sections:parseAnswerSections(response.answer||'No answer returned.')).map(section=>`<div class="answerSection"><div class="answerLabel">${esc(section.title)}</div><div class="answerBody">${nl2br(section.body)}</div></div>`).join('')||`<div class="answerSection"><div class="answerBody">No answer returned.</div></div>`;const w=document.createElement('div');w.className='msg assistant';w.innerHTML=`<div class="av">IG</div><div class="bubble"><div class="assistantCard">${content}</div></div>`;messagesEl.appendChild(w)}
+    function renderAssistantMessage(response){
+      const sections=directHadithSections(response);
+      const isCasual = response.resolvedModelMode === 'casual_chat' || response.resolvedModelMode === 'app_help';
+      
+      let badgeHtml = '';
+      if (!isCasual) {
+        const sourceCount = (response.sources || []).length;
+        if (sourceCount > 0) {
+          badgeHtml = `<div class="status" style="margin-bottom: 10px;"><span class="chip t">Source-backed (${sourceCount})</span><span class="chip b">Verified</span></div>`;
+        } else if (response.errorState === 'no_sources_found') {
+          badgeHtml = `<div class="status" style="margin-bottom: 10px;"><span class="chip error">No approved source found</span></div>`;
+        }
+      }
+
+      const content=(sections.length?sections:parseAnswerSections(response.answer||'No answer returned.')).map(section=>`<div class="answerSection"><div class="answerLabel">${esc(section.title)}</div><div class="answerBody">${nl2br(section.body)}</div></div>`).join('')||`<div class="answerSection"><div class="answerBody">No answer returned.</div></div>`;
+      const w=document.createElement('div');
+      w.className='msg assistant';
+      w.innerHTML=`<div class="av">IG</div><div class="bubble">${badgeHtml}<div class="assistantCard">${content}</div></div>`;
+      messagesEl.appendChild(w);
+    }
     async function sendMsg(){const q=document.getElementById('q').value.trim();if(!q)return;document.getElementById('sendBtn').disabled=true;document.getElementById('sendBtn').textContent='…';const modelMode=document.getElementById('modelMode').value;document.getElementById('welcome').style.display='none';document.getElementById('sources').innerHTML='';addUserMessage(q);saveRecentChat(q);document.getElementById('q').value='';renderStatus(['Classifying question','Searching approved sources','Calling local model']);try{const r=await api('/api/chat',{method:'POST',headers:jsonHeaders(),body:JSON.stringify({message:q,mode:selectedMode,modelMode,answerDepth:document.getElementById('modelMode').value,settings:appSettings})});const d=await parseJson(r);setBackendStatus(true,'AI Online');renderAssistantMessage(d);renderStatus(d.loadingStagesCompleted||[],d.errorState||(!r.ok?'backend_error':null));renderSourceCards(d)}catch(e){setBackendStatus(false,'AI Offline');renderStatus([],'backend_unavailable');renderAssistantMessage({answer:'IslamicGPT could not reach the backend. Check the VM server status.'})}finally{document.getElementById('sendBtn').disabled=false;document.getElementById('sendBtn').textContent='›';updateComposerState();}}
     function addCopyHandler(button,text){button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(text||'');button.textContent='Copied'}catch{button.textContent='Copy failed'}setTimeout(()=>{button.textContent='Copy citation'},1400)})}
     function filterSourceCards(response){let cards=[...(response.sourceCards||[])];if(response.resolvedModelMode==='direct_source'){const sourceIds=new Set((response.sources||[]).map(source=>source.id));cards=cards.filter(card=>sourceIds.has(card.id))}if(response.mode==='hadith_mode')cards=cards.filter(card=>['hadith','hadith_explanation'].includes(card.type));return cards}
@@ -323,7 +410,16 @@
     async function loadAdminWarnings(){try{const r=await api('/api/admin/sources/warnings',{headers:adminHeaders()});const d=await parseJson(r);if(!r.ok)throw new Error(d.error||'Warnings failed');document.getElementById('adminOutput').textContent=JSON.stringify(d.warnings||[],null,2)}catch(e){document.getElementById('adminOutput').textContent=e.message}}
   
     function renderSettingsStatus(){const el=document.getElementById('settingsStatusChips');if(!el)return;const t=new Date().toLocaleTimeString();el.innerHTML=`<span class="chip">Backend: ${backendReachable?'Online':'Offline'}</span><span class="chip">Source search: ${backendReachable?'Online':'Checking'}</span><span class="chip">Local AI: Pending</span><span class="chip">Last checked: ${t}</span>`;document.getElementById('diagBackendUrl').textContent=DEFAULT_API_BASE_URL;document.getElementById('diagHealth').textContent=backendReachable?'ok':'offline';document.getElementById('diagSearch').textContent=backendReachable?'ok':'pending';}
-    function updateComposerState(){const q=document.getElementById('q').value.trim();document.getElementById('sendBtn').disabled=!q;document.getElementById('clearBtn').classList.toggle('hidden',!q);const b=document.getElementById('composerBadges');b.innerHTML=`<span class="chip">Mode: ${(modes.find(m=>m[0]===selectedMode)||['','Search'])[1]}</span><span class="chip">Depth: ${document.getElementById('modelMode').value}</span><span class="chip">${appSettings.requireSource?'Source required':'Source optional'}</span>`;}
+    function updateComposerState(){
+      const q=document.getElementById('q').value.trim();
+      document.getElementById('sendBtn').disabled=!q;
+      const clearBtn = document.getElementById('clearBtn');
+      if (clearBtn) clearBtn.classList.toggle('hidden', !q);
+      const b=document.getElementById('composerBadges');
+      if (b) {
+        b.innerHTML=`<span class="chip">Mode: ${(modes.find(m=>m[0]===selectedMode)||['','Search'])[1]}</span><span class="chip">Depth: ${document.getElementById('modelMode').value}</span><span class="chip">${appSettings.requireSource?'Source required':'Source optional'}</span>`;
+      }
+    }
     function saveRecentChat(title){const key='ISLAMICGPT_RECENTS';let rec=[];try{rec=JSON.parse(localStorage.getItem(key)||'[]')}catch{}rec=[{title,time:Date.now()},...rec.filter(r=>r.title!==title)].slice(0,8);localStorage.setItem(key,JSON.stringify(rec));renderRecents();}
     function renderRecents(){const el=document.getElementById('recentChats');let rec=[];try{rec=JSON.parse(localStorage.getItem('ISLAMICGPT_RECENTS')||'[]')}catch{}el.innerHTML='';if(!rec.length){el.textContent='No recent chats yet';return;}rec.forEach(r=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=String(r.title||'').slice(0,38);b.onclick=()=>setExample(r.title||'');el.appendChild(b);});}
     document.getElementById('q').addEventListener('input',updateComposerState);
