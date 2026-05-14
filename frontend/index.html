@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head><meta charset="utf-8"><title>IslamicGPT</title></head>
-<body style="font-family: sans-serif; max-width: 900px; margin: 20px auto;">
+<body style="font-family: sans-serif; max-width: 980px; margin: 20px auto;">
 <h1>IslamicGPT</h1>
 <p>Reliable Islamic answers from Quran, Sunnah, and approved sources.</p>
 <select id="mode">
@@ -11,27 +11,36 @@
 <option value="islamic_search_mode" selected>Islamic Search Mode</option>
 </select>
 <div><textarea id="q" rows="4" style="width:100%" placeholder="Ask a question..."></textarea><button onclick="sendMsg()">Send</button></div>
-<pre id="status"></pre><pre id="answer"></pre><div id="sources"></div>
+<pre id="status"></pre><pre id="answer"></pre><div id="warnings" style="color:#92400e"></div><div id="sources"></div>
+<details id="debugPanel" style="display:none"><summary>Source Debug Panel</summary><pre id="debug"></pre></details>
 <p style="font-size:12px;color:#6b7280">IslamicGPT is an AI assistant and may make mistakes. Always check the cited sources. For personal rulings, consult a qualified scholar.</p>
 <script>
+const debugEnabled = new URLSearchParams(location.search).get('debug') === '1';
+if (debugEnabled) document.getElementById('debugPanel').style.display = 'block';
+function copyText(text){ navigator.clipboard.writeText(text||''); }
 async function sendMsg(){
  const q=document.getElementById('q').value; const mode=document.getElementById('mode').value;
  document.getElementById('status').textContent='Searching approved Islamic sources\nChecking Quran and hadith references\nValidating citations\nPreparing answer';
  try{
   const r=await fetch('http://localhost:3001/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,mode})});
-  const d=await r.json(); document.getElementById('answer').textContent=d.answer;
-  renderSources(d.sources||[]); if(d.errorState){document.getElementById('status').textContent='Error: '+d.errorState;}
+  const d=await r.json();
+  document.getElementById('answer').textContent=d.answer;
+  document.getElementById('status').textContent=(d.loadingStagesCompleted||[]).join('\n')+(d.errorState?`\nError: ${d.errorState}`:'');
+  document.getElementById('warnings').innerHTML=(d.warnings||[]).map(w=>`<div>⚠️ ${w}</div>`).join('');
+  renderSourceCards(d.sourceCards||[]);
+  if (debugEnabled) document.getElementById('debug').textContent=JSON.stringify(d.debug||{},null,2);
  }catch(e){document.getElementById('status').textContent='Error: backend_unavailable';}
 }
-function renderSources(s){
+function card(title,badge,html,cite){
+  return `<div style="border:1px solid #ddd;border-radius:8px;padding:10px;margin-top:8px"><div><span style="background:#eef;padding:2px 6px;border-radius:6px">${badge}</span></div><h4>${title}</h4>${html}<button onclick="copyText(${JSON.stringify(cite)})">Copy citation</button></div>`
+}
+function renderSourceCards(cards){
  const el=document.getElementById('sources'); el.innerHTML='';
- s.forEach(x=>{const c=document.createElement('div'); c.style='border:1px solid #ddd;padding:8px;margin-top:6px';
-   if(x.source_type==='quran'){c.innerHTML='<b>Quran Source Card</b><br>Surah: '+(x.surah_name_en||x.surah_name_ar||'')+' ('+(x.surah_number||'')+') Ayah: '+(x.ayah_number||x.ayah_range||'');}
-   else if(x.source_type==='hadith'){c.innerHTML='<b>Hadith Source Card</b><br>Collection: '+(x.collection_name||'')+' Hadith No: '+(x.hadith_number||'Hadith number not available in this source.');}
-   else if(['scholar_statement','fatwa','book','lecture','video_transcript'].includes(x.source_type)){c.innerHTML='<b>Scholar Source Card</b><br>Scholar: '+(x.scholar_name||'')+' Ref: '+(x.reference_number||x.fatwa_number||x.page_number||x.timestamp||x.local_reference||'');}
-   else if(['approved_pdf','uploaded_document'].includes(x.source_type)){c.innerHTML='<b>Approved Document Source Card</b><br>Title: '+(x.document_title||x.title||'')+' File: '+(x.file_name||'')+' Approved: '+(x.approved_for_answers?'Yes':'No');}
-   else {c.innerHTML='<b>Source Card</b><br>Type: '+x.source_type;}
-   el.appendChild(c);
+ cards.forEach(c=>{
+   if(c.type==='quran') el.innerHTML += card('Quran Source Card','Quran',`<div>Surah: ${c.surahName||''}</div><div>Surah Number: ${c.surahNumber||''}</div><div>Ayah: ${c.ayah||''}</div><div>Arabic: ${c.arabic||''}</div><div>Translation: ${c.translation||''}</div><div>Used for: ${c.usedFor||''}</div>`,c.copyCitation);
+   else if(c.type==='hadith') el.innerHTML += card('Hadith Source Card','Hadith',`<div>Collection: ${c.collection||''}</div><div>Book/Chapter: ${c.bookChapter||''}</div><div>Hadith Number: ${c.hadithNumber||''}</div><div>Grade: ${c.grade||''}</div><div>Arabic: ${c.arabic||''}</div><div>Translation: ${c.translation||''}</div><div>Used for: ${c.usedFor||''}</div>${c.weakWarning?`<div style='color:#b45309'>${c.weakWarning}</div>`:''}`,c.copyCitation);
+   else if(c.type==='scholar') el.innerHTML += card('Scholar Source Card','Scholar / Fatwa / Explanation',`<div>Scholar: ${c.scholar||''}</div><div>Source title: ${c.sourceTitle||''}</div><div>Reference: ${c.reference||''}</div><div>Quote/Summary: ${c.quoteOrSummary||''}</div><div>Used for: ${c.usedFor||''}</div>`,c.copyCitation);
+   else el.innerHTML += card('Approved Document Source Card','Approved Document',`<div>Document title: ${c.documentTitle||''}</div><div>File name: ${c.fileName||''}</div><div>Page: ${c.pageNumber||''}</div><div>Section: ${c.section||''}</div><div>Approval: ${c.approvalStatus||''}</div><div>Used for: ${c.usedFor||''}</div>`,c.copyCitation);
  });
 }
 </script></body></html>

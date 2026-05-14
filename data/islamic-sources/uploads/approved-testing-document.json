@@ -1,0 +1,17 @@
+[
+  {
+    "id": "upload-approved-test-1",
+    "source_type": "approved_pdf",
+    "source_name": "Testing Approved Upload",
+    "title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+    "language": "en",
+    "reliability_level": 5,
+    "verified_by_admin": true,
+    "approved_for_answers": true,
+    "approved_for_fatwa": false,
+    "approved_by_admin": "test-admin",
+    "file_name": "approved-testing.pdf",
+    "upload_status": "approved",
+    "document_title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+  }
+]

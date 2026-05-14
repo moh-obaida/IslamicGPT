@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-05-14T03:56:07.548Z",
+  "total_indexed": 3,
+  "records": [
+    {
+      "id": "quran-meta-test-1",
+      "source_type": "quran",
+      "source_name": "Testing Quran Metadata",
+      "title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+      "language": "ar",
+      "reliability_level": 1,
+      "verified_by_admin": true,
+      "approved_for_answers": true,
+      "approved_for_fatwa": false,
+      "surah_name_en": "Al-Fatihah",
+      "surah_number": 1,
+      "ayah_number": 1,
+      "translation_text": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    },
+    {
+      "id": "hadith-meta-test-1",
+      "source_type": "hadith",
+      "source_name": "Testing Hadith Metadata",
+      "title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+      "language": "ar",
+      "reliability_level": 2,
+      "verified_by_admin": true,
+      "approved_for_answers": true,
+      "approved_for_fatwa": false,
+      "collection_name": "Metadata Example Collection",
+      "hadith_number_unavailable": true,
+      "grade": "unknown",
+      "translation_text": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    },
+    {
+      "id": "upload-approved-test-1",
+      "source_type": "approved_pdf",
+      "source_name": "Testing Approved Upload",
+      "title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE",
+      "language": "en",
+      "reliability_level": 5,
+      "verified_by_admin": true,
+      "approved_for_answers": true,
+      "approved_for_fatwa": false,
+      "approved_by_admin": "test-admin",
+      "file_name": "approved-testing.pdf",
+      "upload_status": "approved",
+      "document_title": "FOR TESTING ONLY - NOT A REAL RELIGIOUS SOURCE"
+    }
+  ]
+}
