@@ -179,6 +179,11 @@
 
     /* Composer */
     .composer-container { padding: 0 24px 32px; width: 100%; max-width: 888px; margin: 0 auto; }
+    .chat-controls { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: var(--shadow); }
+    .chat-controls .control-item { display: flex; align-items: center; gap: 6px; }
+    .chat-controls label { font-size: 11px; font-weight: 800; color: var(--soft); text-transform: uppercase; }
+    .chat-controls select { background: var(--card2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px 9px; font-size: 12px; }
+    .source-indicator { font-size: 11px; font-weight: 800; color: var(--soft); margin-left: auto; white-space: nowrap; }
     .composer-box { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s; }
     .composer-box:focus-within { border-color: var(--turq); box-shadow: 0 0 0 4px rgba(18, 200, 178, 0.1); }
     .composer-box textarea { width: 100%; border: none; background: transparent; color: var(--text); padding: 12px 16px; font-size: 15px; line-height: 1.5; resize: none; outline: none; min-height: 52px; max-height: 200px; }
@@ -222,27 +227,11 @@
       </div>
       <button class="new-chat-btn" onclick="newChat()"><span>+</span> New Chat</button>
       <nav class="nav-group">
-        <button class="nav-item active" data-view="chat" onclick="switchView('chat')">Chat</button>
         <button class="nav-item" data-view="sources" onclick="switchView('sources')">Sources</button>
         <button class="nav-item" data-view="settings" onclick="switchView('settings')">Settings</button>
         <button class="nav-item hidden" id="navAdmin" data-view="admin" onclick="switchView('admin')">Admin</button>
       </nav>
       <div class="sidebar-scroll">
-        <div class="section-card">
-          <span class="section-label">Islamic Mode</span>
-          <div class="mode-grid" id="modeGrid"></div>
-        </div>
-        <div class="section-card">
-          <span class="section-label">Answer Depth</span>
-          <select id="answerDepth" onchange="updateComposerState()" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text);">
-            <option value="auto">Auto</option>
-            <option value="quick">Quick</option>
-            <option value="balanced" selected>Balanced</option>
-            <option value="detailed">Detailed</option>
-            <option value="student">Student-friendly</option>
-            <option value="evidence">Evidence-heavy</option>
-          </select>
-        </div>
         <div class="section-card">
           <span class="section-label">Recent Conversations</span>
           <div id="recentChats" class="hint">No recent chats yet</div>
@@ -297,8 +286,8 @@
         
         <div id="sourcesView" class="content-inner hidden">
           <div class="dashboard-header">
-            <h1>Approved Sources</h1>
-            <p>Grounding IslamicGPT in verified knowledge.</p>
+            <h1>Sources</h1>
+            <p>Search and review approved Islamic sources.</p>
           </div>
           <div class="full-card" style="margin-bottom:20px;">
             <div style="display:flex; gap:12px;">
@@ -318,7 +307,7 @@
         <div id="settingsView" class="content-inner hidden">
           <div class="dashboard-header">
             <h1>Settings</h1>
-            <p>Manage your AI workspace preferences.</p>
+            <p>Configure IslamicGPT behavior and source rules.</p>
           </div>
           
           <div class="full-card">
@@ -348,8 +337,8 @@
 
         <div id="adminView" class="content-inner hidden">
           <div class="dashboard-header">
-            <h1>Admin Panel</h1>
-            <p>Manage sources and system configuration.</p>
+            <h1>Admin</h1>
+            <p>Manage source quality, approval, and diagnostics.</p>
           </div>
           <div class="full-card">
             <div id="adminContent">
@@ -360,12 +349,41 @@
       </div>
       
       <div class="composer-container">
+        <div class="chat-controls">
+          <div class="control-item">
+            <label for="modeSelect">Mode</label>
+            <select id="modeSelect" onchange="updateComposerState()"></select>
+          </div>
+          <div class="control-item">
+            <label for="answerDepth">Depth</label>
+            <select id="answerDepth" onchange="updateComposerState()">
+              <option value="auto">Auto</option>
+              <option value="quick">Quick</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="detailed">Detailed</option>
+              <option value="student">Student-friendly</option>
+              <option value="evidence">Evidence-heavy</option>
+            </select>
+          </div>
+          <div class="control-item">
+            <label for="thinkingMode">AI Mode</label>
+            <select id="thinkingMode" onchange="updateComposerState()">
+              <option value="fast">Fast</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="deep">Deep</option>
+              <option value="research">Research / Thinking</option>
+            </select>
+          </div>
+          <div class="source-indicator" id="sourceIndicator">Normal chat: sources optional</div>
+        </div>
         <div class="composer-box">
           <textarea id="input" placeholder="Ask a question or search sources..." oninput="autoResize(this)"></textarea>
           <div class="composer-footer">
             <div class="composer-badges">
               <div class="badge" id="activeModeBadge">General Mode</div>
               <div class="badge" id="activeDepthBadge">Balanced Depth</div>
+              <div class="badge" id="activeThinkingBadge">Balanced AI</div>
+              <div class="badge" id="activeSourceRuleBadge">Sources optional</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
               <button id="clearBtn" class="hidden" onclick="clearInput()" style="font-size:11px; color:var(--soft); font-weight:800;">Clear</button>
@@ -404,9 +422,17 @@
       document.querySelectorAll('.content-inner').forEach(p => p.classList.add('hidden'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(view + 'View').classList.remove('hidden');
-      document.querySelector(`[data-view="${view}"]`).classList.add('active');
-      const titles = {chat:'New Islamic chat',sources:'Approved Sources',settings:'Settings',admin:'Admin Panel'};
+      const navTarget = document.querySelector(`[data-view="${view}"]`);
+      if (navTarget) navTarget.classList.add('active');
+      const titles = {chat:'IslamicGPT',sources:'Sources',settings:'Settings',admin:'Admin'};
+      const subtitles = {
+        chat:'Source-first assistant',
+        sources:'Search and review approved Islamic sources',
+        settings:'Configure IslamicGPT behavior and source rules',
+        admin:'Manage source quality, approval, and diagnostics'
+      };
       document.getElementById('pageTitle').textContent = titles[view];
+      document.getElementById('pageSubtitle').textContent = subtitles[view];
       currentView = view;
     }
 
@@ -434,27 +460,34 @@
     }
 
     function initModes() {
-      const grid = document.getElementById('modeGrid');
+      const modeSelect = document.getElementById('modeSelect');
       MODES.forEach(m => {
-        const btn = document.createElement('button');
-        btn.className = m.id === currentMode ? 'mode-btn active' : 'mode-btn';
-        btn.textContent = m.label;
-        btn.onclick = () => {
-          currentMode = m.id;
-          document.querySelectorAll('#modeGrid button').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          document.getElementById('activeModeBadge').textContent = m.label + ' Mode';
-        };
-        grid.appendChild(btn);
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.label;
+        modeSelect.appendChild(option);
       });
+      modeSelect.value = currentMode;
+      updateComposerState();
     }
 
     function clearInput() { const i = document.getElementById('input'); i.value = ''; autoResize(i); }
     function setExample(t) { const i = document.getElementById('input'); i.value = t; autoResize(i); sendMessage(); }
     function updateComposerState() { 
-      const d = document.getElementById('answerDepth').value; 
-      const label = d.charAt(0).toUpperCase() + d.slice(1);
-      document.getElementById('activeDepthBadge').textContent = label + ' Depth'; 
+      currentMode = document.getElementById('modeSelect').value;
+      const modeLabel = MODES.find(m => m.id === currentMode)?.label || 'General';
+      const depth = document.getElementById('answerDepth').value;
+      const depthLabelMap = {auto:'Auto',quick:'Quick',balanced:'Balanced',detailed:'Detailed',student:'Student-friendly',evidence:'Evidence-heavy'};
+      const thinking = document.getElementById('thinkingMode').value;
+      const thinkingLabelMap = {fast:'Fast',balanced:'Balanced',deep:'Deep',research:'Research'};
+      const islamicMode = currentMode !== 'islamic_search_mode';
+      const sourceRule = islamicMode ? 'Sources required' : 'Sources optional';
+      const sourceIndicator = islamicMode ? 'Islamic answer: sources required' : 'Normal chat: sources optional';
+      document.getElementById('activeModeBadge').textContent = modeLabel;
+      document.getElementById('activeDepthBadge').textContent = depthLabelMap[depth] || 'Balanced';
+      document.getElementById('activeThinkingBadge').textContent = `${thinkingLabelMap[thinking] || 'Balanced'} AI`;
+      document.getElementById('activeSourceRuleBadge').textContent = sourceRule;
+      document.getElementById('sourceIndicator').textContent = sourceIndicator;
     }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
@@ -468,7 +501,7 @@
       messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${text}</div></div>`;
       updateProgress(['classified_question']);
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value }) });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value, thinkingMode: document.getElementById('thinkingMode').value }) });
         const data = await res.json();
         if (data.loadingStagesCompleted) { updateProgress(data.loadingStagesCompleted); setTimeout(() => document.getElementById('progressTracker').classList.add('hidden'), 1000); }
         messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${data.answer}</div></div>`;
@@ -495,8 +528,8 @@
         dot.className = aiOnline ? 'status-dot online' : 'status-dot';
         
         if (aiOnline && ragReady) {
-          statusText.textContent = 'System Ready';
-          statusSub.textContent = `v0.2.0 • Local RAG: ${data.services.rag.count} sources`;
+          statusText.textContent = 'AI Ready';
+          statusSub.textContent = `v0.2.0 • Approved sources indexed: ${data.services.rag.count}`;
         } else if (aiOnline) {
           statusText.textContent = 'AI Ready · RAG Pending';
           statusSub.textContent = 'v0.2.0 • Sources not yet indexed';
@@ -521,7 +554,7 @@
       document.getElementById('showAdminTools').checked = adminEnabled;
       document.getElementById('navAdmin').classList.toggle('hidden', !adminEnabled);
     };
-    function newChat() { document.getElementById('messages').innerHTML = ''; document.getElementById('sources').innerHTML = ''; document.getElementById('welcome').classList.remove('hidden'); }
+    function newChat() { switchView('chat'); document.getElementById('messages').innerHTML = ''; document.getElementById('sources').innerHTML = ''; document.getElementById('welcome').classList.remove('hidden'); }
   </script>
 </body>
 </html>
