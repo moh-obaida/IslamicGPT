@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const { normalizeText } = require('./sourceStore');
 
 const TABLE_NAME = 'islamic_sources';
 const MAX_SEARCH_CANDIDATES = 500;
@@ -208,7 +209,7 @@ function normalizeQuery(query) {
 
   return {
     raw: String(query || ''),
-    cleaned,
+    cleaned: normalizeText(cleaned),
     tokens,
   };
 }
@@ -225,7 +226,7 @@ function expandTerms(tokens) {
 
 function searchableText(record) {
   const metadata = normalizeMetadata(record.metadata);
-  return [
+  return normalizeText([
     record.id,
     record.source_type,
     record.title,
@@ -242,8 +243,7 @@ function searchableText(record) {
     ...Object.values(metadata).map((value) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '')),
   ]
     .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+    .join(' '));
 }
 
 function sourceScore(record, normalizedQuery) {
@@ -254,16 +254,16 @@ function sourceScore(record, normalizedQuery) {
   const topicTagSet = new Set((record.topic_tags || []).map((tag) => String(tag).toLowerCase()));
 
   let score = 0;
-  if (haystack.includes(normalizedQuery.cleaned.toLowerCase())) score += 24;
-  if (String(record.title || '').toLowerCase().includes(normalizedQuery.cleaned.toLowerCase())) score += 10;
+  if (haystack.includes(normalizedQuery.cleaned)) score += 24;
+  if (normalizeText(String(record.title || '')).includes(normalizedQuery.cleaned)) score += 10;
 
   expandedTerms.forEach((term) => {
-    const lower = term.toLowerCase();
+    const lower = normalizeText(term);
     if (haystack.includes(lower)) score += 4;
-    if (String(record.title || '').toLowerCase().includes(lower)) score += 6;
-    if (String(record.translation_text || '').toLowerCase().includes(lower)) score += 5;
-    if (String(record.collection_name || '').toLowerCase().includes(lower)) score += 3;
-    if (topicTagSet.has(lower)) score += 8;
+    if (normalizeText(String(record.title || '')).includes(lower)) score += 6;
+    if (normalizeText(String(record.translation_text || '')).includes(lower)) score += 5;
+    if (normalizeText(String(record.collection_name || '')).includes(lower)) score += 3;
+    if (topicTagSet.has(String(term).toLowerCase())) score += 8;
   });
 
   if (record.verified_by_admin) score += 2;

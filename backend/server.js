@@ -11,9 +11,11 @@ try {
 
 const { callOllama, checkOllamaHealth } = require('./src/ollamaClient');
 const { resolveModelMode, modelTimeoutMs } = require('./src/modelRouter');
-const { searchIslamicKnowledgeBase } = require('./src/retrieval');
+const { retrieveApprovedSources, searchIslamicKnowledgeBase } = require('./src/retrieval');
 const { formatSourceCards } = require('./src/sourceCards');
 const { validateIslamicCitations } = require('./src/citationValidation');
+const { validateIslamicAnswerAgainstSources } = require('./src/answerValidator');
+const { classifyQuestion } = require('./src/questionClassifier');
 const {
   deleteSource,
   getHealthSummary,
@@ -65,88 +67,206 @@ const isSupportedMode = (mode) => SUPPORTED_MODES.has(mode);
 const normalizeMode = (mode) => isSupportedMode(mode) ? mode : DEFAULT_MODE;
 const ADMIN_TOKEN_TTL_SECONDS = Number(process.env.ADMIN_TOKEN_TTL_SECONDS || 60 * 60 * 12);
 
-function buildPrompt({ question, mode, language, sources }) {
-  const context = sources.map((s) => `SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nTITLE:${s.title || s.source_title || ''}\nSURAH:${s.surah_name_en || ''}\nSURAH NUMBER:${s.surah_number || s.surah || ''}\nAYAH:${s.ayah_number || s.ayah || s.ayah_range || ''}\nCOLLECTION:${s.collection_name || ''}\nHADITH NUMBER:${s.hadith_number || (s.hadith_number_unavailable ? 'Hadith number not available in this source.' : '')}\nSCHOLAR:${s.scholar_name || ''}\nREFERENCE:${s.reference_number || s.fatwa_reference || s.fatwa_number || s.page_number || s.timestamp || s.local_reference || s.source_url || s.url || ''}\nTOPICS:${Array.isArray(s.topic_tags) ? s.topic_tags.join(', ') : ''}\nARABIC:${s.arabic_text || ''}\nTRANSLATION:${s.translation_text || ''}`).join('\n\n');
-  return `SYSTEM:\nYou are IslamicGPT, a reliable Islamic knowledge assistant. Use only approved source context. If insufficient, return exactly: ${REFUSAL_MESSAGE}\n\nUSER QUESTION:\n${question}\nMODE:${mode}\nLANGUAGE:${language}\n\nAPPROVED SOURCE CONTEXT:\n${context}\n\nREQUIRED ANSWER FORMAT: Answer / Evidence from Quran / Evidence from Hadith / Scholarly Explanation / Explanation / Confidence`;
+function buildSourceContext(sources) {
+  return sources.map((source, index) => [
+    `APPROVED SOURCE ${index + 1}`,
+    `ID: ${source.id || ''}`,
+    `TYPE: ${source.source_type || ''}`,
+    `TITLE: ${source.title || source.source_title || ''}`,
+    `COLLECTION: ${source.collection_name || ''}`,
+    `BOOK: ${source.book_name || ''}`,
+    `CHAPTER: ${source.chapter_name || ''}`,
+    `HADITH NUMBER: ${source.hadith_number || ''}`,
+    `QURAN REF: ${(source.surah_number || source.surah) && (source.ayah_number || source.ayah) ? `${source.surah_number || source.surah}:${source.ayah_number || source.ayah}` : ''}`,
+    `SCHOLAR: ${source.scholar_name || ''}`,
+    `ARABIC TEXT:\n${source.arabic_text || ''}`,
+    `TRANSLATION:\n${source.translation_text || ''}`,
+    `TAGS: ${Array.isArray(source.topic_tags) ? source.topic_tags.join(', ') : ''}`,
+  ].join('\n')).join('\n\n');
 }
 
-function noSourceResponse(mode, modelMode, sourceBackend = 'none') {
+function buildPrompt({ question, classification, sources }) {
+  const sourceContext = buildSourceContext(sources);
+  const personalRulingRule = classification.requiresScholarWarning
+    ? 'If the question asks for a personal religious ruling, give only general information and advise consulting a qualified scholar.'
+    : 'Keep the answer clear, cautious, and source-grounded.';
+
+  return `You are IslamicGPT.\n\nYou may answer ONLY using the approved sources provided below.\n\nRules:\n1. Do not use memory for Islamic facts.\n2. Do not add any Quran verse, hadith, scholar name, book name, ruling, or reference unless it appears in the approved sources.\n3. Do not complete missing hadith text from memory.\n4. Do not invent hadith numbers.\n5. Do not invent Quran references.\n6. Do not invent scholarly opinions.\n7. If the approved sources are insufficient, say exactly:\n"${REFUSAL_MESSAGE}"\n8. ${personalRulingRule}\n9. Mention source names only if they appear in the approved source list.\n10. Do not include unsupported citations.\n11. Do not claim certainty beyond the provided sources.\n12. Keep the answer concise and source-grounded.\n\nApproved sources:\n${sourceContext}\n\nUser question:\n${question}\n\nAnswer:`;
+}
+
+function cleanAnswerText(value) {
+  let next = value;
+  if (next && typeof next === 'object') next = next.answer || next.message || next.response || JSON.stringify(next);
+  if (typeof next !== 'string') return String(next || '').trim();
+
+  let text = next.trim();
+  if (text.startsWith('```')) text = text.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+
+  if ((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))) {
+    try {
+      const parsed = JSON.parse(text);
+      return cleanAnswerText(parsed);
+    } catch (_) {}
+  }
+
+  return text;
+}
+
+function scholarConsultationNote() {
+  return 'Note: This is general information from approved sources, not a personal fatwa. Please consult a qualified scholar for your specific situation.';
+}
+
+function appendScholarNote(answer, classification) {
+  const safeAnswer = cleanAnswerText(answer) || REFUSAL_MESSAGE;
+  if (!classification.requiresScholarWarning) return safeAnswer;
+  if (safeAnswer.includes(scholarConsultationNote())) return safeAnswer;
+  return `${safeAnswer}\n\n${scholarConsultationNote()}`;
+}
+
+function sourceWarnings(sources, classification, extraWarnings = []) {
+  const warnings = [
+    ...extraWarnings,
+    ...sources
+      .filter((source) => source.source_type === 'hadith' && String(source.grade || '').toLowerCase().includes('weak'))
+      .map(() => 'This hadith is graded weak in the approved source. It should not be used as main evidence for a ruling.'),
+  ];
+
+  if (classification.requiresScholarWarning) warnings.push(scholarConsultationNote());
+  return [...new Set(warnings)];
+}
+
+function resolveIslamicConfidence({ sources, classification, validationFailed = false }) {
+  if (validationFailed) return 'validation_failed';
+  if (classification.isSensitive) return 'needs_scholar_review';
+  if (sources.some((source) => source.verified_by_admin !== true)) return 'limited_source';
+  return 'source_backed';
+}
+
+function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'none', warnings = [] }) {
   return {
-    answer: REFUSAL_MESSAGE,
+    answer: appendScholarNote(REFUSAL_MESSAGE, classification),
     mode,
     modelMode,
     resolvedModelMode: null,
     modelUsed: null,
     modelSelectionReason: 'No approved sources found.',
     isIslamicQuestion: true,
-    confidence: 'not_enough_evidence',
+    confidence: 'no_approved_source_found',
     sources: [],
     sourceCards: [],
-    warnings: [],
+    warnings: sourceWarnings([], classification, warnings),
     errorState: 'no_sources_found',
     llmCalled: false,
     sourceBackend,
+    hallucinationGuard: {
+      status: 'blocked',
+      method: 'no_source_gate',
+      reason: 'no_approved_sources_found',
+      unsupportedClaims: [],
+    },
     validation: { passed: false, attempts: 0, issues: ['no_sources_found'] },
     loadingStagesCompleted: ['classified_question', 'searched_approved_sources'],
   };
 }
 
-function directSourceResponse({ source, mode, modelMode, sourceCards, loading, sourceBackend }) {
-  let answer = '';
-
-  if (source.source_type === 'hadith') {
+function buildTemplateAnswer(source) {
+  if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
     const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
-    answer = [
-      'Answer:',
-      source.translation_text ? `The Prophet ﷺ taught: "${source.translation_text}"` : (source.arabic_text || 'The approved source text is available in the source card.'),
+    return [
+      `A relevant hadith is found in ${ref}.`,
+      source.title ? `Title:\n${source.title}` : '',
       '',
-      'Evidence from Hadith:',
-      `${ref}.`,
-      source.arabic_text ? `Arabic: ${source.arabic_text}` : '',
-      source.grade ? `Grade: ${source.grade}.` : '',
+      'Arabic:',
+      source.arabic_text || 'Arabic text is not available in the approved source record.',
       '',
-      'Explanation:',
-      'This answer is grounded only in the approved hadith source shown in the source card.',
+      'Meaning:',
+      source.translation_text || 'Meaning text is not available in the approved source record.',
       '',
-      'Confidence: High',
+      'Source:',
+      ref,
     ].filter(Boolean).join('\n');
-  } else if (source.source_type === 'quran') {
-    const ayah = source.ayah_number || source.ayah || source.ayah_range || '';
-    const ref = `${source.surah_name_en || source.title || 'Quran'}${source.surah_number || source.surah ? ` ${source.surah_number || source.surah}` : ''}${ayah ? `:${ayah}` : ''}`;
-    answer = [
-      'Answer:',
-      source.translation_text || source.arabic_text || 'The approved Quran text is available in the source card.',
-      '',
-      'Evidence from Quran:',
-      `${ref}.`,
-      source.arabic_text ? `Arabic: ${source.arabic_text}` : '',
-      '',
-      'Explanation:',
-      'This answer is grounded only in the approved Quran source shown in the source card.',
-      '',
-      'Confidence: High',
-    ].filter(Boolean).join('\n');
-  } else {
-    return null;
   }
 
+  if (['quran', 'quran_translation', 'tafsir'].includes(source.source_type)) {
+    const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
+    return [
+      `A relevant Quran verse is ${ref}.`,
+      source.title ? `Title:\n${source.title}` : '',
+      '',
+      'Arabic:',
+      source.arabic_text || 'Arabic text is not available in the approved source record.',
+      '',
+      'Meaning:',
+      source.translation_text || 'Meaning text is not available in the approved source record.',
+      '',
+      'Source:',
+      `Quran ${ref}`,
+    ].filter(Boolean).join('\n');
+  }
+
+  const sourceTitle = source.source_title || source.title || source.collection_name || source.scholar_name || source.id || 'Approved source';
+  return [
+    'I found an approved source related to this topic.',
+    '',
+    sourceTitle,
+    '',
+    source.translation_text || source.arabic_text || source.summary || 'Text is not available in the approved source record.',
+    '',
+    'Source:',
+    sourceTitle,
+  ].filter(Boolean).join('\n');
+}
+
+function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [] }) {
+  const answer = appendScholarNote(buildTemplateAnswer(sources[0]), classification);
   return {
     answer,
     mode,
     modelMode,
-    resolvedModelMode: 'direct_source',
+    resolvedModelMode: 'template_answer',
     modelUsed: null,
-    modelSelectionReason: 'Direct Quran/Hadith match answered without local model for speed.',
+    modelSelectionReason: 'Direct source lookup answered from approved source fields without model generation.',
     isIslamicQuestion: true,
-    confidence: 'high',
-    sources: [source],
-    sourceCards,
-    warnings: [],
+    confidence: resolveIslamicConfidence({ sources, classification }),
+    sources,
+    sourceCards: formatSourceCards(sources),
+    warnings: sourceWarnings(sources, classification, warnings),
     errorState: null,
     llmCalled: false,
     sourceBackend,
+    hallucinationGuard: {
+      status: 'passed',
+      method: 'template_answer',
+    },
     validation: { passed: true, attempts: 0, issues: [] },
     loadingStagesCompleted: [...loading, 'built_source_context', 'validated_citations', 'prepared_answer'],
+  };
+}
+
+function modelBlockedResponse({ mode, modelMode, classification, sourceBackend, loading, sources, warnings = [], reason, unsupportedClaims = [] }) {
+  return {
+    answer: appendScholarNote('I found approved sources, but I could not safely generate an answer without risking unsupported claims.', classification),
+    mode,
+    modelMode,
+    resolvedModelMode: 'blocked_after_validation',
+    modelUsed: null,
+    modelSelectionReason: 'Model answer was blocked by hallucination guardrails.',
+    isIslamicQuestion: true,
+    confidence: 'validation_failed',
+    sources,
+    sourceCards: formatSourceCards(sources),
+    warnings: sourceWarnings(sources, classification, warnings),
+    errorState: 'answer_validation_failed',
+    llmCalled: true,
+    sourceBackend,
+    hallucinationGuard: {
+      status: 'blocked',
+      method: 'model_with_validation',
+      reason,
+      unsupportedClaims,
+    },
+    validation: { passed: false, attempts: 1, issues: unsupportedClaims },
+    loadingStagesCompleted: [...loading, 'prepared_answer'],
   };
 }
 
@@ -473,18 +593,27 @@ async function handleChat(payload, res) {
     const modelMode = payload.modelMode || process.env.DEFAULT_MODEL_MODE || 'auto';
     const language = payload.language && payload.language !== 'auto' ? payload.language : detectLanguage(question);
     const loading = ['classified_question'];
+    const classification = classifyQuestion(question, mode);
 
     if (isCasualChat(question)) {
       loading.push('prepared_answer');
       return send(res, 200, {
-        answer: "Wa Alaikum Assalam! How can I help you today with Islamic research or app usage?",
+        answer: 'Wa Alaikum Assalam! How can I help you today with Islamic research or app usage?',
         mode,
         modelMode,
         resolvedModelMode: 'casual_chat',
+        modelUsed: null,
+        modelSelectionReason: 'Handled as casual chat.',
         isIslamicQuestion: false,
-        confidence: 'high',
+        confidence: 'normal_chat',
         sources: [],
         sourceCards: [],
+        warnings: [],
+        llmCalled: false,
+        hallucinationGuard: {
+          status: 'not_required',
+          method: 'normal_chat',
+        },
         loadingStagesCompleted: loading,
       });
     }
@@ -492,153 +621,199 @@ async function handleChat(payload, res) {
     if (isAppHelp(question)) {
       loading.push('prepared_answer');
       return send(res, 200, {
-        answer: "I am IslamicGPT, a source-first Islamic AI assistant. I only provide religious answers if I can find evidence in my approved database of Quran, Hadith, and scholarly works. You can search sources directly in the Sources tab or ask me questions here.",
+        answer: 'I am IslamicGPT, a source-first Islamic AI assistant. I only provide religious answers if I can find evidence in my approved database of Quran, Hadith, and scholarly works. You can search sources directly in the Sources tab or ask me questions here.',
         mode,
         modelMode,
         resolvedModelMode: 'app_help',
-        isIslamicQuestion: false,
-        confidence: 'high',
-        sources: [],
-        sourceCards: [],
-        loadingStagesCompleted: loading,
-      });
-    }
-
-    const isIslamicQuestion = classifyIslamicQuestion(question) || isSupportedMode(requestedMode);
-    if (!isIslamicQuestion) {
-      return send(res, 200, {
-        answer: 'IslamicGPT is focused on Islamic knowledge from approved sources. For non-religious questions, I may not be the best assistant.',
-        mode,
-        modelMode,
-        resolvedModelMode: null,
         modelUsed: null,
-        modelSelectionReason: 'Non-Islamic request.',
+        modelSelectionReason: 'Handled as app help.',
         isIslamicQuestion: false,
-        confidence: 'not_enough_evidence',
+        confidence: 'normal_chat',
         sources: [],
         sourceCards: [],
         warnings: [],
-        errorState: null,
         llmCalled: false,
-        validation: { passed: true, attempts: 0, issues: [] },
+        hallucinationGuard: {
+          status: 'not_required',
+          method: 'normal_chat',
+        },
         loadingStagesCompleted: loading,
       });
     }
 
-    const { matches, debug, sourceBackend } = await searchIslamicKnowledgeBase(question, mode);
+    if (!classification.isIslamic) {
+      loading.push('prepared_answer');
+      return send(res, 200, {
+        answer: 'I can help with general conversation, but I am optimized for Islamic research and source-backed Islamic answers.',
+        mode,
+        modelMode,
+        resolvedModelMode: 'normal_chat',
+        modelUsed: null,
+        modelSelectionReason: 'Non-Islamic request did not require approved sources.',
+        isIslamicQuestion: false,
+        confidence: 'normal_chat',
+        sources: [],
+        sourceCards: [],
+        warnings: [],
+        llmCalled: false,
+        hallucinationGuard: {
+          status: 'not_required',
+          method: 'normal_chat',
+        },
+        loadingStagesCompleted: loading,
+      });
+    }
+
+    const retrieval = await retrieveApprovedSources({
+      message: question,
+      sourceType: classification.sourceType,
+      limit: 8,
+    });
+    const sources = retrieval.sources || [];
     loading.push('searched_approved_sources');
-    if (!matches.length) {
-      const out = noSourceResponse(mode, modelMode, sourceBackend);
-      if (DEBUG_SOURCES || payload.debug) out.debug = debug;
+
+    if (!sources.length) {
+      const out = noSourceResponse({
+        mode,
+        modelMode,
+        classification,
+        sourceBackend: retrieval.sourceBackend,
+        warnings: retrieval.warnings,
+      });
+      if (DEBUG_SOURCES || payload.debug) out.debug = { ...retrieval.debug, classification, retrievalErrors: retrieval.errors };
       return send(res, 200, out);
     }
 
-    const sourceCards = formatSourceCards(matches);
-    const directMatch = matches.find((m) => ['hadith', 'quran'].includes(m.source_type));
-    if (directMatch && ((!wantsExplanation(question) && String(modelMode).toLowerCase() === 'fast') || wantsDirectEvidence(question, mode))) {
-      const direct = directSourceResponse({ source: directMatch, mode, modelMode, sourceCards, loading, sourceBackend });
-      if (direct) {
-        if (DEBUG_SOURCES || payload.debug) direct.debug = { ...debug, llmCalled: false, directSourceAnswer: true, openWebDisabled: true };
-        return send(res, 200, direct);
-      }
+    if (classification.intent === 'direct_source_lookup') {
+      const out = templateSourceResponse({
+        sources,
+        mode,
+        modelMode,
+        classification,
+        sourceBackend: retrieval.sourceBackend,
+        loading,
+        warnings: retrieval.warnings,
+      });
+      if (DEBUG_SOURCES || payload.debug) out.debug = { ...retrieval.debug, classification, llmCalled: false, directSourceAnswer: true, openWebDisabled: true };
+      return send(res, 200, out);
     }
 
     const selection = resolveModelMode({
       requestedModelMode: modelMode,
       islamicMode: mode,
       message: question,
-      sourceCount: matches.length,
-      fatwaRisk: fatwaRisk(question),
+      sourceCount: sources.length,
+      fatwaRisk: classification.isSensitive,
     });
 
     loading.push('built_source_context');
-    const prompt = buildPrompt({ question, mode, language, sources: matches });
-
+    const prompt = buildPrompt({ question, classification, sources });
     const first = await callOllama({ model: selection.model, prompt, timeout: modelTimeoutMs(selection.resolvedModelMode) });
     loading.push('called_local_model');
+
     if (!first.ok) {
-      return send(res, 503, {
-        answer: 'IslamicGPT could not reach the local AI model. Please check that Ollama is running.',
+      const warnings = sourceWarnings(sources, classification, retrieval.warnings);
+      return send(res, 200, {
+        answer: appendScholarNote('I found approved sources, but I could not reach the local AI model to safely explain them. Please review the source cards directly.', classification),
         mode,
         modelMode,
         resolvedModelMode: selection.resolvedModelMode,
         modelUsed: selection.model,
         modelSelectionReason: selection.reason,
         isIslamicQuestion: true,
-        confidence: 'not_enough_evidence',
-        sources: [],
-        sourceCards: [],
-        warnings: [],
+        confidence: resolveIslamicConfidence({ sources, classification }),
+        sources,
+        sourceCards: formatSourceCards(sources),
+        warnings,
         errorState: first.error,
         llmCalled: true,
-        sourceBackend,
+        sourceBackend: retrieval.sourceBackend,
+        hallucinationGuard: {
+          status: 'blocked',
+          method: 'model_with_validation',
+          reason: first.error,
+          unsupportedClaims: [],
+        },
         validation: { passed: false, attempts: 1, issues: [first.error] },
-        loadingStagesCompleted: loading,
-      });
-    }
-
-    let answer = first.text;
-    let attempts = 1;
-    let validation = validateIslamicCitations(answer, matches);
-
-    if (!validation.passed && selection.resolvedModelMode !== 'fast') {
-      const repairPrompt = `${prompt}\n\nYour previous answer included unsupported or invalid citations. Rewrite the answer using only the provided source IDs. If you cannot, return exactly: ${REFUSAL_MESSAGE}`;
-      const second = await callOllama({ model: selection.model, prompt: repairPrompt, timeout: modelTimeoutMs(selection.resolvedModelMode) });
-      attempts = 2;
-      if (second.ok) {
-        answer = second.text;
-        validation = validateIslamicCitations(answer, matches);
-      }
-    }
-
-    loading.push('validated_citations');
-    if (!validation.passed) {
-      return send(res, 200, {
-        answer: REFUSAL_MESSAGE,
-        mode,
-        modelMode,
-        resolvedModelMode: selection.resolvedModelMode,
-        modelUsed: selection.model,
-        modelSelectionReason: selection.reason,
-        isIslamicQuestion: true,
-        confidence: 'not_enough_evidence',
-        sources: [],
-        sourceCards: [],
-        warnings: [],
-        errorState: 'citation_validation_failed',
-        llmCalled: true,
-        sourceBackend,
-        validation: { passed: false, attempts, issues: validation.issues },
         loadingStagesCompleted: [...loading, 'prepared_answer'],
       });
     }
 
-    const warnings = matches
-      .filter((m) => m.source_type === 'hadith' && String(m.grade || '').toLowerCase().includes('weak'))
-      .map(() => 'This hadith is graded weak in the approved source. It should not be used as main evidence for a ruling.');
+    let answer = cleanAnswerText(first.text);
+    let attempts = 1;
+    let citationValidation = validateIslamicCitations(answer, sources);
+    let answerValidation = validateIslamicAnswerAgainstSources(answer, sources);
+
+    if ((!citationValidation.passed || !answerValidation.ok) && selection.resolvedModelMode !== 'fast') {
+      const repairPrompt = `${prompt}
+
+Your previous answer risked unsupported claims. Rewrite the answer using only the approved source details above. If you cannot do that safely, return exactly: "${REFUSAL_MESSAGE}"`;
+      const second = await callOllama({ model: selection.model, prompt: repairPrompt, timeout: modelTimeoutMs(selection.resolvedModelMode) });
+      attempts = 2;
+      if (second.ok) {
+        answer = cleanAnswerText(second.text);
+        citationValidation = validateIslamicCitations(answer, sources);
+        answerValidation = validateIslamicAnswerAgainstSources(answer, sources);
+      }
+    }
+
+    if (classification.isSensitive && /(your|my).{0,24}(prayer|fast|divorce|marriage|business).{0,24}(is valid|is invalid|is halal|is haram|definitely|certainly)/i.test(answer)) {
+      answerValidation = {
+        ok: false,
+        reason: 'personalized_ruling_detected',
+        unsupportedClaims: [...(answerValidation.unsupportedClaims || []), 'The answer attempted to issue a personalized ruling with unjustified certainty.'],
+      };
+    }
+
+    loading.push('validated_citations');
+    if (!citationValidation.passed || !answerValidation.ok) {
+      const blocked = modelBlockedResponse({
+        mode,
+        modelMode,
+        classification,
+        sourceBackend: retrieval.sourceBackend,
+        loading,
+        sources,
+        warnings: retrieval.warnings,
+        reason: answerValidation.reason || 'citation_validation_failed',
+        unsupportedClaims: [...citationValidation.issues, ...(answerValidation.unsupportedClaims || [])],
+      });
+      blocked.validation = {
+        passed: false,
+        attempts,
+        issues: [...citationValidation.issues, ...(answerValidation.unsupportedClaims || [])],
+      };
+      if (DEBUG_SOURCES || payload.debug) blocked.debug = { ...retrieval.debug, classification, validation: blocked.validation, llmCalled: true };
+      return send(res, 200, blocked);
+    }
 
     const out = {
-      answer,
+      answer: appendScholarNote(answer || REFUSAL_MESSAGE, classification),
       mode,
       modelMode,
       resolvedModelMode: selection.resolvedModelMode,
       modelUsed: selection.model,
       modelSelectionReason: selection.reason,
       isIslamicQuestion: true,
-      confidence: matches.length > 2 ? 'high' : 'medium',
-      sources: matches,
-      sourceCards,
-      warnings,
+      confidence: resolveIslamicConfidence({ sources, classification }),
+      sources,
+      sourceCards: formatSourceCards(sources),
+      warnings: sourceWarnings(sources, classification, retrieval.warnings),
       errorState: null,
       llmCalled: true,
-      sourceBackend,
+      sourceBackend: retrieval.sourceBackend,
+      hallucinationGuard: {
+        status: 'passed',
+        method: 'model_with_validation',
+      },
       validation: { passed: true, attempts, issues: [] },
       loadingStagesCompleted: [...loading, 'prepared_answer'],
     };
 
     if (DEBUG_SOURCES || payload.debug) {
       out.debug = {
-        ...debug,
+        ...retrieval.debug,
+        classification,
         requestedModelMode: modelMode,
         resolvedModelMode: selection.resolvedModelMode,
         modelUsed: selection.model,

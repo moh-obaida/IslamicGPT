@@ -1,45 +1,126 @@
-const { loadIndexSources, normalizeText, sourceScore } = require('./sourceStore');
+const { loadIndexSources, normalizeText } = require('./sourceStore');
 const { searchSources } = require('./supabaseSourceDb');
 
-function modeAllowedTypes(mode) {
-  return {
-    quran_mode: ['quran', 'quran_translation', 'tafsir'],
-    hadith_mode: ['hadith', 'hadith_explanation'],
-    tafsir_mode: ['quran', 'quran_translation', 'tafsir'],
-    fiqh_mode: ['quran', 'hadith', 'hadith_explanation', 'scholar_statement', 'fatwa', 'book'],
-    aqidah_mode: ['quran', 'hadith', 'hadith_explanation', 'scholar_statement', 'book', 'educational_explanation'],
-    arabic_mode: null,
-    student_explanation_mode: ['quran', 'hadith', 'tafsir', 'educational_explanation'],
-    compare_opinions_mode: ['scholar_statement', 'fatwa', 'book', 'lecture', 'video_transcript'],
-    islamic_search_mode: null,
-  }[mode] || null;
+const SEARCH_FILLER_WORDS = new Set(['a', 'about', 'an', 'give', 'hadith', 'i', 'if', 'is', 'me', 'my', 'please', 'show', 'source', 'the', 'what']);
+const SOURCE_TYPE_MAP = {
+  all: null,
+  hadith: ['hadith', 'hadith_explanation'],
+  quran: ['quran', 'quran_translation'],
+  tafsir: ['tafsir'],
+  fiqh: ['quran', 'hadith', 'hadith_explanation', 'scholar_statement', 'fatwa', 'book'],
+  aqidah: ['quran', 'hadith', 'hadith_explanation', 'scholar_statement', 'book', 'educational_explanation'],
+  fatwa: ['fatwa'],
+  scholar: ['scholar_statement', 'fatwa', 'book', 'lecture', 'video_transcript', 'educational_explanation'],
+};
+
+function allowedTypesForSourceType(sourceType) {
+  const normalized = String(sourceType || 'all').toLowerCase();
+  return SOURCE_TYPE_MAP[normalized] || null;
 }
 
-function searchLocalIslamicKnowledgeBase(question, mode, limit = 8) {
+function sanitizeSearchQuery(message) {
+  const cleaned = String(message || '')
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !/[A-Za-z]/.test(token) || (token.length > 2 && !SEARCH_FILLER_WORDS.has(token.toLowerCase())))
+    .join(' ')
+    .trim();
+  return cleaned || String(message || '').trim();
+}
+
+function localSearchText(source) {
+  return normalizeText([
+    source.id,
+    source.title,
+    source.source_title,
+    source.collection_name,
+    source.book_name,
+    source.chapter_name,
+    source.translation_text,
+    source.arabic_text,
+    source.summary,
+    source.scholar_name,
+    source.reference_number,
+    source.fatwa_number,
+    source.local_reference,
+    ...(Array.isArray(source.topic_tags) ? source.topic_tags : []),
+  ].filter(Boolean).join(' '));
+}
+
+function tokenVariants(token) {
+  const variants = new Set([token]);
+  if (/^[a-z]+$/i.test(token) && token.endsWith('s') && token.length > 4) variants.add(token.slice(0, -1));
+  return [...variants];
+}
+
+function localSourceScore(source, message) {
+  const query = normalizeText(sanitizeSearchQuery(message));
+  const queryTokens = query.split(' ').filter(Boolean);
+  if (!queryTokens.length) return 0;
+
+  const text = localSearchText(source);
+  const sourceTokens = new Set(text.split(' ').filter(Boolean));
+  let score = text.includes(query) ? 12 : 0;
+
+  queryTokens.forEach((token) => {
+    const variants = tokenVariants(token);
+    if (variants.some((variant) => sourceTokens.has(variant))) score += 4;
+    else if (variants.some((variant) => text.includes(` ${variant} `) || text.startsWith(`${variant} `) || text.endsWith(` ${variant}`))) score += 2;
+  });
+
+  return score;
+}
+
+function searchLocalApprovedSources(message, sourceType = 'all', limit = 8) {
   const allowTestSources = String(process.env.ALLOW_TEST_SOURCES || 'false').toLowerCase() === 'true';
-  const debug = { query: question, normalizedQuery: normalizeText(question), totalSearched: 0, matchedApproved: 0, rejected: [], modeFilter: mode, openWebDisabled: true };
+  const debug = {
+    query: message,
+    normalizedQuery: normalizeText(sanitizeSearchQuery(message)),
+    totalSearched: 0,
+    matchedApproved: 0,
+    rejected: [],
+    sourceType,
+    openWebDisabled: true,
+  };
   const all = loadIndexSources();
   debug.totalSearched = all.length;
 
-  const allowed = modeAllowedTypes(mode);
-  const approved = all.filter((s) => {
-    if (s.is_test_record && !allowTestSources) { debug.rejected.push(`${s.id}: test record blocked`); return false; }
-    if (!s.verified_by_admin || !s.approved_for_answers) { debug.rejected.push(`${s.id}: not approved`); return false; }
-    if ((s.source_type === 'uploaded_document' || s.source_type === 'approved_pdf') && s.upload_status !== 'approved') { debug.rejected.push(`${s.id}: upload not approved`); return false; }
-    if (allowed && !allowed.includes(s.source_type)) { debug.rejected.push(`${s.id}: mode excluded`); return false; }
+  const allowed = allowedTypesForSourceType(sourceType);
+  const approved = all.filter((source) => {
+    if (source.is_test_record && !allowTestSources) {
+      debug.rejected.push(`${source.id}: test record blocked`);
+      return false;
+    }
+    if (!source.verified_by_admin || !source.approved_for_answers) {
+      debug.rejected.push(`${source.id}: not approved`);
+      return false;
+    }
+    if ((source.source_type === 'uploaded_document' || source.source_type === 'approved_pdf') && source.upload_status !== 'approved') {
+      debug.rejected.push(`${source.id}: upload not approved`);
+      return false;
+    }
+    if (allowed && !allowed.includes(source.source_type)) {
+      debug.rejected.push(`${source.id}: source type excluded`);
+      return false;
+    }
     return true;
   });
 
-  const matches = approved.map((s) => ({ s, sc: sourceScore(s, question) })).filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, limit).map((x) => x.s);
-  debug.matchedApproved = matches.length;
-  debug.matchedSourceIds = matches.map((m) => m.id);
+  const matches = approved
+    .map((source) => ({ source, score: localSourceScore(source, message) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((entry) => entry.source);
 
+  debug.matchedApproved = matches.length;
+  debug.matchedSourceIds = matches.map((match) => match.id);
   return { matches, debug };
 }
 
-async function searchIslamicKnowledgeBase(question, mode, options = {}) {
-  const limit = Number(options.limit) || 8;
-  const local = searchLocalIslamicKnowledgeBase(question, mode, limit);
+async function retrieveApprovedSources({ message, sourceType = 'all', limit = 8 } = {}) {
+  const local = searchLocalApprovedSources(message, sourceType, limit);
   const debug = {
     ...local.debug,
     sourceBackend: local.matches.length ? 'local' : 'none',
@@ -54,11 +135,13 @@ async function searchIslamicKnowledgeBase(question, mode, options = {}) {
       error: null,
     },
   };
+  const warnings = [];
+  const errors = [];
 
   try {
     const supabase = await searchSources({
-      q: question,
-      type: mode,
+      q: message,
+      type: sourceType,
       limit,
       approvedOnly: true,
     });
@@ -71,16 +154,28 @@ async function searchIslamicKnowledgeBase(question, mode, options = {}) {
     };
 
     if (supabase.ok && supabase.records.length) {
-      debug.matchedApproved = supabase.records.length;
-      debug.matchedSourceIds = supabase.records.map((record) => record.id);
+      const verifiedFirst = supabase.records.filter((record) => record.verified_by_admin === true);
+      const sources = (verifiedFirst.length ? verifiedFirst : supabase.records).slice(0, limit);
+      debug.matchedApproved = sources.length;
+      debug.matchedSourceIds = sources.map((record) => record.id);
       debug.sourceBackend = 'supabase';
       return {
-        matches: supabase.records,
-        debug,
+        sources,
         sourceBackend: 'supabase',
+        errors,
+        warnings,
+        debug,
       };
     }
+
+    if (supabase.ok && !supabase.records.length) warnings.push('Supabase returned no approved matches, using local fallback.');
+    if (!supabase.ok && supabase.error) {
+      errors.push(supabase.error);
+      warnings.push('Supabase lookup failed, using local fallback.');
+    }
   } catch (error) {
+    errors.push(error.message);
+    warnings.push('Supabase lookup failed, using local fallback.');
     debug.supabase = {
       configured: true,
       ok: false,
@@ -90,14 +185,45 @@ async function searchIslamicKnowledgeBase(question, mode, options = {}) {
   }
 
   return {
-    matches: local.matches,
-    debug,
+    sources: local.matches,
     sourceBackend: local.matches.length ? 'local' : 'none',
+    errors,
+    warnings,
+    debug,
+  };
+}
+
+async function searchIslamicKnowledgeBase(question, mode, options = {}) {
+  const limit = Number(options.limit) || 8;
+  const modeToSourceType = {
+    quran_mode: 'quran',
+    hadith_mode: 'hadith',
+    tafsir_mode: 'tafsir',
+    fiqh_mode: 'fiqh',
+    aqidah_mode: 'aqidah',
+    compare_opinions_mode: 'all',
+    student_explanation_mode: 'all',
+    explain_simply_mode: 'all',
+    islamic_search_mode: 'all',
+    arabic_mode: 'all',
+  };
+  const result = await retrieveApprovedSources({
+    message: question,
+    sourceType: modeToSourceType[mode] || 'all',
+    limit,
+  });
+  return {
+    matches: result.sources,
+    debug: result.debug,
+    sourceBackend: result.sourceBackend,
+    warnings: result.warnings,
+    errors: result.errors,
   };
 }
 
 module.exports = {
-  modeAllowedTypes,
+  allowedTypesForSourceType,
+  retrieveApprovedSources,
   searchIslamicKnowledgeBase,
-  searchLocalIslamicKnowledgeBase,
+  searchLocalApprovedSources,
 };
