@@ -81,10 +81,21 @@ function buildSourceContext(sources) {
     `TAFSIR EDITION: ${source.tafsir_edition_slug || ''}`,
     `TAFSIR BOOK: ${source.tafsir_book_name || ''}`,
     `TAFSIR AUTHOR: ${source.tafsir_author || ''}`,
-    `SCHOLAR: ${source.scholar_name || ''}`,
+    `SCHOLAR: ${source.scholar_name_en || source.scholar_name_ar || source.scholar_name || ''}`,
+    `SCHOLAR SLUG: ${source.scholar_slug || ''}`,
+    `WORK: ${source.work_title || source.work_title_en || source.work_title_ar || ''}`,
+    `SOURCE KIND: ${source.source_kind || ''}`,
+    `WORK TYPE: ${source.work_type || ''}`,
+    `CHAPTER: ${source.chapter_title || source.chapter_name || ''}`,
+    `SECTION: ${source.section_title || ''}`,
+    `FATWA NUMBER: ${source.fatwa_number || source.fatwa_reference || ''}`,
+    `QUESTION:\n${source.question_text || ''}`,
+    `ANSWER:\n${source.answer_text || ''}`,
     `ARABIC TEXT:\n${source.arabic_text || ''}`,
     `TRANSLATION:\n${source.translation_text || ''}`,
     `EXPLANATION:\n${source.explanation_text || ''}`,
+    `SUMMARY:\n${source.summary_text || source.summary || ''}`,
+    `QUOTE:\n${source.quote_text || ''}`,
     `TAGS: ${Array.isArray(source.topic_tags) ? source.topic_tags.join(', ') : ''}`,
   ].join('\n')).join('\n\n');
 }
@@ -125,6 +136,16 @@ function appendScholarNote(answer, classification) {
   if (!classification.requiresScholarWarning) return safeAnswer;
   if (safeAnswer.includes(scholarConsultationNote())) return safeAnswer;
   return `${safeAnswer}\n\n${scholarConsultationNote()}`;
+}
+
+function scholarReference(source) {
+  return [
+    source.work_title || source.work_title_en || source.work_title_ar,
+    source.fatwa_number || source.fatwa_reference ? `Fatwa ${source.fatwa_number || source.fatwa_reference}` : '',
+    source.page_number ? `p. ${source.page_number}` : '',
+    source.page_range ? `pp. ${source.page_range}` : '',
+    source.source_url || '',
+  ].filter(Boolean).join(' / ');
 }
 
 function sourceWarnings(sources, classification, extraWarnings = []) {
@@ -231,6 +252,31 @@ function buildTemplateAnswer(source) {
       translationCredit ? '' : null,
       translationCredit ? 'Translation:' : null,
       translationCredit || null,
+    ].filter(Boolean).join('\n');
+  }
+
+  if (['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(source.source_type)) {
+    const scholarName = source.scholar_name_en || source.scholar_name_ar || source.scholar_name || '';
+    return [
+      'I found an approved scholar/fatwa source.',
+      '',
+      'Title:',
+      source.title || source.source_title || 'Scholar source',
+      '',
+      scholarName ? 'Scholar:' : null,
+      scholarName || null,
+      '',
+      source.question_text ? 'Question:' : null,
+      source.question_text || null,
+      '',
+      'Answer:',
+      source.answer_text || source.translation_text || source.arabic_text || source.summary_text || source.explanation_text || source.quote_text || 'Text is not available in the approved source record.',
+      '',
+      'Reference:',
+      scholarReference(source) || source.source_title || source.title || source.id || 'Approved source',
+      '',
+      'Note:',
+      'If this is a personal religious ruling, consult a qualified scholar for your specific situation.',
     ].filter(Boolean).join('\n');
   }
 
