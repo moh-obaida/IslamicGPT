@@ -588,6 +588,6 @@ http.createServer(async (req, res) => {
   const payload = await readJsonBody(req, res);
   if (!payload) return;
   return handleChat(payload, res);
-}).listen(Number(process.env.PORT || 3001), () => {
+}).listen(Number(process.env.PORT || 3001), '0.0.0.0', () => {
   console.log(`IslamicGPT backend listening on http://localhost:${Number(process.env.PORT || 3001)}`);
 });
