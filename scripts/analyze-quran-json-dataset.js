@@ -17,6 +17,8 @@ function main() {
   console.log(`Dataset root: ${analysis.datasetRoot}`);
   console.log(`Dataset detected: ${analysis.datasetDetected}`);
   console.log(`JSON files analyzed: ${analysis.filesAnalyzed}`);
+  console.log(`Ayah files processed: ${analysis.ayahFilesProcessed || 0}`);
+  console.log(`Metadata files skipped: ${analysis.metadataFilesSkipped || 0}`);
   console.log(`Structure dist/quran.json: ${yesNo(analysis.structures.hasDistQuran)}`);
   console.log(`Structure dist/quran_en.json: ${yesNo(analysis.structures.hasDistQuranEn)}`);
   console.log(`Structure dist/chapters/en/*.json: ${yesNo(analysis.structures.hasChapterEnFiles)}`);

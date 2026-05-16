@@ -130,6 +130,17 @@ function detectDatasetStructures(files, rootDir) {
   };
 }
 
+function isKnownMetadataFile(relPath) {
+  const rel = String(relPath || '').replace(/\\/g, '/').toLowerCase();
+  return (
+    /^data\/chapters\/[^/]+\.json$/.test(rel)
+    || /^data\/editions\/[^/]+\.json$/.test(rel)
+    || /^dist\/chapters\/[^/]+\.json$/.test(rel)
+    || /^dist\/chapters\/en\/[^/]+\.json$/.test(rel)
+    || /^dist\/editions\/[^/]+\.json$/.test(rel)
+  );
+}
+
 function pickNumber(...values) {
   for (const value of values) {
     const parsed = toInteger(value);
@@ -524,6 +535,8 @@ function normalizeQuranDataset(rootDir, options = {}) {
   const chapterMap = new Map();
   const warnings = [];
   let filesAnalyzed = 0;
+  let metadataFilesSkipped = 0;
+  let ayahFilesProcessed = 0;
 
   for (const file of files) {
     let parsed;
@@ -534,8 +547,11 @@ function normalizeQuranDataset(rootDir, options = {}) {
       continue;
     }
     filesAnalyzed += 1;
+    const rel = path.relative(datasetRoot, file).replace(/\\/g, '/');
     const found = scanFile(file, parsed, verseMap, chapterMap, translationLanguage);
-    if (!found) warnings.push(`${path.relative(datasetRoot, file)}: no Quran ayah rows detected.`);
+    if (found) ayahFilesProcessed += 1;
+    else if (isKnownMetadataFile(rel)) metadataFilesSkipped += 1;
+    else warnings.push(`${rel}: no Quran ayah rows detected.`);
   }
 
   const rows = [...verseMap.values()]
@@ -578,6 +594,8 @@ function normalizeQuranDataset(rootDir, options = {}) {
     datasetDetected: files.length ? DEFAULT_QURAN_METADATA.datasetName : 'none',
     files,
     filesAnalyzed,
+    ayahFilesProcessed,
+    metadataFilesSkipped,
     structures,
     rows,
     totalSurahs,

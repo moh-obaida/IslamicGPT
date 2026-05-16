@@ -5,7 +5,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { test, before, after } = require('node:test');
 const { classifyQuestion } = require('../backend/src/questionClassifier');
-const { normalizeSourceRecord } = require('../backend/src/supabaseSourceDb');
+const { normalizeSourceRecord, quranReferenceFromQuery } = require('../backend/src/supabaseSourceDb');
 const { normalizeQuranDataset } = require('./quran-json-utils');
 
 let tempRoot;
@@ -140,7 +140,26 @@ test('quran_mode maps to Quran source type', () => {
 
 test('direct Quran lookup intent is detected', () => {
   assert.strictEqual(classifyQuestion('Quran 2:255', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran Aya 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran Aya 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Quran Ayah 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran Ayah 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Quran verse 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran verse 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Ayah 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Ayah 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Aya 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Aya 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Verse 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Verse 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('آية 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('آية 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('ايه 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('ايه 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('الآية 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('الاية 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
   assert.strictEqual(classifyQuestion('Give me Ayat al-Kursi', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Explain Quran 2:152', 'islamic_search_mode').intent, 'explanation');
   assert.strictEqual(classifyQuestion('اشرح آية الكرسي', 'islamic_search_mode').intent, 'explanation');
 });
 
@@ -251,4 +270,19 @@ test('Quran import pipeline does not require frontend changes', () => {
   assert(fs.existsSync(path.join(process.cwd(), 'frontend', 'index.html')));
   assert(!importer.includes('frontend/index.html'));
   assert(!analyzer.includes('frontend/index.html'));
+});
+
+test('Quran normalization skips known metadata files without warning spam', () => {
+  fs.mkdirSync(path.join(datasetRoot, 'data', 'chapters'), { recursive: true });
+  fs.writeFileSync(path.join(datasetRoot, 'data', 'chapters', 'en.json'), JSON.stringify({ chapters: [] }, null, 2));
+  const analysis = normalizeQuranDataset(datasetRoot, {});
+  assert(analysis.metadataFilesSkipped >= 1);
+  assert(analysis.warnings.every((warning) => !warning.includes('data/chapters/en.json: no Quran ayah rows detected.')));
+});
+
+test('Quran reference parsing supports Aya/Ayah/Verse forms', () => {
+  assert.strictEqual(quranReferenceFromQuery({ raw: 'Quran Aya 2:152' }), '2:152');
+  assert.strictEqual(quranReferenceFromQuery({ raw: 'Quran Ayah 2:152' }), '2:152');
+  assert.strictEqual(quranReferenceFromQuery({ raw: 'Verse 2:152' }), '2:152');
+  assert.strictEqual(quranReferenceFromQuery({ raw: 'الآية 2:152' }), '2:152');
 });

@@ -429,6 +429,21 @@ test('/api/chat uses template answers for direct Quran lookups without Ollama', 
   assert.strictEqual(body.sourceCards[0].metadata.translation_source, 'Tanzil');
 });
 
+test('/api/chat uses template answers for Quran Aya references without Ollama', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Quran Aya 2:255',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.confidence, 'source_backed');
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.answer.includes('A relevant Quran verse is Al-Baqarah 2:255.'), true);
+  assert.strictEqual(body.answer.includes('Source:\nQuran 2:255'), true);
+});
+
 test('/api/chat uses template answers for direct Tafsir lookups without Ollama', async () => {
   const { response, body } = await postJson('/api/chat', {
     message: 'Show tafsir of Al-Fatihah',
