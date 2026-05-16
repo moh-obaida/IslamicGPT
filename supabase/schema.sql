@@ -33,15 +33,27 @@ create table if not exists public.islamic_sources (
   ayah integer,
   surah_number integer,
   ayah_number integer,
+  ayah_start integer,
+  ayah_end integer,
+  ayah_range text,
   ayah_global_number integer,
   surah_name_ar text,
   surah_name_en text,
+  tafsir_edition_slug text,
+  tafsir_book_name text,
+  tafsir_book_name_ar text,
+  tafsir_book_name_en text,
+  tafsir_author text,
+  tafsir_author_ar text,
+  tafsir_author_en text,
+  tafsir_language text,
   juz integer,
   hizb text,
   page_number integer,
   revelation_place text,
   arabic_text text,
   translation_text text,
+  explanation_text text,
   english_narrator text,
   scholar_name text,
   fatwa_reference text,
@@ -54,6 +66,7 @@ create table if not exists public.islamic_sources (
   quran_text_style text,
   quran_arabic_source text,
   quran_edition text,
+  repo_license text,
   license_status text,
   attribution_text text,
   attribution_url text,
@@ -86,9 +99,15 @@ create index if not exists islamic_sources_surah_idx on public.islamic_sources (
 create index if not exists islamic_sources_ayah_idx on public.islamic_sources (ayah);
 create index if not exists islamic_sources_surah_number_idx on public.islamic_sources (surah_number);
 create index if not exists islamic_sources_ayah_number_idx on public.islamic_sources (ayah_number);
+create index if not exists islamic_sources_ayah_start_idx on public.islamic_sources (ayah_start);
+create index if not exists islamic_sources_ayah_end_idx on public.islamic_sources (ayah_end);
 create index if not exists islamic_sources_ayah_global_number_idx on public.islamic_sources (ayah_global_number);
 create index if not exists islamic_sources_surah_name_en_idx on public.islamic_sources (surah_name_en);
 create index if not exists islamic_sources_surah_name_ar_idx on public.islamic_sources (surah_name_ar);
+create index if not exists islamic_sources_tafsir_edition_slug_idx on public.islamic_sources (tafsir_edition_slug);
+create index if not exists islamic_sources_tafsir_book_name_idx on public.islamic_sources (tafsir_book_name);
+create index if not exists islamic_sources_tafsir_author_idx on public.islamic_sources (tafsir_author);
+create index if not exists islamic_sources_tafsir_language_idx on public.islamic_sources (tafsir_language);
 create index if not exists islamic_sources_translator_idx on public.islamic_sources (translator);
 create index if not exists islamic_sources_translation_name_idx on public.islamic_sources (translation_name);
 create index if not exists islamic_sources_translation_language_idx on public.islamic_sources (translation_language);
@@ -111,6 +130,12 @@ create index if not exists islamic_sources_search_tsv_idx on public.islamic_sour
     coalesce(book_name, '') || ' ' ||
     coalesce(book_name_ar, '') || ' ' ||
     coalesce(book_name_en, '') || ' ' ||
+    coalesce(tafsir_book_name, '') || ' ' ||
+    coalesce(tafsir_book_name_ar, '') || ' ' ||
+    coalesce(tafsir_book_name_en, '') || ' ' ||
+    coalesce(tafsir_author, '') || ' ' ||
+    coalesce(tafsir_author_ar, '') || ' ' ||
+    coalesce(tafsir_author_en, '') || ' ' ||
     coalesce(chapter_name, '') || ' ' ||
     coalesce(chapter_name_ar, '') || ' ' ||
     coalesce(chapter_name_en, '') || ' ' ||
@@ -118,9 +143,23 @@ create index if not exists islamic_sources_search_tsv_idx on public.islamic_sour
     coalesce(surah_name_ar, '') || ' ' ||
     coalesce(arabic_text, '') || ' ' ||
     coalesce(translation_text, '') || ' ' ||
+    coalesce(explanation_text, '') || ' ' ||
     coalesce(english_narrator, '') || ' ' ||
     coalesce(translator, '') || ' ' ||
     coalesce(translation_name, '')
+  )
+);
+create index if not exists islamic_sources_tafsir_search_tsv_idx on public.islamic_sources using gin (
+  to_tsvector(
+    'simple',
+    coalesce(title, '') || ' ' ||
+    coalesce(tafsir_book_name, '') || ' ' ||
+    coalesce(tafsir_author, '') || ' ' ||
+    coalesce(arabic_text, '') || ' ' ||
+    coalesce(translation_text, '') || ' ' ||
+    coalesce(explanation_text, '') || ' ' ||
+    coalesce(surah_name_en, '') || ' ' ||
+    coalesce(surah_name_ar, '')
   )
 );
 create index if not exists islamic_sources_quran_search_tsv_idx on public.islamic_sources using gin (

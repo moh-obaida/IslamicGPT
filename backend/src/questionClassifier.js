@@ -43,6 +43,8 @@ const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /verse about/i,
   /quran verse about/i,
   /\bquran\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+  /\bshow\s+(?:me\s+)?tafsir\b/i,
+  /\btafsir\s+(?:ibn|al[-\s]|[\w-]+).*(?:\d{1,3}\s*[:/-]\s*\d{1,3}|fatihah|fatiha|kursi)\b/i,
   /\bayat\s+al[-\s]?kursi\b/i,
   /\bayatul\s+kursi\b/i,
   /source about/i,
@@ -52,10 +54,14 @@ const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /أعطني آية/,
   /اعطني آية/,
   /آية الكرسي/,
+  /اعرض.*تفسير/,
 ];
 
 const EXPLANATION_PATTERNS = [
   /explain/i,
+  /\btafsir\s+of\b/i,
+  /\bexplanation\s+of\s+(?:quran|ayah|verse|surah)\b/i,
+  /\bexplain\s+(?:ayah|quran|verse|surah)\b/i,
   /simply/i,
   /student/i,
   /what does .* mean/i,
@@ -65,6 +71,7 @@ const EXPLANATION_PATTERNS = [
   /what does\s+\d{1,3}\s*[:/-]\s*\d{1,3}\s+mean/i,
   /شرح/,
   /اشرح/,
+  /تفسير\s+(?:آية|اية|الفاتحة|سورة)/,
   /ببساطة/,
   /معنى/,
 ];
@@ -106,6 +113,7 @@ function includesAny(text, keywords) {
 function detectIntent(message, mode) {
   if (COMPARISON_PATTERNS.some((pattern) => pattern.test(message)) || mode === 'compare_opinions_mode') return 'comparison';
   if (PERSONAL_RULING_PATTERNS.some((pattern) => pattern.test(message))) return 'personal_ruling';
+  if (/\bshow\s+(?:me\s+)?tafsir\b/i.test(message) || /اعرض.*تفسير/.test(message)) return 'direct_source_lookup';
   if (EXPLANATION_PATTERNS.some((pattern) => pattern.test(message)) || ['explain_simply_mode', 'student_explanation_mode'].includes(mode)) return 'explanation';
   if (DIRECT_SOURCE_LOOKUP_PATTERNS.some((pattern) => pattern.test(message))) return 'direct_source_lookup';
   return 'general';
@@ -117,8 +125,9 @@ function inferSourceType(message, mode, intent) {
 
   const lower = message.toLowerCase();
   if (/(hadith|bukhari|muslim|tirmidhi|abu dawud|nasai|ibn majah|حديث|سنة|النبي|الرسول|niyyah|intention)/i.test(message)) return 'hadith';
-  if (/(quran|qur'an|ayah|verse|surah|ayat al[-\s]?kursi|ayatul kursi|\b\d{1,3}\s*[:/-]\s*\d{1,3}\b|قرآن|آية|سورة|آية الكرسي)/i.test(message)) return 'quran';
   if (/(tafsir|تفسير)/i.test(message)) return 'tafsir';
+  if (intent === 'explanation' && /(quran|qur'an|ayah|verse|surah|\b\d{1,3}\s*[:/-]\s*\d{1,3}\b|قرآن|آية|سورة|آية الكرسي)/i.test(message)) return 'tafsir';
+  if (/(quran|qur'an|ayah|verse|surah|ayat al[-\s]?kursi|ayatul kursi|\b\d{1,3}\s*[:/-]\s*\d{1,3}\b|قرآن|آية|سورة|آية الكرسي)/i.test(message)) return 'quran';
   if (/(aqidah|tawheed|shirk|iman|ihsan|عقيدة|توحيد|شرك|إيمان|إحسان)/i.test(message)) return 'aqidah';
   if (/(fatwa|scholar|imam|shaykh|فتوى|شيخ|عالم)/i.test(message)) return lower.includes('fatwa') || message.includes('فتوى') ? 'fatwa' : 'scholar';
   if (/(prayer|wudu|zakat|fasting|ramadan|hajj|umrah|halal|haram|fiqh|salah|وضوء|زكاة|صيام|رمضان|حج|عمرة|حلال|حرام|فقه)/i.test(message)) return 'fiqh';

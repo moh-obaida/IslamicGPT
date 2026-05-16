@@ -78,9 +78,13 @@ function buildSourceContext(sources) {
     `CHAPTER: ${source.chapter_name || ''}`,
     `HADITH NUMBER: ${source.hadith_number || ''}`,
     `QURAN REF: ${(source.surah_number || source.surah) && (source.ayah_number || source.ayah) ? `${source.surah_number || source.surah}:${source.ayah_number || source.ayah}` : ''}`,
+    `TAFSIR EDITION: ${source.tafsir_edition_slug || ''}`,
+    `TAFSIR BOOK: ${source.tafsir_book_name || ''}`,
+    `TAFSIR AUTHOR: ${source.tafsir_author || ''}`,
     `SCHOLAR: ${source.scholar_name || ''}`,
     `ARABIC TEXT:\n${source.arabic_text || ''}`,
     `TRANSLATION:\n${source.translation_text || ''}`,
+    `EXPLANATION:\n${source.explanation_text || ''}`,
     `TAGS: ${Array.isArray(source.topic_tags) ? source.topic_tags.join(', ') : ''}`,
   ].join('\n')).join('\n\n');
 }
@@ -187,7 +191,27 @@ function buildTemplateAnswer(source) {
     ].filter(Boolean).join('\n');
   }
 
-  if (['quran', 'quran_translation', 'tafsir'].includes(source.source_type)) {
+  if (source.source_type === 'tafsir') {
+    const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_range || source.ayah_number || source.ayah || '?'}`;
+    const tafsirBookName = source.tafsir_book_name || source.tafsir_book_name_en || source.tafsir_book_name_ar || source.title || 'Tafsir source';
+    return [
+      `A relevant tafsir source is ${tafsirBookName}, explaining Quran ${ref}.`,
+      '',
+      'Explanation:',
+      source.explanation_text || source.translation_text || 'Explanation text is not available in the approved source record.',
+      '',
+      'Source:',
+      tafsirBookName,
+      source.tafsir_author ? '' : null,
+      source.tafsir_author ? 'Author:' : null,
+      source.tafsir_author || null,
+      source.original_source ? '' : null,
+      source.original_source ? 'Original source:' : null,
+      source.original_source || null,
+    ].filter(Boolean).join('\n');
+  }
+
+  if (['quran', 'quran_translation'].includes(source.source_type)) {
     const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
     const verseLabel = source.surah_name_en && (source.surah_number || source.surah) && (source.ayah_number || source.ayah)
       ? `${source.surah_name_en} ${ref}`
