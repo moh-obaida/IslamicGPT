@@ -302,7 +302,6 @@
       <nav class="nav-group">
         <button class="nav-item" data-view="sources" onclick="switchView('sources')">Sources</button>
         <button class="nav-item" data-view="settings" onclick="switchView('settings')">Settings</button>
-        <button class="nav-item hidden" id="navAdmin" data-view="admin" onclick="switchView('admin')">Admin</button>
       </nav>
       <div class="sidebar-scroll">
         <div class="sidebar-panel glow">
@@ -445,17 +444,17 @@
 
         <div id="adminView" class="content-inner hidden">
           <div class="dashboard-header">
-            <h1>Admin</h1>
-            <p>Manage source quality, approval, and diagnostics.</p>
+            <h1>Source Management</h1>
+            <p>Manage source quality, approval, and verification.</p>
           </div>
           <div class="full-card">
             <div id="adminContent">
-              <div class="admin-route-note">Admin tools are available only on <strong>/adminadmin</strong>. This UI route is not a security boundary; backend protection is still required for dangerous actions.</div>
+              <div class="admin-route-note">Management tools are available only on this direct route. This UI route is not a security boundary; backend protection is still required for sensitive actions.</div>
               <div id="adminLoginPanel" class="admin-form">
-                <input id="adminEmail" type="email" autocomplete="username" placeholder="Admin email">
-                <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password">
-                <button class="admin-btn primary" onclick="adminLogin()">Sign in to Admin</button>
-                <div class="hint" id="adminLoginHint">Source management loads after admin sign-in.</div>
+                <input id="adminEmail" type="email" autocomplete="username" placeholder="Email">
+                <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password">
+                <button class="admin-btn primary" onclick="adminLogin()">Sign in</button>
+                <div class="hint" id="adminLoginHint">Source management loads after sign-in.</div>
               </div>
               <div id="adminToolsPanel" class="hidden">
                 <div class="admin-actions">
@@ -464,7 +463,7 @@
                   <button class="admin-btn danger" onclick="adminLogout()">Sign out</button>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
-                  <input id="adminSourceFilter" placeholder="Filter admin sources..." oninput="renderAdminSources()" style="flex:1; min-width:220px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
+                  <input id="adminSourceFilter" placeholder="Filter source records..." oninput="renderAdminSources()" style="flex:1; min-width:220px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
                   <select id="adminTypeFilter" onchange="renderAdminSources()" style="width:180px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
                     <option value="all">All Types</option>
                     <option value="quran">Quran</option>
@@ -475,7 +474,7 @@
                     <option value="scholar_statement">Scholar</option>
                   </select>
                 </div>
-                <div id="adminStatus" class="hint">Admin source management is ready.</div>
+                <div id="adminStatus" class="hint">Source management is ready.</div>
                 <div id="adminSourceList" class="admin-list"></div>
               </div>
             </div>
@@ -578,12 +577,12 @@
       document.getElementById(view + 'View').classList.remove('hidden');
       const navTarget = document.querySelector(`[data-view="${view}"]`);
       if (navTarget) navTarget.classList.add('active');
-      const titles = {chat:'IslamicGPT',sources:'Sources',settings:'Settings',admin:'Admin'};
+      const titles = {chat:'IslamicGPT',sources:'Sources',settings:'Settings',admin:'Source Management'};
       const subtitles = {
         chat:'Source-first assistant',
         sources:'Search and review approved Islamic sources',
         settings:'Configure IslamicGPT behavior and source rules',
-        admin:'Manage source quality, approval, and diagnostics'
+        admin:'Manage source quality, approval, and verification'
       };
       document.getElementById('pageTitle').textContent = titles[view];
       document.getElementById('pageSubtitle').textContent = subtitles[view];
@@ -595,7 +594,6 @@
     function applyRoute() {
       const admin = isAdminRoute();
       document.body.classList.toggle('admin-mode', admin);
-      document.getElementById('navAdmin').classList.toggle('hidden', !admin);
       if (admin) return switchView('admin', { fromRoute: true });
       if (window.location.pathname === '/sources') return switchView('sources', { fromRoute: true });
       return switchView('chat', { fromRoute: true });
@@ -737,13 +735,13 @@
         });
         const data = await res.json();
         if (!res.ok || !data.token) {
-          document.getElementById('adminLoginHint').textContent = 'Admin sign-in unavailable or credentials were not accepted.';
+          document.getElementById('adminLoginHint').textContent = 'Sign-in unavailable or credentials were not accepted.';
           return;
         }
         localStorage.setItem(adminTokenKey, data.token);
         loadAdminRoute();
       } catch {
-        document.getElementById('adminLoginHint').textContent = 'Backend Offline. Admin tools require the backend.';
+        document.getElementById('adminLoginHint').textContent = 'Backend Offline. Management tools require the backend.';
       }
     }
     function adminLogout() {
@@ -758,7 +756,7 @@
       if (signedIn) loadAdminSources();
     }
     async function loadAdminSources() {
-      setAdminStatus('Loading admin sources…');
+      setAdminStatus('Loading source records…');
       try {
         const res = await fetch('/api/admin/sources', { headers: { Authorization: `Bearer ${adminToken()}` } });
         if (res.status === 401) {
@@ -770,7 +768,7 @@
         setAdminStatus(`${adminSources.length} source record${adminSources.length === 1 ? '' : 's'} loaded from ${data.sourceBackend || 'backend'}.`);
         renderAdminSources();
       } catch {
-        setAdminStatus('Backend Offline. Admin source management requires the backend.');
+        setAdminStatus('Backend Offline. Source management requires the backend.');
       }
     }
     function renderAdminSources() {
@@ -784,7 +782,7 @@
         return typeOk && (!query || haystack.includes(query));
       }).slice(0, 80);
       if (!filtered.length) {
-        list.innerHTML = '<div class="empty-state">No admin source records match this filter.</div>';
+        list.innerHTML = '<div class="empty-state">No source records match this filter.</div>';
         return;
       }
       list.innerHTML = filtered.map(({ source, index }) => `
