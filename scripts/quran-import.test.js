@@ -175,6 +175,53 @@ test('Quran importer uses stable quran-{surah}-{ayah} IDs', () => {
   assert(analysis.rows.some((row) => row.id === 'quran-2-255'));
 });
 
+
+
+test('Quran normalization uses chapter-local verse.number and preserves global verse id', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'islamicgpt-quran-json-global-'));
+  const localDatasetRoot = path.join(root, 'quran-json');
+  fs.mkdirSync(path.join(localDatasetRoot, 'dist', 'verses'), { recursive: true });
+  fs.writeFileSync(path.join(localDatasetRoot, 'dist', 'verses', '255.json'), JSON.stringify({
+    id: 255,
+    number: 248,
+    chapter: { id: 2, transliteration: 'Al-Baqarah', name: 'البقرة' },
+    text: 'وَقَالَ لَهُمۡ نَبِيُّهُمۡ...',
+    translations: { en: 'And their prophet said to them...' },
+  }, null, 2));
+
+  try {
+    const analysis = normalizeQuranDataset(localDatasetRoot, {});
+    const row = analysis.rows.find((entry) => entry.id === 'quran-2-248');
+    assert(row);
+    assert.strictEqual(row.surah_number, 2);
+    assert.strictEqual(row.ayah_number, 248);
+    assert.strictEqual(row.ayah_global_number, 255);
+    assert.strictEqual(row.title, 'Al-Baqarah 2:248');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Quran normalization keeps Ayat al-Kursi id as quran-2-255 when chapter-local number is 255', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'islamicgpt-quran-json-kursi-'));
+  const localDatasetRoot = path.join(root, 'quran-json');
+  fs.mkdirSync(path.join(localDatasetRoot, 'dist', 'verses'), { recursive: true });
+  fs.writeFileSync(path.join(localDatasetRoot, 'dist', 'verses', '262.json'), JSON.stringify({
+    id: 262,
+    number: 255,
+    chapter: { id: 2, transliteration: 'Al-Baqarah', name: 'البقرة' },
+    text: 'اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ...',
+    translations: { en: 'Allah - there is no deity except Him...' },
+  }, null, 2));
+
+  try {
+    const analysis = normalizeQuranDataset(localDatasetRoot, {});
+    assert(analysis.rows.some((entry) => entry.id === 'quran-2-255'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('Quran analyzer warns when requested English translation is unavailable', () => {
   const warningRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'islamicgpt-quran-json-warning-'));
   const warningDatasetRoot = path.join(warningRoot, 'quran-json');
