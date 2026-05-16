@@ -2,12 +2,14 @@ const http = require('http');
 const crypto = require('crypto');
 const path = require('path');
 
-try {
-  const dotenv = require('dotenv');
-  dotenv.config({ path: path.join(__dirname, '.env') });
-  dotenv.config({ path: path.join(__dirname, '..', '.env') });
-  dotenv.config();
-} catch (_) {}
+if (process.env.NODE_ENV !== 'test' && process.env.ISLAMICGPT_SKIP_DOTENV !== '1') {
+  try {
+    const dotenv = require('dotenv');
+    dotenv.config({ path: path.join(__dirname, '.env') });
+    dotenv.config({ path: path.join(__dirname, '..', '.env') });
+    dotenv.config();
+  } catch (_) {}
+}
 
 const { callOllama, checkOllamaHealth } = require('./src/ollamaClient');
 const { resolveModelMode, modelTimeoutMs } = require('./src/modelRouter');
