@@ -38,6 +38,11 @@ before(() => {
       surah_name_en: 'Al-Fatihah',
       text: 'Ibn Kathir explains the opening verse of Al-Fatihah.',
     },
+    {
+      ayah: 1,
+      surah_name_en: 'Al-Fatihah',
+      text: 'Duplicate entry for testing duplicate normalized ids.',
+    },
   ], null, 2));
   fs.writeFileSync(path.join(datasetRoot, 'tafsir', 'en-al-jalalayn', '2', '255.json'), JSON.stringify({
     ayah: 255,
@@ -144,6 +149,20 @@ test('Tafsir importer uses stable tafsir-{edition_slug}-{surah}-{ayah} IDs', () 
   const analysis = normalizeTafsirApiDataset(datasetRoot, {});
   assert(analysis.rows.some((row) => row.id === 'tafsir-en-tafisr-ibn-kathir-1-1'));
   assert(analysis.rows.some((row) => row.id === 'tafsir-en-al-jalalayn-2-255'));
+});
+
+test('Tafsir normalization dedupes duplicate normalized IDs and warns', () => {
+  const analysis = normalizeTafsirApiDataset(datasetRoot, {});
+  const duplicateRows = analysis.rows.filter((row) => row.id === 'tafsir-en-tafisr-ibn-kathir-1-1');
+  assert.strictEqual(duplicateRows.length, 1);
+  assert(analysis.warnings.some((warning) => warning.includes('Duplicate tafsir id "tafsir-en-tafisr-ibn-kathir-1-1"')));
+});
+
+test('Tafsir importer dry-run does not produce duplicate IDs', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--editions=en-tafisr-ibn-kathir', '--limit=10']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 1/);
+  assert.match(result.stdout, /Duplicate tafsir id "tafsir-en-tafisr-ibn-kathir-1-1"/);
 });
 
 test('Tafsir import pipeline does not require frontend changes', () => {
