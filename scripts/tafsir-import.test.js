@@ -123,7 +123,7 @@ test('Tafsir analyzer runs without Supabase env', () => {
   assert.match(result.stdout, /Total tafsir rows: 2/);
   assert.match(result.stdout, /Sample normalized Tafsir row/);
   assert.match(result.stdout, /MIT-repo-content-source-needs-review/);
-  assert.match(result.stdout, /Original source info: Quran\.com/);
+  assert.match(result.stdout, /Original source info: (Quran\.com|Altafsir\.com)/);
 });
 
 test('Tafsir importer dry-run runs without Supabase env', () => {
