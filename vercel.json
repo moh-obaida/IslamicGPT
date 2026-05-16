@@ -1,4 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "frontend"
+  "outputDirectory": "frontend",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "http://34.69.23.141:3001/api/$1"
+    },
+    {
+      "source": "/health",
+      "destination": "http://34.69.23.141:3001/health"
+    }
+  ]
 }

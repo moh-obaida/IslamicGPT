@@ -471,7 +471,23 @@
         const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value }) });
         const data = await res.json();
         if (data.loadingStagesCompleted) { updateProgress(data.loadingStagesCompleted); setTimeout(() => document.getElementById('progressTracker').classList.add('hidden'), 1000); }
-        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${data.answer}</div></div>`;
+        const cleanAssistantAnswer = (() => {
+          let a = data.answer ?? data.message ?? data.response ?? data;
+          if (typeof a === 'object' && a !== null) a = a.answer ?? a.message ?? JSON.stringify(a);
+          if (typeof a === 'string') {
+            const t = a.trim();
+            if (t.startsWith('{') && t.endsWith('}')) {
+              try {
+                const j = JSON.parse(t);
+                a = j.answer ?? j.message ?? j.response ?? t;
+              } catch {
+                a = t;
+              }
+            }
+          }
+          return a || 'No answer returned.';
+        })();
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${cleanAssistantAnswer}</div></div>`;
         if (data.sourceCards && data.sourceCards.length) {
           document.getElementById('sources').innerHTML = data.sourceCards.map(s => `<div class="full-card"><div class="badge">${s.type}</div><h4 style="margin:10px 0 5px;">${s.title}</h4><div style="font-size:12px; color:var(--muted);">${s.reference}</div><p style="font-size:13px; margin-top:10px;">${s.preview}</p></div>`).join('');
         }
