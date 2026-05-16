@@ -12,7 +12,7 @@ const MODE_BEHAVIOR = {
 };
 
 const ISLAMIC_KEYWORDS = [
-  'islam', 'muslim', 'quran', "qur'an", 'ayah', 'verse', 'surah', 'hadith', 'sunnah',
+  'islam', 'muslim', 'quran', "qur'an", 'ayah', 'verse', 'surah', 'ayat al-kursi', 'ayat al kursi', 'ayatul kursi', 'hadith', 'sunnah',
   'prophet', 'rasul', 'allah', 'dua', 'dhikr', 'salah', 'prayer', 'wudu', 'zakat',
   'fasting', 'ramadan', 'hajj', 'umrah', 'halal', 'haram', 'fiqh', 'fatwa', 'aqidah',
   'tawheed', 'shirk', 'iman', 'ihsan', 'tafsir', 'sahaba', 'bukhari', 'muslim',
@@ -35,13 +35,23 @@ const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /show me a hadith/i,
   /hadith about/i,
   /give me an ayah/i,
+  /show me an ayah/i,
+  /give me a quran verse/i,
+  /show me a quran verse/i,
+  /show me a verse/i,
   /ayah about/i,
+  /verse about/i,
   /quran verse about/i,
+  /\bquran\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+  /\bayat\s+al[-\s]?kursi\b/i,
+  /\bayatul\s+kursi\b/i,
   /source about/i,
   /حديث عن/,
   /آية عن/,
   /أعطني حديث/,
   /أعطني آية/,
+  /اعطني آية/,
+  /آية الكرسي/,
 ];
 
 const EXPLANATION_PATTERNS = [
@@ -52,7 +62,9 @@ const EXPLANATION_PATTERNS = [
   /meaning/i,
   /lesson/i,
   /benefit/i,
+  /what does\s+\d{1,3}\s*[:/-]\s*\d{1,3}\s+mean/i,
   /شرح/,
+  /اشرح/,
   /ببساطة/,
   /معنى/,
 ];
@@ -105,7 +117,7 @@ function inferSourceType(message, mode, intent) {
 
   const lower = message.toLowerCase();
   if (/(hadith|bukhari|muslim|tirmidhi|abu dawud|nasai|ibn majah|حديث|سنة|النبي|الرسول|niyyah|intention)/i.test(message)) return 'hadith';
-  if (/(quran|qur'an|ayah|verse|surah|قرآن|آية|سورة)/i.test(message)) return 'quran';
+  if (/(quran|qur'an|ayah|verse|surah|ayat al[-\s]?kursi|ayatul kursi|\b\d{1,3}\s*[:/-]\s*\d{1,3}\b|قرآن|آية|سورة|آية الكرسي)/i.test(message)) return 'quran';
   if (/(tafsir|تفسير)/i.test(message)) return 'tafsir';
   if (/(aqidah|tawheed|shirk|iman|ihsan|عقيدة|توحيد|شرك|إيمان|إحسان)/i.test(message)) return 'aqidah';
   if (/(fatwa|scholar|imam|shaykh|فتوى|شيخ|عالم)/i.test(message)) return lower.includes('fatwa') || message.includes('فتوى') ? 'fatwa' : 'scholar';

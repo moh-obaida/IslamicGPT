@@ -46,6 +46,13 @@ const TERM_SYNONYMS = {
   sincerity: ['sincerity', 'ikhlas', 'إخلاص'],
   actions: ['action', 'actions', 'deeds', 'الأعمال'],
   action: ['action', 'actions', 'deeds', 'الأعمال'],
+  fatiha: ['al-fatihah', 'fatihah', 'الفاتحة'],
+  fatihah: ['al-fatihah', 'fatiha', 'الفاتحة'],
+  kursi: ['2:255', 'ayat al kursi', 'ayatul kursi', 'آية الكرسي'],
+  الفاتحة: ['al-fatihah', '1'],
+  البقرة: ['al-baqarah', '2'],
+  الإخلاص: ['al-ikhlas', '112'],
+  الاخلاص: ['al-ikhlas', '112'],
 };
 
 let cachedClient = null;
@@ -163,9 +170,17 @@ function buildDisplayTitle(row) {
     const hadithNumber = resolveHadithNumber(row);
     return hadithNumber ? `${collection}, Hadith ${hadithNumber}` : (row.title || collection);
   }
-  if (row.source_type === 'quran' || row.source_type === 'quran_translation' || row.source_type === 'tafsir') {
-    const surah = toInteger(row.surah);
-    const ayah = toInteger(row.ayah);
+  if (row.source_type === 'quran' || row.source_type === 'quran_translation') {
+    const surah = toInteger(row.surah_number) || toInteger(row.surah);
+    const ayah = toInteger(row.ayah_number) || toInteger(row.ayah);
+    const surahNameEn = toTrimmedString(row.surah_name_en);
+    if (surahNameEn && surah && ayah) return `${surahNameEn} ${surah}:${ayah}`;
+    if (surah && ayah) return `Quran ${surah}:${ayah}`;
+    return row.title || 'Quran source';
+  }
+  if (row.source_type === 'tafsir') {
+    const surah = toInteger(row.surah_number) || toInteger(row.surah);
+    const ayah = toInteger(row.ayah_number) || toInteger(row.ayah);
     if (surah && ayah) return `Quran ${surah}:${ayah}`;
     return row.title || `Surah ${surah || '?'}`;
   }
@@ -182,6 +197,9 @@ function normalizeSourceRecord(row) {
   const fatwaReference = toTrimmedString(row.fatwa_reference);
   const bookName = resolveBookName(row);
   const chapterName = resolveChapterName(row);
+
+  const surah = toInteger(row.surah_number) || toInteger(row.surah);
+  const ayah = toInteger(row.ayah_number) || toInteger(row.ayah);
 
   return {
     id: toTrimmedString(row.id),
@@ -212,10 +230,17 @@ function normalizeSourceRecord(row) {
     hadith_number_global: toTrimmedString(row.hadith_number_global) || hadithNumber,
     hadith_number_in_book: toTrimmedString(row.hadith_number_in_book),
     hadith_number_in_chapter: toTrimmedString(row.hadith_number_in_chapter),
-    surah: toInteger(row.surah),
-    ayah: toInteger(row.ayah),
-    surah_number: toInteger(row.surah),
-    ayah_number: toInteger(row.ayah),
+    surah,
+    ayah,
+    surah_number: toInteger(row.surah_number) || surah,
+    ayah_number: toInteger(row.ayah_number) || ayah,
+    ayah_global_number: toInteger(row.ayah_global_number),
+    surah_name_ar: toTrimmedString(row.surah_name_ar),
+    surah_name_en: toTrimmedString(row.surah_name_en),
+    juz: toInteger(row.juz),
+    hizb: toTrimmedString(row.hizb),
+    page_number: toInteger(row.page_number),
+    revelation_place: toTrimmedString(row.revelation_place),
     arabic_text: toTrimmedString(row.arabic_text),
     english_narrator: toTrimmedString(row.english_narrator),
     translation_text: toTrimmedString(row.translation_text),
@@ -225,8 +250,21 @@ function normalizeSourceRecord(row) {
     reference_number: fatwaReference,
     grade: toTrimmedString(row.grade),
     translator: toTrimmedString(row.translator),
+    translation_name: toTrimmedString(row.translation_name),
+    translation_language: toTrimmedString(row.translation_language),
+    translation_source: toTrimmedString(row.translation_source),
+    translation_source_url: toTrimmedString(row.translation_source_url),
+    quran_text_style: toTrimmedString(row.quran_text_style),
+    quran_arabic_source: toTrimmedString(row.quran_arabic_source),
+    quran_edition: toTrimmedString(row.quran_edition),
+    license_status: toTrimmedString(row.license_status),
+    attribution_text: toTrimmedString(row.attribution_text),
+    attribution_url: toTrimmedString(row.attribution_url),
+    requires_attribution: toBoolean(row.requires_attribution, false),
+    requires_sharealike_review: toBoolean(row.requires_sharealike_review, false),
     dataset_name: toTrimmedString(row.dataset_name),
     dataset_version: toTrimmedString(row.dataset_version),
+    dataset_url: toTrimmedString(row.dataset_url),
     original_source: toTrimmedString(row.original_source),
     import_batch_id: toTrimmedString(row.import_batch_id),
     topic_tags: normalizeTopicTags(row.topic_tags),
@@ -273,6 +311,38 @@ function expandTerms(tokens) {
   return [...expanded].filter(Boolean);
 }
 
+function normalizedQueryText(value) {
+  return normalizeText(String(value || '').replace(/[^\p{L}\p{N}:/\s-]+/gu, ' ').replace(/\s+/g, ' ').trim());
+}
+
+function quranReferenceFromQuery(query) {
+  const text = normalizedQueryText(query.raw || query.cleaned || '');
+  const direct = text.match(/(?:quran|surah|ayah|verse)?\s*(\d{1,3})\s*[:/-]\s*(\d{1,3})/i);
+  if (direct) return `${Number.parseInt(direct[1], 10)}:${Number.parseInt(direct[2], 10)}`;
+  if (/(ayat\s+al\s+kursi|ayatul\s+kursi|آية\s+الكرسي|ايه\s+الكرسي|kursi)/i.test(text)) return '2:255';
+  return null;
+}
+
+function expandQuranQueryTerms(normalizedQuery) {
+  const expanded = new Set(expandTerms(normalizedQuery.tokens));
+  const text = normalizedQueryText(normalizedQuery.raw || normalizedQuery.cleaned);
+  const phraseSynonyms = [
+    { pattern: /\bfatihah?\b|\bfatiha\b|الفاتحة/i, terms: ['al-fatihah', 'fatihah', 'fatiha', 'الفاتحة', '1'] },
+    { pattern: /\bbaqarah\b|\bal\s+baqarah\b|البقرة/i, terms: ['al-baqarah', 'baqarah', 'البقرة', '2'] },
+    { pattern: /\b(?:ayat\s+al\s+kursi|ayatul\s+kursi|kursi)\b|آية\s+الكرسي|ايه\s+الكرسي/i, terms: ['2:255', 'ayat al kursi', 'ayatul kursi', 'kursi'] },
+    { pattern: /الإخلاص|الاخلاص/i, terms: ['al-ikhlas', 'ikhlas', 'الإخلاص', 'الاخلاص', '112'] },
+  ];
+  phraseSynonyms.forEach(({ pattern, terms }) => {
+    if (pattern.test(text)) terms.forEach((term) => expanded.add(term));
+  });
+  const ref = quranReferenceFromQuery(normalizedQuery);
+  if (ref) {
+    expanded.add(ref);
+    expanded.add(`quran-${ref.replace(':', '-')}`);
+  }
+  return [...expanded].filter(Boolean);
+}
+
 function searchableText(record) {
   const metadata = normalizeMetadata(record.metadata);
   return normalizeText([
@@ -298,6 +368,15 @@ function searchableText(record) {
     record.hadith_number_global,
     record.hadith_number_in_book,
     record.hadith_number_in_chapter,
+    record.surah,
+    record.ayah,
+    record.surah_number,
+    record.ayah_number,
+    record.ayah_global_number,
+    record.surah_name_ar,
+    record.surah_name_en,
+    record.translator,
+    record.translation_name,
     record.arabic_text,
     record.translation_text,
     record.english_narrator,
@@ -320,12 +399,18 @@ function sourceScore(record, normalizedQuery) {
     'verse', 'islamic', 'islam', 'the', 'of', 'for', 'with'
   ]);
 
-  const expandedTerms = expandTerms(normalizedQuery.tokens);
+  const quranRef = quranReferenceFromQuery(normalizedQuery);
+  if (quranRef && ['quran', 'quran_translation', 'tafsir'].includes(record.source_type)) {
+    const recordRef = `${record.surah_number || record.surah}:${record.ayah_number || record.ayah}`;
+    return recordRef === quranRef ? 120 : 0;
+  }
+
+  const expandedTerms = expandQuranQueryTerms(normalizedQuery);
   const meaningfulTerms = expandedTerms
     .map((term) => String(term || '').trim())
     .filter(Boolean)
     .filter((term) => !genericTerms.has(term.toLowerCase()))
-    .filter((term) => term.length > 1 || /\\d/.test(term));
+    .filter((term) => term.length > 1 || /\d/.test(term));
 
   // Do not guess if the user only asked generic things like "give me a hadith".
   if (!meaningfulTerms.length) return 0;
@@ -349,6 +434,18 @@ function sourceScore(record, normalizedQuery) {
     record.hadith_number,
     record.hadith_number_global,
     record.hadith_number_in_book,
+    record.surah,
+    record.ayah,
+    record.surah_number,
+    record.ayah_number,
+    record.ayah_global_number,
+    record.surah_name_ar,
+    record.surah_name_en,
+    (record.surah_number || record.surah) && (record.ayah_number || record.ayah)
+      ? `${record.surah_number || record.surah}:${record.ayah_number || record.ayah}`
+      : '',
+    record.translator,
+    record.translation_name,
     record.arabic_text,
     record.translation_text,
     record.english_narrator,
@@ -531,6 +628,8 @@ async function getSourceById(id) {
 }
 
 function toDatabaseRow(record) {
+  const surah = toInteger(record.surah || record.surah_number);
+  const ayah = toInteger(record.ayah || record.ayah_number);
   const row = {
     id: toTrimmedString(record.id),
     source_type: toTrimmedString(record.source_type || record.type),
@@ -557,8 +656,17 @@ function toDatabaseRow(record) {
     hadith_number_global: toTrimmedString(record.hadith_number_global),
     hadith_number_in_book: toTrimmedString(record.hadith_number_in_book),
     hadith_number_in_chapter: toTrimmedString(record.hadith_number_in_chapter),
-    surah: toInteger(record.surah || record.surah_number),
-    ayah: toInteger(record.ayah || record.ayah_number),
+    surah,
+    ayah,
+    surah_number: toInteger(record.surah_number) || surah,
+    ayah_number: toInteger(record.ayah_number) || ayah,
+    ayah_global_number: toInteger(record.ayah_global_number),
+    surah_name_ar: toTrimmedString(record.surah_name_ar),
+    surah_name_en: toTrimmedString(record.surah_name_en),
+    juz: toInteger(record.juz),
+    hizb: toTrimmedString(record.hizb),
+    page_number: toInteger(record.page_number),
+    revelation_place: toTrimmedString(record.revelation_place),
     arabic_text: toTrimmedString(record.arabic_text),
     translation_text: toTrimmedString(record.translation_text),
     english_narrator: toTrimmedString(record.english_narrator),
@@ -566,8 +674,21 @@ function toDatabaseRow(record) {
     fatwa_reference: toTrimmedString(record.fatwa_reference || record.fatwa_number || record.reference_number),
     grade: toTrimmedString(record.grade),
     translator: toTrimmedString(record.translator),
+    translation_name: toTrimmedString(record.translation_name),
+    translation_language: toTrimmedString(record.translation_language),
+    translation_source: toTrimmedString(record.translation_source),
+    translation_source_url: toTrimmedString(record.translation_source_url),
+    quran_text_style: toTrimmedString(record.quran_text_style),
+    quran_arabic_source: toTrimmedString(record.quran_arabic_source),
+    quran_edition: toTrimmedString(record.quran_edition),
+    license_status: toTrimmedString(record.license_status),
+    attribution_text: toTrimmedString(record.attribution_text),
+    attribution_url: toTrimmedString(record.attribution_url),
+    requires_attribution: toBoolean(record.requires_attribution, false),
+    requires_sharealike_review: toBoolean(record.requires_sharealike_review, false),
     dataset_name: toTrimmedString(record.dataset_name),
     dataset_version: toTrimmedString(record.dataset_version),
+    dataset_url: toTrimmedString(record.dataset_url),
     original_source: toTrimmedString(record.original_source),
     import_batch_id: toTrimmedString(record.import_batch_id),
     topic_tags: normalizeTopicTags(record.topic_tags),

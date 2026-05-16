@@ -37,6 +37,15 @@ function localSearchText(source) {
     source.collection_name,
     source.book_name,
     source.chapter_name,
+    source.surah_name_en,
+    source.surah_name_ar,
+    source.surah_number || source.surah,
+    source.ayah_number || source.ayah,
+    (source.surah_number || source.surah) && (source.ayah_number || source.ayah)
+      ? `${source.surah_number || source.surah}:${source.ayah_number || source.ayah}`
+      : '',
+    source.translator,
+    source.translation_name,
     source.translation_text,
     source.arabic_text,
     source.summary,
