@@ -330,6 +330,7 @@ function normalizeTafsirApiDataset(rootDir, options = {}) {
   const warnings = [];
   const editions = loadEditionMetadata(datasetRoot, files, warnings);
   const rows = [];
+  const rowsById = new Map();
   let filesAnalyzed = 0;
 
   for (const file of files) {
@@ -355,6 +356,12 @@ function normalizeTafsirApiDataset(rootDir, options = {}) {
         continue;
       }
       if (!editions.has(context.editionSlug)) warnings.push(`${context.rel}: edition metadata missing for ${context.editionSlug}.`);
+      const existing = rowsById.get(row.id);
+      if (existing) {
+        warnings.push(`Duplicate tafsir id "${row.id}" detected in ${context.rel}; canonical row from ${existing.metadata?.original_file || 'unknown'} retained.`);
+        continue;
+      }
+      rowsById.set(row.id, row);
       rows.push(row);
     }
   }
