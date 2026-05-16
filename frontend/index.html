@@ -493,6 +493,7 @@
 
     async function sendMessage() {
       const input = document.getElementById('input');
+      const sourcesPanel = document.getElementById('sources');
       const text = input.value.trim();
       if (!text) return;
       input.value = ''; autoResize(input);
@@ -521,8 +522,9 @@
           return a || 'No answer returned.';
         })();
         messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${cleanAssistantAnswer}</div></div>`;
+        sourcesPanel.innerHTML = '';
         if (data.sourceCards && data.sourceCards.length) {
-          document.getElementById('sources').innerHTML = data.sourceCards.map(s => `<div class="full-card"><div class="badge">${s.type}</div><h4 style="margin:10px 0 5px;">${s.title}</h4><div style="font-size:12px; color:var(--muted);">${s.reference}</div><p style="font-size:13px; margin-top:10px;">${s.preview}</p></div>`).join('');
+          sourcesPanel.innerHTML = data.sourceCards.map(s => `<div class="full-card"><div class="badge">${s.type}</div><h4 style="margin:10px 0 5px;">${s.title}</h4><div style="font-size:12px; color:var(--muted);">${s.reference}</div><p style="font-size:13px; margin-top:10px;">${s.preview}</p></div>`).join('');
         }
       } catch (e) { messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">Error occurred.</div></div>`; }
     }
