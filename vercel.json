@@ -9,6 +9,14 @@
     {
       "source": "/health",
       "destination": "http://34.174.226.95:3001/health"
+    },
+    {
+      "source": "/adminadmin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sources",
+      "destination": "/index.html"
     }
   ]
 }

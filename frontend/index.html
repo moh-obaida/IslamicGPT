@@ -21,8 +21,11 @@
       --turq: #12c8b2;
       --turq2: #0e9f91;
       --softTurq: rgba(18, 200, 178, 0.13);
+      --turqLine: rgba(18, 200, 178, 0.34);
       --bad: #ff6b60;
       --badBg: rgba(255, 107, 96, 0.12);
+      --warn: #f7c948;
+      --warnBg: rgba(247, 201, 72, 0.12);
       --radius: 16px;
       --shadow: 0 8px 32px rgba(0,0,0,0.25);
       --shadowSoft: 0 4px 12px rgba(0,0,0,0.1);
@@ -41,6 +44,7 @@
       --turq: #0ca678;
       --turq2: #099268;
       --softTurq: rgba(12, 166, 120, 0.1);
+      --turqLine: rgba(12, 166, 120, 0.28);
       --bad: #fa5252;
       --badBg: rgba(250, 82, 82, 0.1);
     }
@@ -50,19 +54,21 @@
     button { cursor: pointer; border: none; background: transparent; }
 
     .app { height: 100vh; display: grid; grid-template-columns: var(--sidebarWidth) 1px 1fr; }
-    .side { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+    .side { background: linear-gradient(180deg, var(--side), rgba(8,12,11,0.92)); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
     .resizer { width: 1px; background: var(--line); cursor: col-resize; }
     .main { display: flex; flex-direction: column; background: var(--main); overflow: hidden; }
 
     /* Sidebar Header */
-    .sideHead { padding: 24px 20px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--line); }
-    .brand-logo { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+    .sideHead { padding: 24px 20px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--line); position: relative; }
+    .sideHead::after { content: ""; position: absolute; left: 20px; right: 20px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--turqLine), transparent); }
+    .brand-logo { font-size: 21px; font-weight: 900; letter-spacing: -0.03em; display: flex; align-items: center; gap: 8px; }
+    .brand-logo::before { content: "◆"; color: var(--turq); font-size: 12px; filter: drop-shadow(0 0 10px var(--turq)); }
     .brand-logo span { color: var(--turq); }
     .brand-subtitle { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--soft); font-weight: 800; }
 
     .new-chat-btn {
       margin: 16px;
-      background: var(--card2);
+      background: linear-gradient(135deg, var(--card2), rgba(18, 200, 178, 0.04));
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 12px 16px;
@@ -74,12 +80,12 @@
       gap: 12px;
       transition: all 0.2s;
     }
-    .new-chat-btn:hover { background: var(--softTurq); border-color: var(--turq); }
+    .new-chat-btn:hover { background: var(--softTurq); border-color: var(--turq); transform: translateY(-1px); }
     .new-chat-btn span { font-size: 18px; color: var(--turq); }
 
     .nav-group { padding: 0 16px; display: flex; flex-direction: column; gap: 4px; }
     .nav-item {
-      padding: 10px 12px;
+      padding: 11px 12px;
       border-radius: 10px;
       font-size: 14px;
       font-weight: 500;
@@ -88,51 +94,72 @@
       transition: all 0.2s;
     }
     .nav-item:hover { background: var(--card2); color: var(--text); }
-    .nav-item.active { background: var(--softTurq); color: var(--turq); font-weight: 700; }
+    .nav-item.active { background: linear-gradient(90deg, var(--softTurq), transparent); color: var(--turq); font-weight: 800; border: 1px solid var(--turqLine); }
 
     .sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; }
-    .section-card { margin-bottom: 24px; padding: 12px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; }
+    .section-card { margin-bottom: 24px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--line); border-radius: 14px; }
     .section-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; display: block; padding-left: 4px; letter-spacing: 0.05em; }
+    .sidebar-panel { margin-bottom: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(17,24,23,0.88), rgba(8,12,11,0.68)); box-shadow: var(--shadowSoft); }
+    .sidebar-panel.glow { border-color: var(--turqLine); background: radial-gradient(circle at top left, rgba(18,200,178,0.14), rgba(17,24,23,0.86) 42%, rgba(8,12,11,0.7)); }
+    .side-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .side-panel-title { font-size: 12px; font-weight: 900; color: var(--text); letter-spacing: -0.01em; }
+    .side-chip { padding: 4px 8px; border: 1px solid var(--turqLine); border-radius: 999px; color: var(--turq); background: var(--softTurq); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
+    .side-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .side-stat { padding: 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(0,0,0,0.15); }
+    .side-stat strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .side-stat span { color: var(--soft); font-size: 10px; line-height: 1.3; }
+    .mode-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .side-mode { border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: left; background: rgba(255,255,255,0.02); color: var(--muted); font-size: 11px; font-weight: 800; transition: all 0.2s; }
+    .side-mode:hover, .side-mode.active { color: var(--turq); border-color: var(--turqLine); background: var(--softTurq); transform: translateY(-1px); }
+    .trust-list { display: grid; gap: 9px; }
+    .trust-item { display: grid; grid-template-columns: 20px 1fr; gap: 9px; align-items: start; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .trust-item b { color: var(--text); font-size: 12px; }
+    .trust-icon { width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center; color: var(--turq); background: var(--softTurq); border: 1px solid var(--turqLine); font-size: 10px; font-weight: 900; }
+    .recent-list { display: grid; gap: 8px; }
+    .recent-chip { width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,0.02); text-align: left; color: var(--muted); font-size: 12px; line-height: 1.35; transition: all 0.2s; }
+    .recent-chip:hover { color: var(--text); border-color: var(--turqLine); background: rgba(18,200,178,0.08); }
 
-    .status-card { padding: 16px; border-top: 1px solid var(--line); background: var(--side); }
+    .status-card { padding: 16px; border-top: 1px solid var(--line); background: rgba(0,0,0,0.14); }
     .status-row { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
     .status-dot.online { background: var(--turq); box-shadow: 0 0 8px var(--turq); }
-    .status-sub { font-size: 10px; color: var(--soft); }
+    .status-sub { font-size: 10px; color: var(--soft); line-height: 1.45; }
 
     /* Workspace Header */
-    .workspace-header { height: 72px; padding: 0 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+    .workspace-header { min-height: 72px; padding: 0 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(5,7,6,0.72); backdrop-filter: blur(14px); }
     .header-title h2 { margin: 0; font-size: 16px; font-weight: 800; }
     .header-title span { font-size: 12px; color: var(--soft); }
     .header-actions { display: flex; gap: 12px; }
-    .action-pill { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; font-weight: 700; background: var(--card2); text-transform: uppercase; letter-spacing: 0.02em; }
+    .action-pill { padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; font-weight: 800; background: var(--card2); text-transform: uppercase; letter-spacing: 0.02em; white-space: nowrap; }
     .action-pill.status { color: var(--turq); border-color: var(--softTurq); background: var(--softTurq); }
     .action-pill.status.error { color: var(--bad); border-color: var(--badBg); background: var(--badBg); }
+    .action-pill.status.checking { color: var(--warn); border-color: var(--warnBg); background: var(--warnBg); }
 
     /* Workspace Content */
     .workspace-content { flex: 1; overflow-y: auto; position: relative; }
-    .content-inner { max-width: 888px; margin: 0 auto; padding: 40px 24px; }
+    .content-inner { max-width: 940px; margin: 0 auto; padding: 36px 24px; }
 
-    .welcome-card { text-align: center; padding: 40px 0; position: relative; }
+    .welcome-card { text-align: center; padding: 24px 0 36px; position: relative; }
     .welcome-glow {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, var(--softTurq) 0%, transparent 60%);
+      width: min(520px, 86vw);
+      height: min(520px, 86vw);
+      background: radial-gradient(circle, rgba(18, 200, 178, 0.18) 0%, transparent 62%);
       pointer-events: none;
       opacity: 0.5;
     }
-    .welcome-card h1 { font-size: 48px; font-weight: 900; margin-bottom: 12px; letter-spacing: -0.04em; }
+    .hero-mark { width: 58px; height: 58px; border-radius: 18px; margin: 0 auto 18px; display: grid; place-items: center; color: var(--turq); background: linear-gradient(135deg, var(--softTurq), rgba(18,200,178,0.04)); border: 1px solid var(--turqLine); box-shadow: 0 20px 80px rgba(18, 200, 178, 0.14); font-size: 25px; font-weight: 900; position: relative; z-index: 1; }
+    .welcome-card h1 { font-size: clamp(38px, 6vw, 58px); font-weight: 950; margin: 0 0 12px; letter-spacing: -0.055em; position: relative; z-index: 1; }
     .welcome-card h1 span { color: var(--turq); }
-    .welcome-card p { font-size: 15px; color: var(--muted); max-width: 520px; margin: 0 auto 32px; line-height: 1.6; }
+    .welcome-card p { font-size: 16px; color: var(--muted); max-width: 560px; margin: 0 auto 24px; line-height: 1.65; position: relative; z-index: 1; }
 
-    .trust-badges { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
+    .trust-badges { display: flex; justify-content: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; position: relative; z-index: 1; }
     .trust-badge {
       padding: 8px 16px;
-      background: var(--card);
+      background: rgba(14,20,19,0.82);
       border: 1px solid var(--line);
       border-radius: 99px;
       font-size: 11px;
@@ -145,9 +172,19 @@
       gap: 8px;
     }
 
-    .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 640px; margin: 0 auto; }
-    .prompt-chip { padding: 14px 18px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; text-align: left; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
-    .prompt-chip:hover { border-color: var(--turq); background: var(--softTurq); transform: translateY(-1px); }
+    .library-status { max-width: 720px; margin: 0 auto 26px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; position: relative; z-index: 1; }
+    .library-card { padding: 14px; background: linear-gradient(180deg, rgba(14,20,19,0.92), rgba(17,24,23,0.78)); border: 1px solid var(--line); border-radius: 16px; text-align: left; box-shadow: var(--shadowSoft); }
+    .library-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .library-card span { font-size: 11px; color: var(--soft); line-height: 1.4; }
+    .library-card.accent { border-color: var(--turqLine); background: linear-gradient(135deg, var(--softTurq), rgba(17,24,23,0.8)); }
+
+    .prompt-section { max-width: 780px; margin: 0 auto; position: relative; z-index: 1; }
+    .prompt-section-title { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--soft); font-weight: 900; margin: 0 0 10px 4px; }
+    .prompt-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .prompt-chip { padding: 16px; min-height: 118px; background: linear-gradient(180deg, var(--card2), rgba(17,24,23,0.72)); border: 1px solid var(--line); border-radius: 18px; text-align: left; font-size: 13px; font-weight: 700; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; transition: all 0.2s; }
+    .prompt-chip:hover { border-color: var(--turq); background: var(--softTurq); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
+    .prompt-chip .prompt-type { font-size: 10px; color: var(--turq); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 900; }
+    .prompt-chip .prompt-text { color: var(--text); line-height: 1.35; }
 
     /* Mode Grid */
     .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -168,30 +205,30 @@
 
     /* Messages */
     #messages { display: flex; flex-direction: column; gap: 24px; }
-    .message { display: flex; gap: 16px; max-width: 100%; }
+    .message { display: flex; gap: 16px; max-width: 100%; animation: fadeIn 0.22s ease; }
     .message.user { align-self: flex-end; flex-direction: row-reverse; }
     .avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
     .avatar.ai { background: var(--softTurq); color: var(--turq); }
     .avatar.user { background: var(--black); color: white; }
-    .bubble { padding: 16px 20px; border-radius: 20px; line-height: 1.6; max-width: 85%; position: relative; }
+    .bubble { padding: 16px 20px; border-radius: 20px; line-height: 1.6; max-width: 85%; position: relative; white-space: pre-wrap; }
     .message.ai .bubble { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadowSoft); }
     .message.user .bubble { background: var(--softTurq); border: 1px solid rgba(18, 200, 178, 0.2); }
 
     /* Composer */
-    .composer-container { padding: 0 24px 32px; width: 100%; max-width: 888px; margin: 0 auto; }
-    .chat-controls { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: var(--shadow); }
+    .composer-container { padding: 0 24px 24px; width: 100%; max-width: 940px; margin: 0 auto; }
+    .chat-controls { background: rgba(14,20,19,0.84); border: 1px solid var(--line); border-radius: 16px; padding: 9px 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; box-shadow: var(--shadowSoft); }
     .chat-controls .control-item { display: flex; align-items: center; gap: 6px; }
     .chat-controls label { font-size: 11px; font-weight: 800; color: var(--soft); text-transform: uppercase; }
-    .chat-controls select { background: var(--card2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px 9px; font-size: 12px; }
+    .chat-controls select { background: var(--card2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 8px; font-size: 12px; }
     .source-indicator { font-size: 11px; font-weight: 800; color: var(--soft); margin-left: auto; white-space: nowrap; }
-    .composer-box { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s; }
+    .composer-box { background: rgba(14,20,19,0.94); border: 1px solid var(--line); border-radius: 20px; padding: 6px; box-shadow: var(--shadowSoft); display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s; }
     .composer-box:focus-within { border-color: var(--turq); box-shadow: 0 0 0 4px rgba(18, 200, 178, 0.1); }
-    .composer-box textarea { width: 100%; border: none; background: transparent; color: var(--text); padding: 12px 16px; font-size: 15px; line-height: 1.5; resize: none; outline: none; min-height: 52px; max-height: 200px; }
-    .composer-footer { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 4px 16px; }
+    .composer-box textarea { width: 100%; border: none; background: transparent; color: var(--text); padding: 10px 14px; font-size: 15px; line-height: 1.45; resize: none; outline: none; min-height: 46px; max-height: 150px; }
+    .composer-footer { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 4px 14px; gap: 10px; }
     .composer-badges { display: flex; gap: 6px; }
     .badge { padding: 4px 10px; background: var(--card2); border: 1px solid var(--line); border-radius: 8px; font-size: 10px; font-weight: 800; color: var(--soft); text-transform: uppercase; }
     .badge.active { background: var(--softTurq); color: var(--turq); border-color: var(--turq); }
-    .send-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--turq); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .send-btn { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, var(--turq), var(--turq2)); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 10px 28px rgba(18, 200, 178, 0.2); }
     .send-btn:disabled { background: var(--line); opacity: 0.5; cursor: not-allowed; }
 
     /* Sources & Settings */
@@ -200,6 +237,28 @@
     .dashboard-header p { margin: 0; color: var(--muted); }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .full-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
+    .source-grid { width: 100%; margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .source-card { background: linear-gradient(180deg, var(--card), rgba(17,24,23,0.78)); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadowSoft); }
+    .source-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .source-type { padding: 5px 9px; border-radius: 999px; background: var(--softTurq); color: var(--turq); font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+    .source-verify { font-size: 10px; color: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; white-space: nowrap; }
+    .source-verify.good { color: var(--turq); border-color: var(--turqLine); background: var(--softTurq); }
+    .source-title { margin: 0 0 6px; font-size: 15px; line-height: 1.35; }
+    .source-ref { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .source-arabic { direction: rtl; text-align: right; font-size: 17px; line-height: 1.8; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.16); border: 1px solid var(--line); margin-bottom: 12px; }
+    .source-preview { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+    .empty-state { border: 1px dashed var(--line); border-radius: 18px; padding: 24px; text-align: center; color: var(--soft); background: rgba(255,255,255,0.02); }
+    .admin-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 18px; }
+    .admin-btn { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); font-size: 12px; font-weight: 800; color: var(--text); }
+    .admin-btn.primary { background: var(--softTurq); border-color: var(--turqLine); color: var(--turq); }
+    .admin-btn.danger { background: var(--badBg); border-color: var(--badBg); color: var(--bad); }
+    .admin-list { display: grid; gap: 12px; }
+    .admin-source-row { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: rgba(255,255,255,0.02); }
+    .admin-source-row h4 { margin: 0 0 6px; font-size: 14px; }
+    .admin-meta { color: var(--soft); font-size: 12px; line-height: 1.5; }
+    .admin-form { display: grid; gap: 10px; }
+    .admin-form input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); }
+    .admin-route-note { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--turqLine); background: var(--softTurq); color: var(--muted); font-size: 12px; line-height: 1.45; margin-bottom: 18px; }
     .settings-section { margin-bottom: 32px; }
     .settings-label { font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--turq); margin-bottom: 16px; display: block; letter-spacing: 0.05em; }
     .settings-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
@@ -209,12 +268,32 @@
     .settings-item select, .settings-item input[type="text"] { background: var(--card2); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; font-size: 13px; outline: none; }
 
     .hidden { display: none !important; }
-    .hint { font-size: 12px; color: var(--soft); text-align: center; padding: 20px; }
+    .hint { font-size: 12px; color: var(--soft); text-align: center; padding: 20px; line-height: 1.45; }
+    .offline-helper { margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--badBg); background: var(--badBg); color: var(--muted); font-size: 12px; line-height: 1.45; }
 
     @media (max-width: 900px) {
       .app { grid-template-columns: 1fr; }
       .side { display: none; }
       .resizer { display: none; }
+      .workspace-header { padding: 14px 16px; align-items: flex-start; }
+      .header-actions { flex-wrap: wrap; justify-content: flex-end; }
+      .content-inner { padding: 28px 16px; }
+      .composer-container { padding: 0 16px 18px; }
+      .prompt-grid { grid-template-columns: repeat(2, 1fr); }
+      .library-status { grid-template-columns: 1fr; }
+      .source-grid, .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .workspace-header { flex-direction: column; }
+      .header-actions { width: 100%; justify-content: space-between; }
+      .prompt-grid { grid-template-columns: 1fr; }
+      .prompt-chip { min-height: 92px; }
+      .chat-controls { align-items: stretch; }
+      .chat-controls .control-item { width: 100%; justify-content: space-between; }
+      .chat-controls select { min-width: 58%; }
+      .source-indicator { margin-left: 0; width: 100%; }
+      .composer-badges { flex-wrap: wrap; }
+      .bubble { max-width: calc(100vw - 92px); }
     }
   </style>
 </head>
@@ -232,6 +311,41 @@
         <button class="nav-item hidden" id="navAdmin" data-view="admin" onclick="switchView('admin')">Admin</button>
       </nav>
       <div class="sidebar-scroll">
+        <div class="sidebar-panel glow">
+          <div class="side-panel-head">
+            <div class="side-panel-title">Source Library</div>
+            <span class="side-chip" id="sideBackendLabel">Checking</span>
+          </div>
+          <div class="side-stat-grid">
+            <div class="side-stat"><strong id="sideApprovedCount">—</strong><span>Approved sources</span></div>
+            <div class="side-stat"><strong id="sideVerifiedCount">—</strong><span>Verified records</span></div>
+          </div>
+        </div>
+
+        <div class="sidebar-panel">
+          <div class="side-panel-head">
+            <div class="side-panel-title">Research Modes</div>
+            <span class="side-chip">Fast switch</span>
+          </div>
+          <div class="mode-shortcuts">
+            <button class="side-mode" data-short-mode="quran_mode" onclick="selectSidebarMode('quran_mode')">Quran</button>
+            <button class="side-mode" data-short-mode="hadith_mode" onclick="selectSidebarMode('hadith_mode')">Hadith</button>
+            <button class="side-mode" data-short-mode="tafsir_mode" onclick="selectSidebarMode('tafsir_mode')">Tafsir</button>
+            <button class="side-mode" data-short-mode="fiqh_mode" onclick="selectSidebarMode('fiqh_mode')">Fiqh</button>
+          </div>
+        </div>
+
+        <div class="sidebar-panel">
+          <div class="side-panel-head">
+            <div class="side-panel-title">Trust Protocol</div>
+          </div>
+          <div class="trust-list">
+            <div class="trust-item"><span class="trust-icon">1</span><span><b>Retrieve</b><br>Search approved source records first.</span></div>
+            <div class="trust-item"><span class="trust-icon">2</span><span><b>Answer</b><br>Use only retrieved source evidence.</span></div>
+            <div class="trust-item"><span class="trust-icon">3</span><span><b>Block</b><br>No approved source means no religious answer.</span></div>
+          </div>
+        </div>
+
         <div class="section-card">
           <span class="section-label">Recent Conversations</span>
           <div id="recentChats" class="hint">No recent chats yet</div>
@@ -240,9 +354,9 @@
       <div class="status-card">
         <div class="status-row">
           <div class="status-dot" id="statusDot"></div>
-          <span id="statusText">Checking...</span>
+          <span id="statusText">Checking connection…</span>
         </div>
-        <div class="status-sub" id="statusSub">v0.2.0 • RAG: Backend pending</div>
+        <div class="status-sub" id="statusSub">v0.2.0 • Checking source backend</div>
       </div>
     </aside>
     <div class="resizer" id="sidebarResizer"></div>
@@ -253,7 +367,7 @@
           <span id="pageSubtitle">Ready to search approved Islamic sources</span>
         </div>
         <div class="header-actions">
-          <div class="action-pill status" id="backendStatusPill">Checking...</div>
+          <div class="action-pill status checking" id="backendStatusPill">Checking connection…</div>
           <button class="action-pill" onclick="toggleTheme()" id="themeToggle">Light Mode</button>
         </div>
       </header>
@@ -261,27 +375,44 @@
         <div id="chatView" class="content-inner">
           <div class="welcome-card" id="welcome">
             <div class="welcome-glow"></div>
+            <div class="hero-mark">IG</div>
             <h1>Islamic<span>GPT</span></h1>
-            <p>Your source-first Islamic research assistant. Normal chat is allowed. Islamic answers require approved sources.</p>
+            <p>Search Quran, Hadith, Tafsir, and verified scholar sources.</p>
             
             <div class="trust-badges">
               <div class="trust-badge">✓ Source-first</div>
               <div class="trust-badge">✓ Approved sources</div>
               <div class="trust-badge">✓ No source, no answer</div>
             </div>
+
+            <div class="library-status">
+              <div class="library-card accent">
+                <strong id="libraryStatus">Checking connection…</strong>
+                <span id="libraryBackend">Source backend status will appear here.</span>
+              </div>
+              <div class="library-card">
+                <strong id="libraryCount">Approved source count</strong>
+                <span>Quran, Hadith, Tafsir, and scholar records when available.</span>
+              </div>
+              <div class="library-card">
+                <strong>Research guardrail</strong>
+                <span>Islamic answers stay blocked when no approved source is found.</span>
+              </div>
+            </div>
             
-            <div class="prompt-grid">
-              <button class="prompt-chip" onclick="setExample('What is the importance of prayer?')">Importance of prayer</button>
-              <button class="prompt-chip" onclick="setExample('Give me a hadith about intention.')">Hadith about intention</button>
-              <button class="prompt-chip" onclick="setExample('Explain this ayah simply.')">Explain an ayah simply</button>
-              <button class="prompt-chip" onclick="setExample('What are the basics of wudu?')">Basics of wudu</button>
-              <button class="prompt-chip" onclick="setExample('Explain tawheed simply.')">Explain tawheed simply</button>
-              <button class="prompt-chip" onclick="setExample('Give me a student-friendly Islamic reminder.')">Student-friendly reminder</button>
+            <div class="prompt-section">
+              <div class="prompt-section-title">Start with a source-aware search</div>
+              <div class="prompt-grid">
+                <button class="prompt-chip" onclick="setExample('Quran 2:255')"><span class="prompt-type">Quran</span><span class="prompt-text">Quran 2:255</span></button>
+                <button class="prompt-chip" onclick="setExample('Hadith about intention')"><span class="prompt-type">Hadith</span><span class="prompt-text">Hadith about intention</span></button>
+                <button class="prompt-chip" onclick="setExample('Tafsir of Al-Fatihah')"><span class="prompt-type">Tafsir</span><span class="prompt-text">Tafsir of Al-Fatihah</span></button>
+                <button class="prompt-chip" onclick="setExample('What did scholars say about sincerity?')"><span class="prompt-type">Scholar/Fatwa</span><span class="prompt-text">What did scholars say about sincerity?</span></button>
+              </div>
             </div>
           </div>
           <div id="progressTracker" class="hidden"></div>
           <div id="messages"></div>
-          <div id="sources" class="grid-2" style="width:100%; margin-top:20px;"></div>
+          <div id="sources" class="source-grid"></div>
         </div>
         
         <div id="sourcesView" class="content-inner hidden">
@@ -328,7 +459,6 @@
 
             <div class="settings-section">
               <span class="settings-label">Developer & Diagnostics</span>
-              <div class="settings-item"><label><input type="checkbox" id="showAdminTools" onchange="toggleAdminNav()"> Show Admin Tools</label></div>
               <div class="settings-item"><label><input type="checkbox"> Compact Message Mode</label></div>
               <div class="settings-item"><label><input type="checkbox" checked> Show Progress Tracker</label></div>
             </div>
@@ -342,7 +472,34 @@
           </div>
           <div class="full-card">
             <div id="adminContent">
-              <p>Admin tools are hidden. Enable them from Developer & Diagnostics.</p>
+              <div class="admin-route-note">Admin tools are available only on <strong>/adminadmin</strong>. This UI route is not a security boundary; backend protection is still required for dangerous actions.</div>
+              <div id="adminLoginPanel" class="admin-form">
+                <input id="adminEmail" type="email" autocomplete="username" placeholder="Admin email">
+                <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password">
+                <button class="admin-btn primary" onclick="adminLogin()">Sign in to Admin</button>
+                <div class="hint" id="adminLoginHint">Source management loads after admin sign-in.</div>
+              </div>
+              <div id="adminToolsPanel" class="hidden">
+                <div class="admin-actions">
+                  <button class="admin-btn primary" onclick="loadAdminSources()">Refresh sources</button>
+                  <button class="admin-btn" onclick="adminReindex()">Reindex local sources</button>
+                  <button class="admin-btn danger" onclick="adminLogout()">Sign out</button>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+                  <input id="adminSourceFilter" placeholder="Filter admin sources..." oninput="renderAdminSources()" style="flex:1; min-width:220px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
+                  <select id="adminTypeFilter" onchange="renderAdminSources()" style="width:180px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text);">
+                    <option value="all">All Types</option>
+                    <option value="quran">Quran</option>
+                    <option value="hadith">Hadith</option>
+                    <option value="tafsir">Tafsir</option>
+                    <option value="fatwa">Fatwa</option>
+                    <option value="book">Book</option>
+                    <option value="scholar_statement">Scholar</option>
+                  </select>
+                </div>
+                <div id="adminStatus" class="hint">Admin source management is ready.</div>
+                <div id="adminSourceList" class="admin-list"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -391,13 +548,17 @@
             </div>
           </div>
         </div>
-        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">IslamicGPT is an AI assistant. Always consult scholars for personal religious rulings.</div>
+        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">IslamicGPT is an AI assistant. Always consult qualified scholars for personal religious rulings.</div>
       </div>
     </main>
   </div>
   <script>
     let currentView = 'chat';
     let currentMode = 'islamic_search_mode';
+    let adminSources = [];
+    const ADMIN_ROUTE = '/adminadmin';
+    const adminTokenKey = 'ISLAMICGPT_ADMIN_TOKEN';
+    const recentChatsKey = 'ISLAMICGPT_RECENT_CHATS';
     const MODES = [
       {id:'islamic_search_mode',label:'Search / General'},
       {id:'quran_mode',label:'Quran'},
@@ -412,10 +573,25 @@
     ];
     const STAGES = [{id:'classified_question',label:'Classifying request'},{id:'searched_approved_sources',label:'Searching approved sources'},{id:'built_source_context',label:'Building source context'},{id:'called_local_model',label:'Generating verified answer'},{id:'validated_citations',label:'Validating citations'},{id:'prepared_answer',label:'Finalizing response'}];
 
-    function switchView(view) {
-      const adminEnabled = localStorage.getItem('ISLAMICGPT_ADMIN_ENABLED') === 'true';
-      if (view === 'admin' && !adminEnabled) {
-        alert('Admin tools are hidden. Enable them from Developer & Diagnostics.');
+    function isAdminRoute() {
+      return window.location.pathname.replace(/\/+$/, '') === ADMIN_ROUTE;
+    }
+
+    function switchView(view, options = {}) {
+      if (view === 'admin' && !isAdminRoute()) {
+        history.pushState({}, '', ADMIN_ROUTE);
+        return applyRoute();
+      }
+      if (view === 'chat' && isAdminRoute() && options.fromRoute !== true) {
+        history.pushState({}, '', '/');
+      }
+      if (view === 'sources' && options.fromRoute !== true) {
+        history.pushState({}, '', '/sources');
+      }
+      if (view !== 'sources' && !isAdminRoute() && window.location.pathname === '/sources' && options.fromRoute !== true) {
+        history.pushState({}, '', '/');
+      }
+      if (view === 'admin' && !document.getElementById('adminView')) {
         return switchView('chat');
       }
 
@@ -434,13 +610,17 @@
       document.getElementById('pageTitle').textContent = titles[view];
       document.getElementById('pageSubtitle').textContent = subtitles[view];
       currentView = view;
+      if (view === 'sources') loadPublicSources();
+      if (view === 'admin') loadAdminRoute();
     }
 
-    function toggleAdminNav() {
-      const show = document.getElementById('showAdminTools').checked;
-      localStorage.setItem('ISLAMICGPT_ADMIN_ENABLED', show ? 'true' : 'false');
-      document.getElementById('navAdmin').classList.toggle('hidden', !show);
-      if (!show && currentView === 'admin') switchView('chat');
+    function applyRoute() {
+      const admin = isAdminRoute();
+      document.body.classList.toggle('admin-mode', admin);
+      document.getElementById('navAdmin').classList.toggle('hidden', !admin);
+      if (admin) return switchView('admin', { fromRoute: true });
+      if (window.location.pathname === '/sources') return switchView('sources', { fromRoute: true });
+      return switchView('chat', { fromRoute: true });
     }
 
     function autoResize(el) {
@@ -473,6 +653,220 @@
 
     function clearInput() { const i = document.getElementById('input'); i.value = ''; autoResize(i); }
     function setExample(t) { const i = document.getElementById('input'); i.value = t; autoResize(i); sendMessage(); }
+    function selectSidebarMode(mode) {
+      document.getElementById('modeSelect').value = mode;
+      updateComposerState();
+      switchView('chat');
+      document.getElementById('input').focus();
+    }
+    function renderModeShortcuts() {
+      document.querySelectorAll('[data-short-mode]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.shortMode === currentMode);
+      });
+    }
+    function getRecentChats() {
+      try { return JSON.parse(localStorage.getItem(recentChatsKey) || '[]'); } catch { return []; }
+    }
+    function addRecentChat(text) {
+      const trimmed = String(text || '').trim();
+      if (!trimmed) return;
+      const next = [trimmed, ...getRecentChats().filter((item) => item !== trimmed)].slice(0, 5);
+      localStorage.setItem(recentChatsKey, JSON.stringify(next));
+      renderRecentChats();
+    }
+    function renderRecentChats() {
+      const target = document.getElementById('recentChats');
+      if (!target) return;
+      const items = getRecentChats();
+      if (!items.length) {
+        target.className = 'hint';
+        target.textContent = 'No recent chats yet';
+        return;
+      }
+      target.className = 'recent-list';
+      target.innerHTML = items.map((item, index) => `<button class="recent-chip" onclick="useRecentChat(${index})">${escapeHtml(item.length > 54 ? `${item.slice(0, 54)}…` : item)}</button>`).join('');
+    }
+    function useRecentChat(index) {
+      const item = getRecentChats()[index];
+      if (item) setExample(item);
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+    function sourceTypeLabel(type) {
+      const labels = { quran: 'Quran', quran_translation: 'Quran', hadith: 'Hadith', hadith_explanation: 'Hadith', tafsir: 'Tafsir', fatwa: 'Fatwa', scholar_statement: 'Scholar', book: 'Book', lecture: 'Lecture', educational_explanation: 'Explanation' };
+      return labels[type] || type || 'Source';
+    }
+    function renderSourceCards(cards = [], rawSources = []) {
+      if (!cards.length) return '';
+      return cards.map((card, index) => {
+        const raw = rawSources[index] || {};
+        const type = card.type || raw.source_type;
+        const verified = raw.verified_by_admin === true || raw.approved_for_answers === true || /approved/i.test(String(raw.approved_status || ''));
+        const verifiedText = raw.verified_by_admin === true ? 'Verified' : raw.approved_for_answers === true ? 'Approved' : 'Source record';
+        const arabic = card.arabic || raw.arabic_text || '';
+        const preview = card.preview || raw.translation_text || raw.answer_text || raw.summary_text || raw.explanation_text || '';
+        return `
+          <article class="source-card">
+            <div class="source-top">
+              <span class="source-type">${escapeHtml(sourceTypeLabel(type))}</span>
+              <span class="source-verify ${verified ? 'good' : ''}">${escapeHtml(verifiedText)}</span>
+            </div>
+            <h4 class="source-title">${escapeHtml(card.title || raw.title || 'Approved source')}</h4>
+            <div class="source-ref">${escapeHtml(card.reference || raw.fatwa_number || raw.hadith_number || raw.source_url || '')}</div>
+            ${arabic ? `<div class="source-arabic">${escapeHtml(arabic)}</div>` : ''}
+            ${preview ? `<p class="source-preview">${escapeHtml(preview)}</p>` : '<p class="source-preview">Excerpt unavailable in the source card.</p>'}
+          </article>
+        `;
+      }).join('');
+    }
+    async function loadPublicSources() {
+      const results = document.getElementById('sourceResults');
+      if (!results) return;
+      const q = document.getElementById('sourceSearch')?.value || '';
+      const type = document.getElementById('sourceTypeFilter')?.value || 'all';
+      results.innerHTML = '<div class="empty-state">Searching approved sources…</div>';
+      try {
+        const params = new URLSearchParams({ q, type, limit: '50' });
+        const res = await fetch(`/api/sources/search?${params.toString()}`);
+        const data = await res.json();
+        const cards = data.sources || [];
+        if (!cards.length) {
+          results.innerHTML = '<div class="empty-state">No approved sources matched this search.</div>';
+          return;
+        }
+        results.innerHTML = cards.map((source) => `
+          <article class="source-card">
+            <div class="source-top">
+              <span class="source-type">${escapeHtml(sourceTypeLabel(source.source_type || source.type))}</span>
+              <span class="source-verify good">${source.verified_by_admin ? 'Verified' : 'Approved'}</span>
+            </div>
+            <h4 class="source-title">${escapeHtml(source.title || 'Approved source')}</h4>
+            <div class="source-ref">${escapeHtml(source.exact_reference || source.fatwa_reference || source.hadith_number || source.source_url || '')}</div>
+            ${source.arabic_text ? `<div class="source-arabic">${escapeHtml(source.arabic_text)}</div>` : ''}
+            <p class="source-preview">${escapeHtml(source.translation_text || source.summary || source.metadata?.translation_source || 'Approved source record.')}</p>
+          </article>
+        `).join('');
+      } catch {
+        results.innerHTML = '<div class="empty-state">Backend Offline<br>Source browsing requires the source backend.</div>';
+      }
+    }
+    function adminToken() {
+      return localStorage.getItem(adminTokenKey) || '';
+    }
+    function setAdminStatus(message) {
+      const target = document.getElementById('adminStatus') || document.getElementById('adminLoginHint');
+      if (target) target.textContent = message;
+    }
+    async function adminLogin() {
+      const email = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
+      document.getElementById('adminLoginHint').textContent = 'Signing in…';
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.token) {
+          document.getElementById('adminLoginHint').textContent = 'Admin sign-in unavailable or credentials were not accepted.';
+          return;
+        }
+        localStorage.setItem(adminTokenKey, data.token);
+        loadAdminRoute();
+      } catch {
+        document.getElementById('adminLoginHint').textContent = 'Backend Offline. Admin tools require the backend.';
+      }
+    }
+    function adminLogout() {
+      localStorage.removeItem(adminTokenKey);
+      adminSources = [];
+      loadAdminRoute();
+    }
+    function loadAdminRoute() {
+      const signedIn = Boolean(adminToken());
+      document.getElementById('adminLoginPanel').classList.toggle('hidden', signedIn);
+      document.getElementById('adminToolsPanel').classList.toggle('hidden', !signedIn);
+      if (signedIn) loadAdminSources();
+    }
+    async function loadAdminSources() {
+      setAdminStatus('Loading admin sources…');
+      try {
+        const res = await fetch('/api/admin/sources', { headers: { Authorization: `Bearer ${adminToken()}` } });
+        if (res.status === 401) {
+          adminLogout();
+          return;
+        }
+        const data = await res.json();
+        adminSources = data.sources || [];
+        setAdminStatus(`${adminSources.length} source record${adminSources.length === 1 ? '' : 's'} loaded from ${data.sourceBackend || 'backend'}.`);
+        renderAdminSources();
+      } catch {
+        setAdminStatus('Backend Offline. Admin source management requires the backend.');
+      }
+    }
+    function renderAdminSources() {
+      const list = document.getElementById('adminSourceList');
+      if (!list) return;
+      const query = (document.getElementById('adminSourceFilter')?.value || '').toLowerCase();
+      const type = document.getElementById('adminTypeFilter')?.value || 'all';
+      const filtered = adminSources.map((source, index) => ({ source, index })).filter(({ source }) => {
+        const haystack = [source.id, source.title, source.source_type, source.collection_name, source.scholar_name, source.work_title, source.fatwa_number].filter(Boolean).join(' ').toLowerCase();
+        const typeOk = type === 'all' || source.source_type === type;
+        return typeOk && (!query || haystack.includes(query));
+      }).slice(0, 80);
+      if (!filtered.length) {
+        list.innerHTML = '<div class="empty-state">No admin source records match this filter.</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(({ source, index }) => `
+        <div class="admin-source-row">
+          <h4>${escapeHtml(source.title || source.id || 'Source')}</h4>
+          <div class="admin-meta">${escapeHtml(source.source_type || 'unknown')} • ${escapeHtml(source.collection_name || source.scholar_name || source.work_title || 'No collection')}</div>
+          <div class="admin-actions">
+            <button class="admin-btn ${source.approved_for_answers ? 'primary' : ''}" onclick="adminToggleSource(${index}, 'approved_for_answers', ${source.approved_for_answers ? 'false' : 'true'})">${source.approved_for_answers ? 'Unapprove' : 'Approve'}</button>
+            <button class="admin-btn ${source.verified_by_admin ? 'primary' : ''}" onclick="adminToggleSource(${index}, 'verified_by_admin', ${source.verified_by_admin ? 'false' : 'true'})">${source.verified_by_admin ? 'Unverify' : 'Verify'}</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    async function adminToggleSource(index, field, value) {
+      const source = adminSources[index];
+      if (!source) return;
+      const id = source.id;
+      setAdminStatus('Updating source status…');
+      try {
+        const res = await fetch(`/api/admin/sources/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken()}` },
+          body: JSON.stringify({ ...source, [field]: value === true || value === 'true' })
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setAdminStatus((data.errors || ['Source update failed.']).join(' '));
+          return;
+        }
+        await loadAdminSources();
+      } catch {
+        setAdminStatus('Backend Offline. Could not update source.');
+      }
+    }
+    async function adminReindex() {
+      setAdminStatus('Reindexing local sources…');
+      try {
+        const res = await fetch('/api/admin/sources/reindex', { method: 'POST', headers: { Authorization: `Bearer ${adminToken()}` } });
+        const data = await res.json();
+        if (!res.ok) {
+          setAdminStatus('Reindex request was not accepted.');
+          return;
+        }
+        setAdminStatus(`Reindexed ${data.total_indexed || 0} approved source record(s).`);
+        await loadAdminSources();
+      } catch {
+        setAdminStatus('Backend Offline. Could not reindex sources.');
+      }
+    }
     function updateComposerState() { 
       currentMode = document.getElementById('modeSelect').value;
       const modeLabel = MODES.find(m => m.id === currentMode)?.label || 'General';
@@ -488,6 +882,7 @@
       document.getElementById('activeThinkingBadge').textContent = `${thinkingLabelMap[thinking] || 'Balanced'} AI`;
       document.getElementById('activeSourceRuleBadge').textContent = sourceRule;
       document.getElementById('sourceIndicator').textContent = sourceIndicator;
+      renderModeShortcuts();
     }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
@@ -497,9 +892,11 @@
       const text = input.value.trim();
       if (!text) return;
       input.value = ''; autoResize(input);
+      addRecentChat(text);
       document.getElementById('welcome').classList.add('hidden');
       const messages = document.getElementById('messages');
-      messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${text}</div></div>`;
+      sourcesPanel.innerHTML = '';
+      messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${escapeHtml(text)}</div></div>`;
       updateProgress(['classified_question']);
       try {
         const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value, thinkingMode: document.getElementById('thinkingMode').value }) });
@@ -521,12 +918,15 @@
           }
           return a || 'No answer returned.';
         })();
-        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${cleanAssistantAnswer}</div></div>`;
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${escapeHtml(cleanAssistantAnswer)}</div></div>`;
         sourcesPanel.innerHTML = '';
         if (data.sourceCards && data.sourceCards.length) {
-          sourcesPanel.innerHTML = data.sourceCards.map(s => `<div class="full-card"><div class="badge">${s.type}</div><h4 style="margin:10px 0 5px;">${s.title}</h4><div style="font-size:12px; color:var(--muted);">${s.reference}</div><p style="font-size:13px; margin-top:10px;">${s.preview}</p></div>`).join('');
+          sourcesPanel.innerHTML = renderSourceCards(data.sourceCards, data.sources || []);
         }
-      } catch (e) { messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">Error occurred.</div></div>`; }
+      } catch (e) {
+        sourcesPanel.innerHTML = '';
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">Backend Offline\n\nIslamic answers require the source backend. Start the VM/backend to continue.</div></div>`;
+      }
     }
 
     async function checkHealth() {
@@ -534,44 +934,64 @@
       const dot = document.getElementById('statusDot');
       const statusText = document.getElementById('statusText');
       const statusSub = document.getElementById('statusSub');
+      const libraryStatus = document.getElementById('libraryStatus');
+      const libraryBackend = document.getElementById('libraryBackend');
+      const libraryCount = document.getElementById('libraryCount');
       try {
         const res = await fetch('/health');
         const data = await res.json();
-        const ok = data.ok;
-        const aiOnline = data.services.local_ai.status === 'online';
-        const ragReady = data.services.rag.status === 'ready';
+        const backendOnline = res.ok && data && (data.ok !== false);
+        const rag = data.services?.rag || {};
+        const sourceCount = Number(rag.count || 0);
         
-        pill.textContent = aiOnline ? 'AI Connected' : 'AI Offline';
-        pill.className = aiOnline ? 'action-pill status' : 'action-pill status error';
-        dot.className = aiOnline ? 'status-dot online' : 'status-dot';
+        pill.textContent = backendOnline ? 'AI Connected' : 'Backend Offline';
+        pill.className = backendOnline ? 'action-pill status' : 'action-pill status error';
+        dot.className = backendOnline ? 'status-dot online' : 'status-dot';
         
-        if (aiOnline && ragReady) {
+        if (backendOnline) {
           statusText.textContent = 'AI Ready';
-          statusSub.textContent = `v0.2.0 • Approved sources indexed: ${data.services.rag.count}`;
-        } else if (aiOnline) {
-          statusText.textContent = 'AI Ready · RAG Pending';
-          statusSub.textContent = 'v0.2.0 • Sources not yet indexed';
+          statusSub.textContent = `v0.2.0 • Approved sources: ${sourceCount}`;
+          libraryStatus.textContent = 'Source backend online';
+          libraryBackend.textContent = 'AI Connected';
+          libraryCount.textContent = `${sourceCount} approved source${sourceCount === 1 ? '' : 's'}`;
+          document.getElementById('sideBackendLabel').textContent = 'Online';
+          document.getElementById('sideApprovedCount').textContent = sourceCount;
+          document.getElementById('sideVerifiedCount').textContent = Number(data.services?.supabase?.verified || 0);
         } else {
-          statusText.textContent = 'App Ready · AI Offline';
-          statusSub.textContent = 'Source library and settings may still work';
+          statusText.textContent = 'Backend Offline';
+          statusSub.textContent = 'v0.2.0 • Islamic answers require the source backend';
+          libraryStatus.textContent = 'Backend Offline';
+          libraryBackend.textContent = 'Islamic answers require the source backend. Start the VM/backend to continue.';
+          libraryCount.textContent = 'Approved source count unavailable';
+          document.getElementById('sideBackendLabel').textContent = 'Offline';
+          document.getElementById('sideApprovedCount').textContent = '—';
+          document.getElementById('sideVerifiedCount').textContent = '—';
         }
       } catch (e) { 
-        pill.textContent = 'Offline'; 
+        pill.textContent = 'Backend Offline'; 
         pill.className = 'action-pill status error';
         dot.className = 'status-dot'; 
-        statusText.textContent = 'App Offline';
-        statusSub.textContent = 'Check backend connection';
+        statusText.textContent = 'Backend Offline';
+        statusSub.textContent = 'v0.2.0 • Islamic answers require the source backend';
+        libraryStatus.textContent = 'Backend Offline';
+        libraryBackend.textContent = 'Islamic answers require the source backend. Start the VM/backend to continue.';
+        libraryCount.textContent = 'Approved source count unavailable';
+        document.getElementById('sideBackendLabel').textContent = 'Offline';
+        document.getElementById('sideApprovedCount').textContent = '—';
+        document.getElementById('sideVerifiedCount').textContent = '—';
       }
     }
 
     window.onload = () => { 
       initModes(); 
+      document.getElementById('sourceSearch')?.addEventListener('input', loadPublicSources);
+      document.getElementById('sourceTypeFilter')?.addEventListener('change', loadPublicSources);
+      renderRecentChats();
       checkHealth(); 
       setInterval(checkHealth, 30000); 
-      const adminEnabled = localStorage.getItem('ISLAMICGPT_ADMIN_ENABLED') === 'true';
-      document.getElementById('showAdminTools').checked = adminEnabled;
-      document.getElementById('navAdmin').classList.toggle('hidden', !adminEnabled);
+      applyRoute();
     };
+    window.onpopstate = applyRoute;
     function newChat() { switchView('chat'); document.getElementById('messages').innerHTML = ''; document.getElementById('sources').innerHTML = ''; document.getElementById('welcome').classList.remove('hidden'); }
   </script>
 </body>
