@@ -410,7 +410,7 @@ function sourceScore(record, normalizedQuery) {
     .map((term) => String(term || '').trim())
     .filter(Boolean)
     .filter((term) => !genericTerms.has(term.toLowerCase()))
-    .filter((term) => term.length > 1 || /\\d/.test(term));
+    .filter((term) => term.length > 1 || /\d/.test(term));
 
   // Do not guess if the user only asked generic things like "give me a hadith".
   if (!meaningfulTerms.length) return 0;
