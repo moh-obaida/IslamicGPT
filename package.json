@@ -8,5 +8,8 @@
     "ingest": "node scripts/ingest-islamic-sources.js",
     "test": "node --test",
     "check": "node --check backend/server.js && node --check scripts/ingest-islamic-sources.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4"
   }
 }
