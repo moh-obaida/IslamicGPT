@@ -123,9 +123,10 @@ function includesAny(text, keywords) {
 function detectIntent(message, mode) {
   if (COMPARISON_PATTERNS.some((pattern) => pattern.test(message)) || mode === 'compare_opinions_mode') return 'comparison';
   if (/\bshow\s+(?:me\s+)?tafsir\b/i.test(message) || /اعرض.*تفسير/.test(message)) return 'direct_source_lookup';
-  if (DIRECT_SOURCE_LOOKUP_PATTERNS.some((pattern) => pattern.test(message))) return 'direct_source_lookup';
+  if (/\bfatwa\s+(?:by|from|of)\b/i.test(message) || /\b(?:show|give|find|share)\s+(?:me\s+)?(?:a\s+)?fatwa\b/i.test(message) || /فتوى\s+(?:ابن|بن|الشيخ)/.test(message)) return 'direct_source_lookup';
   if (PERSONAL_RULING_PATTERNS.some((pattern) => pattern.test(message))) return 'personal_ruling';
   if (EXPLANATION_PATTERNS.some((pattern) => pattern.test(message)) || ['explain_simply_mode', 'student_explanation_mode'].includes(mode)) return 'explanation';
+  if (DIRECT_SOURCE_LOOKUP_PATTERNS.some((pattern) => pattern.test(message))) return 'direct_source_lookup';
   return 'general';
 }
 
