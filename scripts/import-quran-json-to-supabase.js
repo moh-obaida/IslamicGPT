@@ -35,6 +35,9 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`Dataset detected: ${analysis.datasetDetected}`);
   console.log(`Mode: ${options.execute ? 'execute' : 'dry-run'}`);
   console.log(`Rows prepared: ${rows.length}`);
+  console.log(`JSON files analyzed: ${analysis.filesAnalyzed}`);
+  console.log(`Ayah files processed: ${analysis.ayahFilesProcessed || 0}`);
+  console.log(`Metadata files skipped: ${analysis.metadataFilesSkipped || 0}`);
   console.log(`Approved for answers: ${options.approve === true}`);
   console.log(`Verified by admin: ${options.verify === true}`);
   console.log(`Counts by surah: ${JSON.stringify(countsBySurah)}`);

@@ -905,8 +905,15 @@
         const res = await fetch('/health');
         const data = await res.json();
         const backendOnline = res.ok && data && (data.ok !== false);
-        const rag = data.services?.rag || {};
-        const sourceCount = Number(rag.count || 0);
+        const services = data.services || {};
+        const rag = services.rag || {};
+        const supabase = services.supabase || {};
+        const sourceMode = String(services.source_mode || '').toLowerCase();
+        const preferSupabase = sourceMode === 'supabase';
+        const supabaseApproved = Number.isFinite(Number(supabase.approved)) ? Number(supabase.approved) : null;
+        const ragCount = Number.isFinite(Number(rag.count)) ? Number(rag.count) : null;
+        const sourceCount = preferSupabase ? supabaseApproved : (ragCount ?? supabaseApproved);
+        const hasReliableCount = Number.isFinite(sourceCount) && sourceCount >= 0;
         
         pill.textContent = backendOnline ? 'AI Connected' : 'Backend Offline';
         pill.className = backendOnline ? 'action-pill status' : 'action-pill status error';
@@ -914,12 +921,12 @@
         
         if (backendOnline) {
           statusText.textContent = 'AI Ready';
-          statusSub.textContent = `v0.2.0 • Approved sources: ${sourceCount}`;
+          statusSub.textContent = hasReliableCount ? `v0.2.0 • Approved sources: ${sourceCount}` : 'v0.2.0 • Source backend ready';
           libraryStatus.textContent = 'Source backend online';
           libraryBackend.textContent = 'AI Connected';
-          libraryCount.textContent = `${sourceCount} approved source${sourceCount === 1 ? '' : 's'}`;
+          libraryCount.textContent = hasReliableCount ? `${sourceCount} approved source${sourceCount === 1 ? '' : 's'}` : 'Source backend ready';
           document.getElementById('sideBackendLabel').textContent = 'Online';
-          document.getElementById('sideApprovedCount').textContent = sourceCount;
+          document.getElementById('sideApprovedCount').textContent = hasReliableCount ? sourceCount : '—';
         } else {
           statusText.textContent = 'Backend Offline';
           statusSub.textContent = 'v0.2.0 • Islamic answers require the source backend';

@@ -398,7 +398,7 @@ function normalizedQueryText(value) {
 
 function quranReferenceFromQuery(query) {
   const text = normalizedQueryText(query.raw || query.cleaned || '');
-  const direct = text.match(/(?:quran|surah|ayah|verse)?\s*(\d{1,3})\s*[:/-]\s*(\d{1,3})/i);
+  const direct = text.match(/(?:quran|surah|aya|ayah|verse|آية|اية|ايه|الآية|الاية)?\s*(\d{1,3})\s*[:/-]\s*(\d{1,3})/i);
   if (direct) return `${Number.parseInt(direct[1], 10)}:${Number.parseInt(direct[2], 10)}`;
   if (/(ayat\s+al\s+kursi|ayatul\s+kursi|آية\s+الكرسي|ايه\s+الكرسي|kursi)/i.test(text)) return '2:255';
   return null;
@@ -410,7 +410,7 @@ function expandQuranQueryTerms(normalizedQuery) {
   const phraseSynonyms = [
     { pattern: /\bfatihah?\b|\bfatiha\b|الفاتحة/i, terms: ['al-fatihah', 'fatihah', 'fatiha', 'الفاتحة', '1'] },
     { pattern: /\bbaqarah\b|\bal\s+baqarah\b|البقرة/i, terms: ['al-baqarah', 'baqarah', 'البقرة', '2'] },
-    { pattern: /\b(?:ayat\s+al\s+kursi|ayatul\s+kursi|kursi)\b|آية\s+الكرسي|ايه\s+الكرسي/i, terms: ['2:255', 'ayat al kursi', 'ayatul kursi', 'kursi'] },
+    { pattern: /\b(?:ayat\s+al\s+kursi|ayatul\s+kursi|kursi)\b|آية\s+الكرسي|ايه\s+الكرسي/i, terms: ['2:255', 'ayat al kursi', 'ayatul kursi', 'آية الكرسي', 'ايه الكرسي', 'kursi'] },
     { pattern: /الإخلاص|الاخلاص/i, terms: ['al-ikhlas', 'ikhlas', 'الإخلاص', 'الاخلاص', '112'] },
   ];
   phraseSynonyms.forEach(({ pattern, terms }) => {
@@ -1090,6 +1090,7 @@ module.exports = {
   isSupabaseConfigured,
   listSources,
   normalizeSourceRecord,
+  quranReferenceFromQuery,
   searchSources,
   toDatabaseRow,
   upsertSource,
