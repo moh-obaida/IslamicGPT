@@ -158,6 +158,40 @@ function looksArabic(value) {
   return /[\u0600-\u06FF]/.test(String(value || ''));
 }
 
+function containsNonEnglishScript(value) {
+  return /[\u0400-\u04FF\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\u0900-\u097F\u0980-\u09FF\u0E00-\u0E7F\u3040-\u30FF\u3100-\u312F\u31A0-\u31BF\u3400-\u9FFF\uAC00-\uD7AF]/.test(String(value || ''));
+}
+
+function englishWords(value) {
+  return String(value || '')
+    .toLowerCase()
+    .match(/[a-z']+/g) || [];
+}
+
+function appearsEnglish(value) {
+  const text = toTrimmedString(value);
+  if (!text || containsNonEnglishScript(text)) return false;
+  const latinLetters = text.match(/[A-Za-z]/g) || [];
+  if (latinLetters.length < 3) return false;
+  const words = englishWords(text);
+  return words.length >= 2 || latinLetters.length >= 8;
+}
+
+function looksClearlyEnglish(value) {
+  const text = toTrimmedString(value);
+  if (!appearsEnglish(text)) return false;
+  const words = englishWords(text);
+  if (!words.length) return false;
+  const commonWords = new Set([
+    'a', 'all', 'allah', 'an', 'and', 'are', 'be', 'by', 'for', 'from',
+    'has', 'have', 'he', 'his', 'in', 'indeed', 'is', 'it', 'its', 'lord',
+    'may', 'merciful', 'most', 'not', 'of', 'on', 'or', 'our', 'said',
+    'that', 'the', 'their', 'them', 'then', 'there', 'they', 'this', 'to',
+    'upon', 'we', 'were', 'who', 'with', 'would', 'you', 'your',
+  ]);
+  return words.some((word) => commonWords.has(word));
+}
+
 function extractChapterCandidates(parsed) {
   if (Array.isArray(parsed)) return parsed;
   if (!parsed || typeof parsed !== 'object') return [];
@@ -180,13 +214,19 @@ function extractVerseCandidates(parsed) {
   ].filter((entry) => entry && typeof entry === 'object');
 }
 
-function chapterMeta(chapter = {}) {
+function chapterMeta(chapter = {}, englishContext = false) {
   const surah = pickNumber(chapter.id, chapter.number, chapter.surah, chapter.surah_number, chapter.chapter_id);
   const genericName = pickString(chapter.name);
   return {
     surah,
     surah_name_ar: pickString(chapter.name_ar, chapter.name_arabic, chapter.arabic_name, looksArabic(genericName) ? genericName : null),
-    surah_name_en: pickString(chapter.transliteration, chapter.name_en, chapter.english_name, !looksArabic(genericName) ? genericName : null, chapter.translation),
+    surah_name_en: pickString(
+      chapter.transliteration,
+      chapter.name_en,
+      chapter.english_name,
+      !looksArabic(genericName) && (englishContext || looksClearlyEnglish(genericName)) ? genericName : null,
+      (englishContext || looksClearlyEnglish(chapter.translation)) ? chapter.translation : null,
+    ),
     revelation_place: pickString(chapter.type, chapter.revelation_place, chapter.revelationPlace),
   };
 }
@@ -215,42 +255,89 @@ function globalVerseNumber(verse = {}) {
   );
 }
 
-function textFromTranslations(verse = {}) {
+function translationEntryText(entry) {
+  if (typeof entry === 'string') return toTrimmedString(entry);
+  if (!entry || typeof entry !== 'object') return null;
+  return pickString(entry.text, entry.translation, entry.translation_text, entry.value, entry.content);
+}
+
+function translationFromTranslations(verse = {}, language = 'en', englishContext = false) {
+  if (!verse.translations) return null;
+
+  if (!Array.isArray(verse.translations) && typeof verse.translations === 'object') {
+    const exact = translationEntryText(verse.translations[language]);
+    if (exact) return exact;
+  }
+
   const translations = toArray(verse.translations);
   for (const entry of translations) {
-    if (typeof entry === 'string') return entry;
+    const text = translationEntryText(entry);
+    if (!text) continue;
     if (entry && typeof entry === 'object') {
-      const text = pickString(entry.text, entry.translation, entry.resource_name);
-      if (text) return text;
+      const entryLanguage = pickString(entry.language, entry.lang, entry.locale, entry.code, entry.iso_code);
+      if (entryLanguage && entryLanguage.toLowerCase().startsWith(String(language || '').toLowerCase())) return text;
     }
+    if (language === 'en' && englishContext && looksClearlyEnglish(text)) return text;
   }
+
   return null;
 }
 
-function extractVerseText(verse = {}, englishContext = false) {
-  const text = pickString(
-    verse.text,
-    verse.translation,
-    verse.translation_text,
-    verse.meaning,
-    verse.english,
-    verse.content,
-  );
+function translationMatchesLanguage(text, language = 'en') {
+  if (!text) return false;
+  if (language === 'en') return appearsEnglish(text);
+  return true;
+}
+
+function hasPotentialTranslationContent(verse = {}) {
+  if (pickString(verse.translation_text, verse.translation, verse.meaning, verse.english)) return true;
+  if (pickString(verse.text, verse.content) && !looksArabic(verse.text || verse.content)) return true;
+  if (Array.isArray(verse.translations)) return verse.translations.some((entry) => Boolean(translationEntryText(entry)));
+  if (verse.translations && typeof verse.translations === 'object') {
+    return Object.values(verse.translations).some((entry) => Boolean(translationEntryText(entry)));
+  }
+  return false;
+}
+
+function extractVerseText(verse = {}, { englishContext = false, translationLanguage = 'en' } = {}) {
+  const rawText = pickString(verse.text, verse.content);
+  const explicitTranslation = pickString(verse.translation_text, verse.english, verse.meaning);
   const arabic = pickString(
     verse.arabic_text,
     verse.text_uthmani,
     verse.text_imlaei,
     verse.arabic,
-    !englishContext && looksArabic(text) ? text : null,
-  );
-  const translation = pickString(
-    verse.translation_text,
-    verse.translation,
-    textFromTranslations(verse),
-    englishContext && !looksArabic(text) ? text : null,
+    !englishContext && looksArabic(rawText) ? rawText : null,
   );
 
-  return { arabic_text: arabic, translation_text: translation };
+  let translation;
+  if (translationLanguage === 'en') {
+    translation = pickString(
+      translationFromTranslations(verse, 'en', englishContext),
+      looksClearlyEnglish(explicitTranslation) ? explicitTranslation : null,
+      englishContext && looksClearlyEnglish(verse.translation) ? verse.translation : null,
+      englishContext && looksClearlyEnglish(rawText) ? rawText : null,
+      looksClearlyEnglish(rawText) ? rawText : null,
+    );
+  } else {
+    translation = pickString(
+      translationFromTranslations(verse, translationLanguage, englishContext),
+      explicitTranslation,
+      englishContext ? verse.translation : null,
+      englishContext && !looksArabic(rawText) ? rawText : null,
+    );
+  }
+
+  let translation_warning = null;
+  if (translationLanguage === 'en') {
+    if (translation && !translationMatchesLanguage(translation, 'en')) {
+      translation_warning = 'translation_text does not appear to match requested translation_language=en.';
+    } else if (!translation && hasPotentialTranslationContent(verse)) {
+      translation_warning = 'no English translation available; left translation_text null.';
+    }
+  }
+
+  return { arabic_text: arabic, translation_text: translation, translation_warning };
 }
 
 function addOrMergeVerse(map, partial) {
@@ -266,21 +353,21 @@ function addOrMergeVerse(map, partial) {
   return true;
 }
 
-function scanFile(filePath, parsed, verseMap, chapterMap) {
+function scanFile(filePath, parsed, verseMap, chapterMap, translationLanguage = DEFAULT_QURAN_METADATA.translationLanguage) {
   const englishContext = isEnglishPath(filePath);
   const chapters = extractChapterCandidates(parsed);
   const directVerses = extractVerseCandidates(parsed);
   let count = 0;
 
   for (const chapter of chapters) {
-    const meta = chapterMeta(chapter);
+    const meta = chapterMeta(chapter, englishContext);
     if (meta.surah) chapterMap.set(meta.surah, { ...(chapterMap.get(meta.surah) || {}), ...meta });
     const verses = extractVerseCandidates(chapter);
     verses.forEach((verse, index) => {
       const ref = parseVerseReference(verse.verse_key || verse.key || verse.reference);
       const surah = pickNumber(ref.surah, verse.surah, verse.surah_number, verse.chapter_id, meta.surah);
       const ayah = verseNumber(verse, index);
-      const text = extractVerseText(verse, englishContext);
+      const text = extractVerseText(verse, { englishContext, translationLanguage });
       if (addOrMergeVerse(verseMap, {
         ...meta,
         surah,
@@ -301,7 +388,7 @@ function scanFile(filePath, parsed, verseMap, chapterMap) {
       const ref = parseVerseReference(verse.verse_key || verse.key || verse.reference);
       const surah = pickNumber(ref.surah, verse.surah, verse.surah_number, verse.chapter_id);
       const ayah = verseNumber(verse, index);
-      const text = extractVerseText(verse, englishContext);
+      const text = extractVerseText(verse, { englishContext, translationLanguage });
       if (addOrMergeVerse(verseMap, {
         surah,
         ayah,
@@ -318,10 +405,10 @@ function scanFile(filePath, parsed, verseMap, chapterMap) {
 
   if (!chapters.length && !directVerses.length && parsed && typeof parsed === 'object') {
     const ref = parseVerseReference(parsed.verse_key || parsed.key || parsed.reference);
-    const meta = chapterMeta(parsed.chapter || parsed.surah || {});
+    const meta = chapterMeta(parsed.chapter || parsed.surah || {}, englishContext);
     const surah = pickNumber(ref.surah, parsed.surah, parsed.surah_number, parsed.chapter_id, meta.surah);
     const ayah = pickNumber(ref.ayah, parsed.ayah, parsed.ayah_number, parsed.verse_number, parsed.id);
-    const text = extractVerseText(parsed, englishContext);
+    const text = extractVerseText(parsed, { englishContext, translationLanguage });
     if (addOrMergeVerse(verseMap, {
       ...meta,
       surah,
@@ -399,6 +486,7 @@ function buildNormalizedRow(entry, options = {}) {
 
 function normalizeQuranDataset(rootDir, options = {}) {
   const datasetRoot = path.resolve(rootDir || 'data/imports/quran-json');
+  const translationLanguage = toTrimmedString(options.translationLanguage || DEFAULT_QURAN_METADATA.translationLanguage) || 'en';
   const files = collectJsonFiles(datasetRoot);
   const structures = detectDatasetStructures(files, datasetRoot);
   const verseMap = new Map();
@@ -415,14 +503,20 @@ function normalizeQuranDataset(rootDir, options = {}) {
       continue;
     }
     filesAnalyzed += 1;
-    const found = scanFile(file, parsed, verseMap, chapterMap);
+    const found = scanFile(file, parsed, verseMap, chapterMap, translationLanguage);
     if (!found) warnings.push(`${path.relative(datasetRoot, file)}: no Quran ayah rows detected.`);
   }
 
   const rows = [...verseMap.values()]
     .map((entry) => {
       const chapter = chapterMap.get(toInteger(entry.surah)) || {};
-      return buildNormalizedRow({ ...chapter, ...entry }, options);
+      const mergedEntry = { ...chapter, ...entry };
+      const row = buildNormalizedRow(mergedEntry, { ...options, translationLanguage });
+      if (mergedEntry.translation_warning && !row.translation_text) warnings.push(`${row.id}: ${mergedEntry.translation_warning}`);
+      if (translationLanguage === 'en' && row.translation_text && !translationMatchesLanguage(row.translation_text, 'en')) {
+        warnings.push(`${row.id}: translation_text does not appear to match requested translation_language=en.`);
+      }
+      return row;
     })
     .filter((row) => {
       const valid = row.surah && row.ayah && (row.arabic_text || row.translation_text);
@@ -437,7 +531,7 @@ function normalizeQuranDataset(rootDir, options = {}) {
   const missingSurahNames = rows.filter((row) => !row.surah_name_en && !row.surah_name_ar).length;
 
   if (files.length && missingArabic) warnings.push(`${missingArabic} row(s) are missing Arabic text.`);
-  if (files.length && missingTranslation) warnings.push(`${missingTranslation} row(s) are missing English translation text.`);
+  if (files.length && missingTranslation) warnings.push(`${missingTranslation} row(s) are missing ${translationLanguage === 'en' ? 'English' : translationLanguage} translation text.`);
   if (files.length && missingSurahNames) warnings.push(`${missingSurahNames} row(s) are missing surah names.`);
 
   return {
@@ -449,7 +543,7 @@ function normalizeQuranDataset(rootDir, options = {}) {
     rows,
     totalSurahs,
     totalAyahs: rows.length,
-    warnings,
+    warnings: [...new Set(warnings)],
     sampleRow: rows.find((row) => row.id === 'quran-1-1') || rows[0] || null,
   };
 }

@@ -53,6 +53,17 @@ before(() => {
       ],
     },
   ], null, 2));
+  fs.mkdirSync(path.join(datasetRoot, 'dist', 'verses', '1'), { recursive: true });
+  fs.writeFileSync(path.join(datasetRoot, 'dist', 'verses', '1', '1.json'), JSON.stringify({
+    surah: 1,
+    ayah: 1,
+    text: 'بسم الله الرحمن الرحيم',
+    translation: '奉至仁至慈的真主之名',
+    translations: {
+      en: 'In the name of Allah, the Entirely Merciful, the Especially Merciful.',
+      zh: '奉至仁至慈的真主之名',
+    },
+  }, null, 2));
 });
 
 after(() => {
@@ -93,6 +104,17 @@ test('Quran normalization preserves required fields and license metadata', () =>
   assert.strictEqual(row.requires_sharealike_review, true);
   assert.strictEqual(row.approved_for_answers, true);
   assert.strictEqual(row.verified_by_admin, false);
+  assert.strictEqual(row.translation_text, 'In the name of Allah, the Entirely Merciful, the Especially Merciful.');
+});
+
+test('Quran normalization prefers translations.en over non-English generic translation fields', () => {
+  const analysis = normalizeQuranDataset(datasetRoot, {});
+  const row = analysis.rows.find((entry) => entry.id === 'quran-1-1');
+
+  assert(row);
+  assert.strictEqual(row.translation_language, 'en');
+  assert.strictEqual(row.translation_text, 'In the name of Allah, the Entirely Merciful, the Especially Merciful.');
+  assert(!analysis.warnings.some((warning) => warning.includes('quran-1-1: translation_text does not appear to match requested translation_language=en.')));
 });
 
 test('Quran display title uses surah name and verse reference', () => {
@@ -130,6 +152,7 @@ test('Quran analyzer runs without Supabase env', () => {
   assert.match(result.stdout, /Total ayahs: 2/);
   assert.match(result.stdout, /Sample normalized Quran row/);
   assert.match(result.stdout, /CC-BY-SA-4\.0/);
+  assert.match(result.stdout, /Translation language: en/);
 });
 
 test('Quran importer dry-run runs without Supabase env', () => {
@@ -150,6 +173,29 @@ test('Quran importer uses stable quran-{surah}-{ayah} IDs', () => {
   const analysis = normalizeQuranDataset(datasetRoot, {});
   assert(analysis.rows.some((row) => row.id === 'quran-1-1'));
   assert(analysis.rows.some((row) => row.id === 'quran-2-255'));
+});
+
+test('Quran analyzer warns when requested English translation is unavailable', () => {
+  const warningRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'islamicgpt-quran-json-warning-'));
+  const warningDatasetRoot = path.join(warningRoot, 'quran-json');
+  fs.mkdirSync(path.join(warningDatasetRoot, 'dist', 'verses', '3'), { recursive: true });
+  fs.writeFileSync(path.join(warningDatasetRoot, 'dist', 'verses', '3', '1.json'), JSON.stringify({
+    surah: 3,
+    ayah: 1,
+    text: 'الم',
+    translation: '这是错误的中文翻译',
+  }, null, 2));
+
+  try {
+    const analysis = normalizeQuranDataset(warningDatasetRoot, {});
+    const row = analysis.rows.find((entry) => entry.id === 'quran-3-1');
+
+    assert(row);
+    assert.strictEqual(row.translation_text, null);
+    assert(analysis.warnings.some((warning) => warning.includes('quran-3-1: no English translation available; left translation_text null.')));
+  } finally {
+    fs.rmSync(warningRoot, { recursive: true, force: true });
+  }
 });
 
 test('Quran import pipeline does not require frontend changes', () => {
