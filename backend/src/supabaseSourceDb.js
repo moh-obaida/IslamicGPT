@@ -312,7 +312,7 @@ function expandTerms(tokens) {
 }
 
 function normalizedQueryText(value) {
-  return normalizeText(String(value || '').replace(/[^\p{L}\p{N}:/-\s]+/gu, ' ').replace(/\s+/g, ' ').trim());
+  return normalizeText(String(value || '').replace(/[^\p{L}\p{N}:/\s-]+/gu, ' ').replace(/\s+/g, ' ').trim());
 }
 
 function quranReferenceFromQuery(query) {

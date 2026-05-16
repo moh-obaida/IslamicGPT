@@ -182,10 +182,11 @@ function extractVerseCandidates(parsed) {
 
 function chapterMeta(chapter = {}) {
   const surah = pickNumber(chapter.id, chapter.number, chapter.surah, chapter.surah_number, chapter.chapter_id);
+  const genericName = pickString(chapter.name);
   return {
     surah,
-    surah_name_ar: pickString(chapter.name_ar, chapter.name_arabic, chapter.arabic_name, chapter.name),
-    surah_name_en: pickString(chapter.transliteration, chapter.name_en, chapter.english_name, chapter.translation),
+    surah_name_ar: pickString(chapter.name_ar, chapter.name_arabic, chapter.arabic_name, looksArabic(genericName) ? genericName : null),
+    surah_name_en: pickString(chapter.transliteration, chapter.name_en, chapter.english_name, !looksArabic(genericName) ? genericName : null, chapter.translation),
     revelation_place: pickString(chapter.type, chapter.revelation_place, chapter.revelationPlace),
   };
 }
