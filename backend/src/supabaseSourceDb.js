@@ -29,32 +29,16 @@ const TYPE_ALIASES = {
   documents: ['approved_pdf', 'uploaded_document'],
 };
 const FILLER_WORDS = new Set([
-  'a',
-  'an',
-  'about',
-  'actions',
-  'find',
-  'for',
-  'give',
-  'hadith',
-  'i',
-  'is',
-  'me',
-  'of',
-  'please',
-  'quote',
-  'show',
-  'tell',
-  'the',
-  'what',
+  'a', 'an', 'about', 'actions', 'find', 'for', 'give', 'hadith', 'i', 'is', 'me',
+  'of', 'please', 'quote', 'show', 'tell', 'the', 'what',
 ]);
 const TERM_SYNONYMS = {
-  intention: ['intention', 'intentions', 'niyyah', 'نية', 'نيات'],
-  intentions: ['intention', 'intentions', 'niyyah', 'نية', 'نيات'],
-  niyyah: ['niyyah', 'intention', 'intentions', 'نية', 'نيات'],
+  intention: ['intention', 'intentions', 'niyyah', 'نية', 'نيات', 'الأعمال بالنيات'],
+  intentions: ['intention', 'intentions', 'niyyah', 'نية', 'نيات', 'الأعمال بالنيات'],
+  niyyah: ['niyyah', 'intention', 'intentions', 'نية', 'نيات', 'الأعمال بالنيات'],
   sincerity: ['sincerity', 'ikhlas', 'إخلاص'],
-  actions: ['action', 'actions', 'deeds'],
-  action: ['action', 'actions', 'deeds'],
+  actions: ['action', 'actions', 'deeds', 'الأعمال'],
+  action: ['action', 'actions', 'deeds', 'الأعمال'],
 };
 
 let cachedClient = null;
@@ -138,48 +122,100 @@ function sourceTypesForFilter(type) {
   return TYPE_ALIASES[normalized] || (normalized && normalized !== 'all' ? [normalized] : null);
 }
 
+function resolveHadithNumber(row) {
+  return toTrimmedString(row.hadith_number)
+    || toTrimmedString(row.hadith_number_global)
+    || toTrimmedString(row.hadith_number_in_book)
+    || toTrimmedString(row.hadith_number_in_chapter);
+}
+
+function resolveBookName(row) {
+  return toTrimmedString(row.book_name)
+    || toTrimmedString(row.book_name_en)
+    || toTrimmedString(row.book_name_ar);
+}
+
+function resolveChapterName(row) {
+  return toTrimmedString(row.chapter_name)
+    || toTrimmedString(row.chapter_name_en)
+    || toTrimmedString(row.chapter_name_ar)
+    || toTrimmedString(row.chapter_intro_en)
+    || toTrimmedString(row.chapter_intro_ar);
+}
+
 function buildDisplayTitle(row) {
   if (!row || typeof row !== 'object') return '';
   if (row.source_type === 'hadith' || row.source_type === 'hadith_explanation') {
-    const collection = row.collection_name || 'Hadith';
-    return row.hadith_number ? `${collection}, Hadith ${row.hadith_number}` : collection;
+    const collection = row.collection_name || row.collection_name_en || row.collection_name_ar || 'Hadith';
+    const hadithNumber = resolveHadithNumber(row);
+    return hadithNumber ? `${collection}, Hadith ${hadithNumber}` : (row.title || collection);
   }
   if (row.source_type === 'quran' || row.source_type === 'quran_translation' || row.source_type === 'tafsir') {
-    const surahTitle = row.title || `Surah ${row.surah || '?'}`;
-    if (row.surah && row.ayah) return `${surahTitle} ${row.surah}:${row.ayah}`;
-    return surahTitle;
+    const surah = toInteger(row.surah);
+    const ayah = toInteger(row.ayah);
+    if (surah && ayah) return `Quran ${surah}:${ayah}`;
+    return row.title || `Surah ${surah || '?'}`;
   }
-  return row.title || row.collection_name || row.book_name || row.scholar_name || row.id || 'Approved source';
+  return row.display_title || row.title || row.collection_name || row.book_name || row.scholar_name || row.id || 'Approved source';
 }
 
 function normalizeSourceRecord(row) {
   if (!row || typeof row !== 'object') return null;
 
   const displayTitle = buildDisplayTitle(row);
+  const hadithNumber = resolveHadithNumber(row);
   const title = toTrimmedString(row.title) || displayTitle;
   const sourceUrl = toTrimmedString(row.source_url);
   const fatwaReference = toTrimmedString(row.fatwa_reference);
+  const bookName = resolveBookName(row);
+  const chapterName = resolveChapterName(row);
 
   return {
     id: toTrimmedString(row.id),
     source_type: toTrimmedString(row.source_type) || 'unknown',
     type: toTrimmedString(row.source_type) || 'unknown',
     title,
+    display_title: displayTitle,
     source_title: displayTitle,
-    collection_name: toTrimmedString(row.collection_name),
-    book_name: toTrimmedString(row.book_name),
-    chapter_name: toTrimmedString(row.chapter_name),
-    hadith_number: toTrimmedString(row.hadith_number),
+    collection_slug: toTrimmedString(row.collection_slug),
+    collection_name: toTrimmedString(row.collection_name) || toTrimmedString(row.collection_name_en) || toTrimmedString(row.collection_name_ar),
+    collection_name_ar: toTrimmedString(row.collection_name_ar),
+    collection_name_en: toTrimmedString(row.collection_name_en),
+    collection_author_ar: toTrimmedString(row.collection_author_ar),
+    collection_author_en: toTrimmedString(row.collection_author_en),
+    book_id: toInteger(row.book_id),
+    book_number: toTrimmedString(row.book_number),
+    book_name: bookName,
+    book_name_ar: toTrimmedString(row.book_name_ar),
+    book_name_en: toTrimmedString(row.book_name_en),
+    chapter_id: toInteger(row.chapter_id),
+    chapter_number: toTrimmedString(row.chapter_number),
+    chapter_name: chapterName,
+    chapter_name_ar: toTrimmedString(row.chapter_name_ar),
+    chapter_name_en: toTrimmedString(row.chapter_name_en),
+    chapter_intro_ar: toTrimmedString(row.chapter_intro_ar),
+    chapter_intro_en: toTrimmedString(row.chapter_intro_en),
+    hadith_number: hadithNumber,
+    hadith_number_global: toTrimmedString(row.hadith_number_global) || hadithNumber,
+    hadith_number_in_book: toTrimmedString(row.hadith_number_in_book),
+    hadith_number_in_chapter: toTrimmedString(row.hadith_number_in_chapter),
     surah: toInteger(row.surah),
     ayah: toInteger(row.ayah),
     surah_number: toInteger(row.surah),
     ayah_number: toInteger(row.ayah),
     arabic_text: toTrimmedString(row.arabic_text),
+    english_narrator: toTrimmedString(row.english_narrator),
     translation_text: toTrimmedString(row.translation_text),
     scholar_name: toTrimmedString(row.scholar_name),
     fatwa_reference: fatwaReference,
     fatwa_number: fatwaReference,
     reference_number: fatwaReference,
+    grade: toTrimmedString(row.grade),
+    translator: toTrimmedString(row.translator),
+    dataset_name: toTrimmedString(row.dataset_name),
+    dataset_version: toTrimmedString(row.dataset_version),
+    original_source: toTrimmedString(row.original_source),
+    import_batch_id: toTrimmedString(row.import_batch_id),
     topic_tags: normalizeTopicTags(row.topic_tags),
     approved_for_answers: toBoolean(row.approved_for_answers, true),
     verified_by_admin: toBoolean(row.verified_by_admin, false),
@@ -230,20 +266,36 @@ function searchableText(record) {
     record.id,
     record.source_type,
     record.title,
+    record.display_title,
+    record.collection_slug,
     record.collection_name,
+    record.collection_name_ar,
+    record.collection_name_en,
+    record.collection_author_ar,
+    record.collection_author_en,
     record.book_name,
+    record.book_name_ar,
+    record.book_name_en,
     record.chapter_name,
+    record.chapter_name_ar,
+    record.chapter_name_en,
+    record.chapter_intro_ar,
+    record.chapter_intro_en,
     record.hadith_number,
+    record.hadith_number_global,
+    record.hadith_number_in_book,
+    record.hadith_number_in_chapter,
     record.arabic_text,
     record.translation_text,
+    record.english_narrator,
     record.scholar_name,
     record.fatwa_reference,
     record.source_url,
+    record.dataset_name,
+    record.original_source,
     ...(record.topic_tags || []),
     ...Object.values(metadata).map((value) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '')),
-  ]
-    .filter(Boolean)
-    .join(' '));
+  ].filter(Boolean).join(' '));
 }
 
 function sourceScore(record, normalizedQuery) {
@@ -403,17 +455,42 @@ function toDatabaseRow(record) {
   const row = {
     id: toTrimmedString(record.id),
     source_type: toTrimmedString(record.source_type || record.type),
-    title: toTrimmedString(record.title || record.source_title),
+    title: toTrimmedString(record.title || record.display_title || record.source_title),
+    collection_slug: toTrimmedString(record.collection_slug),
     collection_name: toTrimmedString(record.collection_name),
+    collection_name_ar: toTrimmedString(record.collection_name_ar),
+    collection_name_en: toTrimmedString(record.collection_name_en),
+    collection_author_ar: toTrimmedString(record.collection_author_ar),
+    collection_author_en: toTrimmedString(record.collection_author_en),
+    book_id: toInteger(record.book_id),
+    book_number: toTrimmedString(record.book_number),
     book_name: toTrimmedString(record.book_name),
+    book_name_ar: toTrimmedString(record.book_name_ar),
+    book_name_en: toTrimmedString(record.book_name_en),
+    chapter_id: toInteger(record.chapter_id),
+    chapter_number: toTrimmedString(record.chapter_number),
     chapter_name: toTrimmedString(record.chapter_name),
+    chapter_name_ar: toTrimmedString(record.chapter_name_ar),
+    chapter_name_en: toTrimmedString(record.chapter_name_en),
+    chapter_intro_ar: toTrimmedString(record.chapter_intro_ar),
+    chapter_intro_en: toTrimmedString(record.chapter_intro_en),
     hadith_number: toTrimmedString(record.hadith_number),
+    hadith_number_global: toTrimmedString(record.hadith_number_global),
+    hadith_number_in_book: toTrimmedString(record.hadith_number_in_book),
+    hadith_number_in_chapter: toTrimmedString(record.hadith_number_in_chapter),
     surah: toInteger(record.surah || record.surah_number),
     ayah: toInteger(record.ayah || record.ayah_number),
     arabic_text: toTrimmedString(record.arabic_text),
     translation_text: toTrimmedString(record.translation_text),
+    english_narrator: toTrimmedString(record.english_narrator),
     scholar_name: toTrimmedString(record.scholar_name),
     fatwa_reference: toTrimmedString(record.fatwa_reference || record.fatwa_number || record.reference_number),
+    grade: toTrimmedString(record.grade),
+    translator: toTrimmedString(record.translator),
+    dataset_name: toTrimmedString(record.dataset_name),
+    dataset_version: toTrimmedString(record.dataset_version),
+    original_source: toTrimmedString(record.original_source),
+    import_batch_id: toTrimmedString(record.import_batch_id),
     topic_tags: normalizeTopicTags(record.topic_tags),
     approved_for_answers: toBoolean(record.approved_for_answers, false),
     verified_by_admin: toBoolean(record.verified_by_admin, false),
@@ -578,6 +655,7 @@ async function getHealthSummary() {
 }
 
 module.exports = {
+  TABLE_NAME,
   countSources,
   deleteSource,
   getHealthSummary,
@@ -587,5 +665,6 @@ module.exports = {
   listSources,
   normalizeSourceRecord,
   searchSources,
+  toDatabaseRow,
   upsertSource,
 };

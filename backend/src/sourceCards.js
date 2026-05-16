@@ -21,7 +21,8 @@ function formatSourceCards(sources) {
     }
 
     if (['hadith', 'hadith_explanation'].includes(s.source_type)) {
-      const title = `${s.collection_name || 'Hadith'} #${s.hadith_number || 'N/A'}`;
+      const hadithNumber = s.hadith_number || s.hadith_number_global || s.hadith_number_in_book || 'N/A';
+      const title = `${s.collection_name || 'Hadith'} #${hadithNumber}`;
       return {
         id: s.id,
         type: s.source_type,

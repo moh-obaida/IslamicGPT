@@ -103,7 +103,7 @@ function copyCitation(source) {
   }
 
   if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
-    return `${source.collection_name || 'Hadith'} #${source.hadith_number || 'N/A'}`;
+    return `${source.collection_name || 'Hadith'} #${source.hadith_number || source.hadith_number_global || source.hadith_number_in_book || 'N/A'}`;
   }
 
   if (['scholar_statement', 'fatwa', 'book', 'lecture', 'video_transcript', 'educational_explanation'].includes(source.source_type)) {
@@ -130,7 +130,9 @@ function publicSourceCard(source) {
     surah_number: source.surah || source.surah_number,
     ayah_number: source.ayah || source.ayah_number,
     ayah_range: source.ayah_range,
-    hadith_number: source.hadith_number,
+    hadith_number: source.hadith_number || source.hadith_number_global || source.hadith_number_in_book,
+    hadith_number_global: source.hadith_number_global,
+    hadith_number_in_book: source.hadith_number_in_book,
     hadith_number_unavailable: source.hadith_number_unavailable,
     arabic_text: source.arabic_text,
     translation_text: source.translation_text,
