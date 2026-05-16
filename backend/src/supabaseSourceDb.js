@@ -1,4 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
+
+let WebSocketTransport = null;
+try {
+  WebSocketTransport = require('ws');
+} catch (_) {
+  WebSocketTransport = null;
+}
 const { normalizeText } = require('./sourceStore');
 
 const TABLE_NAME = 'islamic_sources';
@@ -58,7 +65,7 @@ function isSupabaseConfigured() {
 function getSupabaseClient() {
   if (!isSupabaseConfigured()) return null;
   if (cachedClient) return cachedClient;
-  cachedClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  const clientOptions = {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -68,7 +75,13 @@ function getSupabaseClient() {
         'x-client-info': 'islamicgpt-backend',
       },
     },
-  });
+  };
+
+  if (WebSocketTransport) {
+    clientOptions.realtime = { transport: WebSocketTransport };
+  }
+
+  cachedClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, clientOptions);
   return cachedClient;
 }
 
@@ -301,25 +314,91 @@ function searchableText(record) {
 function sourceScore(record, normalizedQuery) {
   if (!normalizedQuery.cleaned) return 0;
 
+  const genericTerms = new Set([
+    'a', 'an', 'about', 'give', 'show', 'share', 'find', 'quote', 'tell',
+    'me', 'i', 'please', 'source', 'sources', 'hadith', 'quran', 'ayah',
+    'verse', 'islamic', 'islam', 'the', 'of', 'for', 'with'
+  ]);
+
   const expandedTerms = expandTerms(normalizedQuery.tokens);
-  const haystack = searchableText(record);
-  const topicTagSet = new Set((record.topic_tags || []).map((tag) => String(tag).toLowerCase()));
+  const meaningfulTerms = expandedTerms
+    .map((term) => String(term || '').trim())
+    .filter(Boolean)
+    .filter((term) => !genericTerms.has(term.toLowerCase()))
+    .filter((term) => term.length > 1 || /\\d/.test(term));
+
+  // Do not guess if the user only asked generic things like "give me a hadith".
+  if (!meaningfulTerms.length) return 0;
+
+  const metadata = normalizeMetadata(record.metadata);
+  const topicTags = normalizeTopicTags(record.topic_tags);
+  const topicTagSet = new Set(topicTags.map((tag) => normalizeText(tag)));
+
+  const haystack = normalizeText([
+    record.id,
+    record.title,
+    record.collection_name,
+    record.collection_name_ar,
+    record.collection_name_en,
+    record.book_name,
+    record.book_name_ar,
+    record.book_name_en,
+    record.chapter_name,
+    record.chapter_name_ar,
+    record.chapter_name_en,
+    record.hadith_number,
+    record.hadith_number_global,
+    record.hadith_number_in_book,
+    record.arabic_text,
+    record.translation_text,
+    record.english_narrator,
+    record.scholar_name,
+    record.fatwa_reference,
+    ...topicTags,
+    ...Object.values(metadata).map((value) => (
+      typeof value === 'string' || typeof value === 'number' ? String(value) : ''
+    )),
+  ].filter(Boolean).join(' '));
+
+  function rootOf(term) {
+    return normalizeText(term)
+      .replace(/(ions|ion|ing|ed|s)$/i, '')
+      .trim();
+  }
+
+  function termMatches(term) {
+    const lower = normalizeText(term);
+    if (!lower) return false;
+
+    if (haystack.includes(lower)) return true;
+    if (topicTagSet.has(lower)) return true;
+
+    const root = rootOf(lower);
+    if (root.length >= 5 && haystack.includes(root)) return true;
+
+    return false;
+  }
+
+  // Important hallucination guard:
+  // At least one real topic term must match the source content.
+  const matchedTerms = meaningfulTerms.filter(termMatches);
+  if (!matchedTerms.length) return 0;
 
   let score = 0;
-  if (haystack.includes(normalizedQuery.cleaned)) score += 24;
-  if (normalizeText(String(record.title || '')).includes(normalizedQuery.cleaned)) score += 10;
 
-  expandedTerms.forEach((term) => {
+  if (haystack.includes(normalizedQuery.cleaned)) score += 24;
+
+  matchedTerms.forEach((term) => {
     const lower = normalizeText(term);
+    if (topicTagSet.has(lower)) score += 12;
+    if (normalizeText(String(record.title || '')).includes(lower)) score += 8;
+    if (normalizeText(String(record.translation_text || '')).includes(lower)) score += 6;
     if (haystack.includes(lower)) score += 4;
-    if (normalizeText(String(record.title || '')).includes(lower)) score += 6;
-    if (normalizeText(String(record.translation_text || '')).includes(lower)) score += 5;
-    if (normalizeText(String(record.collection_name || '')).includes(lower)) score += 3;
-    if (topicTagSet.has(String(term).toLowerCase())) score += 8;
   });
 
   if (record.verified_by_admin) score += 2;
   if (record.admin_managed) score += 1;
+
   return score;
 }
 
