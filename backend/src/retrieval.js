@@ -1,7 +1,11 @@
 const { loadIndexSources, normalizeText } = require('./sourceStore');
 const { searchSources } = require('./supabaseSourceDb');
 
-const SEARCH_FILLER_WORDS = new Set(['a', 'about', 'an', 'give', 'hadith', 'i', 'if', 'is', 'me', 'my', 'please', 'show', 'source', 'the', 'what']);
+const SEARCH_FILLER_WORDS = new Set([
+  'a', 'about', 'an', 'explain', 'explanation', 'give', 'hadith', 'i', 'if',
+  'is', 'me', 'my', 'of', 'please', 'show', 'source', 'tafsir', 'the', 'what',
+  'تفسير', 'اشرح', 'شرح',
+]);
 const SOURCE_TYPE_MAP = {
   all: null,
   hadith: ['hadith', 'hadith_explanation'],
@@ -34,6 +38,14 @@ function localSearchText(source) {
     source.id,
     source.title,
     source.source_title,
+    source.tafsir_edition_slug,
+    source.tafsir_book_name,
+    source.tafsir_book_name_ar,
+    source.tafsir_book_name_en,
+    source.tafsir_author,
+    source.tafsir_author_ar,
+    source.tafsir_author_en,
+    source.tafsir_language,
     source.collection_name,
     source.book_name,
     source.chapter_name,
@@ -41,12 +53,16 @@ function localSearchText(source) {
     source.surah_name_ar,
     source.surah_number || source.surah,
     source.ayah_number || source.ayah,
+    source.ayah_start,
+    source.ayah_end,
+    source.ayah_range,
     (source.surah_number || source.surah) && (source.ayah_number || source.ayah)
       ? `${source.surah_number || source.surah}:${source.ayah_number || source.ayah}`
       : '',
     source.translator,
     source.translation_name,
     source.translation_text,
+    source.explanation_text,
     source.arabic_text,
     source.summary,
     source.scholar_name,
@@ -67,12 +83,14 @@ function localSourceScore(source, message) {
   const query = normalizeText(sanitizeSearchQuery(message));
   const queryTokens = query.split(' ').filter(Boolean);
   if (!queryTokens.length) return 0;
+  const meaningfulTokens = queryTokens.filter((token) => !SEARCH_FILLER_WORDS.has(token.toLowerCase()));
+  if (!meaningfulTokens.length) return 0;
 
   const text = localSearchText(source);
   const sourceTokens = new Set(text.split(' ').filter(Boolean));
   let score = text.includes(query) ? 12 : 0;
 
-  queryTokens.forEach((token) => {
+  meaningfulTokens.forEach((token) => {
     const variants = tokenVariants(token);
     if (variants.some((variant) => sourceTokens.has(variant))) score += 4;
     else if (variants.some((variant) => text.includes(` ${variant} `) || text.startsWith(`${variant} `) || text.endsWith(` ${variant}`))) score += 2;

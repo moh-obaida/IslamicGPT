@@ -108,6 +108,31 @@ before(async () => {
       topic_tags: ['ayat al-kursi', 'kursi'],
     },
   ], null, 2));
+  fs.writeFileSync(path.join(sourceRoot, 'tafsir', 'seed.json'), JSON.stringify([
+    {
+      id: 'tafsir-en-tafisr-ibn-kathir-1-1',
+      source_type: 'tafsir',
+      title: 'Tafsir Ibn Kathir, Tafsir of 1:1',
+      collection_name: 'Tafsir',
+      surah: 1,
+      ayah: 1,
+      surah_number: 1,
+      ayah_number: 1,
+      ayah_start: 1,
+      ayah_end: 1,
+      ayah_range: '1',
+      surah_name_en: 'Al-Fatihah',
+      tafsir_edition_slug: 'en-tafisr-ibn-kathir',
+      tafsir_book_name: 'Tafsir Ibn Kathir',
+      tafsir_author: 'Ibn Kathir',
+      tafsir_language: 'en',
+      explanation_text: 'This tafsir explains the opening verse of Al-Fatihah.',
+      original_source: 'Quran.com',
+      verified_by_admin: true,
+      approved_for_answers: true,
+      topic_tags: ['fatihah', 'tafsir'],
+    },
+  ], null, 2));
   buildIslamicSourceIndex({ root: sourceRoot, allowTestSources: true, write: true });
 
   const ollamaPort = await getFreePort();
@@ -393,6 +418,20 @@ test('/api/chat uses template answers for direct Quran lookups without Ollama', 
   assert.strictEqual(body.answer.includes('A relevant Quran verse is Al-Baqarah 2:255.'), true);
   assert.strictEqual(body.answer.includes('Translation:\nSaheeh International'), true);
   assert.strictEqual(body.sourceCards[0].metadata.translation_source, 'Tanzil');
+});
+
+test('/api/chat uses template answers for direct Tafsir lookups without Ollama', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Show tafsir of Al-Fatihah',
+    mode: 'tafsir_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.answer.includes('A relevant tafsir source is Tafsir Ibn Kathir, explaining Quran 1:1.'), true);
+  assert.strictEqual(body.answer.includes('Original source:\nQuran.com'), true);
 });
 
 test('/api/chat uses model with validation for explanations', async () => {
