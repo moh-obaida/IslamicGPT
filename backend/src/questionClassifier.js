@@ -17,9 +17,12 @@ const ISLAMIC_KEYWORDS = [
   'fasting', 'ramadan', 'hajj', 'umrah', 'halal', 'haram', 'fiqh', 'fatwa', 'aqidah',
   'tawheed', 'shirk', 'iman', 'ihsan', 'tafsir', 'sahaba', 'bukhari', 'muslim',
   'tirmidhi', 'abu dawud', 'nasai', 'ibn majah', 'intention', 'niyyah',
+  'ibn baz', 'bin baz', 'ibn uthaymeen', 'ibn uthaymin', 'ibn taymiyyah',
+  'ibn taymiyah', 'ibn al-qayyim', 'ibn al qayyim', 'nawawi', 'ibn hajar',
   'قرآن', 'آية', 'سورة', 'حديث', 'سنة', 'النبي', 'الرسول', 'الله', 'دعاء', 'ذكر',
   'صلاة', 'وضوء', 'زكاة', 'صيام', 'رمضان', 'حج', 'عمرة', 'حلال', 'حرام', 'فقه',
   'فتوى', 'عقيدة', 'توحيد', 'شرك', 'إيمان', 'إحسان', 'تفسير', 'نية', 'الأعمال بالنيات',
+  'ابن باز', 'بن باز', 'ابن عثيمين', 'ابن تيمية', 'ابن القيم', 'النووي', 'ابن حجر',
 ];
 
 const SENSITIVE_KEYWORDS = [
@@ -48,6 +51,11 @@ const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /\bayat\s+al[-\s]?kursi\b/i,
   /\bayatul\s+kursi\b/i,
   /source about/i,
+  /\bfatwa\s+(?:by|from|of)\b/i,
+  /\b(?:show|give|find|share)\s+(?:me\s+)?(?:a\s+)?fatwa\b/i,
+  /\b(?:quote|source)\s+(?:from\s+)?(?:ibn|imam|shaykh|sheikh|al[-\s])/i,
+  /فتوى\s+(?:ابن|بن|الشيخ)/,
+  /قول\s+(?:ابن|الإمام|الشيخ|شيخ)/,
   /حديث عن/,
   /آية عن/,
   /أعطني حديث/,
@@ -65,6 +73,8 @@ const EXPLANATION_PATTERNS = [
   /simply/i,
   /student/i,
   /what does .* mean/i,
+  /what did .*\b(?:say|write|teach)\b/i,
+  /\b(?:ibn|imam|shaykh|sheikh|al[-\s]).*\b(?:on|about|explanation of)\b/i,
   /meaning/i,
   /lesson/i,
   /benefit/i,
@@ -87,8 +97,8 @@ const COMPARISON_PATTERNS = [
 ];
 
 const PERSONAL_RULING_PATTERNS = [
-  /fatwa/i,
-  /ruling/i,
+  /personal fatwa/i,
+  /\bruling\s+(?:for|on)\s+(?:me|my)\b/i,
   /can i/i,
   /should i/i,
   /do i have to/i,
@@ -112,10 +122,10 @@ function includesAny(text, keywords) {
 
 function detectIntent(message, mode) {
   if (COMPARISON_PATTERNS.some((pattern) => pattern.test(message)) || mode === 'compare_opinions_mode') return 'comparison';
-  if (PERSONAL_RULING_PATTERNS.some((pattern) => pattern.test(message))) return 'personal_ruling';
   if (/\bshow\s+(?:me\s+)?tafsir\b/i.test(message) || /اعرض.*تفسير/.test(message)) return 'direct_source_lookup';
-  if (EXPLANATION_PATTERNS.some((pattern) => pattern.test(message)) || ['explain_simply_mode', 'student_explanation_mode'].includes(mode)) return 'explanation';
   if (DIRECT_SOURCE_LOOKUP_PATTERNS.some((pattern) => pattern.test(message))) return 'direct_source_lookup';
+  if (PERSONAL_RULING_PATTERNS.some((pattern) => pattern.test(message))) return 'personal_ruling';
+  if (EXPLANATION_PATTERNS.some((pattern) => pattern.test(message)) || ['explain_simply_mode', 'student_explanation_mode'].includes(mode)) return 'explanation';
   return 'general';
 }
 
@@ -129,7 +139,7 @@ function inferSourceType(message, mode, intent) {
   if (intent === 'explanation' && /(quran|qur'an|ayah|verse|surah|\b\d{1,3}\s*[:/-]\s*\d{1,3}\b|قرآن|آية|سورة|آية الكرسي)/i.test(message)) return 'tafsir';
   if (/(quran|qur'an|ayah|verse|surah|ayat al[-\s]?kursi|ayatul kursi|\b\d{1,3}\s*[:/-]\s*\d{1,3}\b|قرآن|آية|سورة|آية الكرسي)/i.test(message)) return 'quran';
   if (/(aqidah|tawheed|shirk|iman|ihsan|عقيدة|توحيد|شرك|إيمان|إحسان)/i.test(message)) return 'aqidah';
-  if (/(fatwa|scholar|imam|shaykh|فتوى|شيخ|عالم)/i.test(message)) return lower.includes('fatwa') || message.includes('فتوى') ? 'fatwa' : 'scholar';
+  if (/(ibn baz|bin baz|ibn uthaymeen|ibn uthaymin|ibn taymiyyah|ibn taymiyah|ibn al[-\s]qayyim|nawawi|ibn hajar|ابن باز|بن باز|ابن عثيمين|ابن تيمية|ابن القيم|النووي|ابن حجر|fatwa|scholar|imam|shaykh|sheikh|فتوى|شيخ|عالم|قول)/i.test(message)) return lower.includes('fatwa') || message.includes('فتوى') ? 'fatwa' : 'scholar';
   if (/(prayer|wudu|zakat|fasting|ramadan|hajj|umrah|halal|haram|fiqh|salah|وضوء|زكاة|صيام|رمضان|حج|عمرة|حلال|حرام|فقه)/i.test(message)) return 'fiqh';
   return MODE_BEHAVIOR[mode]?.sourceType || 'all';
 }

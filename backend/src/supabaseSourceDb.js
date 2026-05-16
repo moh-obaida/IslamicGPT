@@ -38,7 +38,8 @@ const TYPE_ALIASES = {
 const FILLER_WORDS = new Set([
   'a', 'an', 'about', 'actions', 'explain', 'explanation', 'find', 'for', 'give',
   'hadith', 'i', 'is', 'me', 'of', 'please', 'quote', 'show', 'tafsir', 'tell',
-  'the', 'what', 'تفسير', 'اشرح', 'شرح',
+  'the', 'what', 'fatwa', 'scholar', 'ruling', 'book', 'source', 'sources',
+  'تفسير', 'اشرح', 'شرح', 'فتوى', 'عالم', 'كتاب',
 ]);
 const TERM_SYNONYMS = {
   intention: ['intention', 'intentions', 'niyyah', 'نية', 'نيات', 'الأعمال بالنيات'],
@@ -50,6 +51,13 @@ const TERM_SYNONYMS = {
   fatiha: ['al-fatihah', 'fatihah', 'الفاتحة'],
   fatihah: ['al-fatihah', 'fatiha', 'الفاتحة'],
   kursi: ['2:255', 'ayat al kursi', 'ayatul kursi', 'آية الكرسي'],
+  baz: ['bin baz', 'ibn baz', 'ابن باز', 'بن باز'],
+  uthaymeen: ['uthaymin', 'ibn uthaymeen', 'ibn uthaymin', 'ابن عثيمين'],
+  uthaymin: ['uthaymeen', 'ibn uthaymeen', 'ibn uthaymin', 'ابن عثيمين'],
+  taymiyyah: ['taymiyah', 'ibn taymiyyah', 'ibn taymiyah', 'ابن تيمية'],
+  qayyim: ['ibn al qayyim', 'ibn al-qayyim', 'ابن القيم'],
+  nawawi: ['al nawawi', 'al-nawawi', 'imam nawawi', 'النووي'],
+  hajar: ['ibn hajar', 'ابن حجر'],
   الفاتحة: ['al-fatihah', '1'],
   البقرة: ['al-baqarah', '2'],
   الإخلاص: ['al-ikhlas', '112'],
@@ -190,6 +198,22 @@ function buildDisplayTitle(row) {
     if (tafsirBookName && surah && ayah) return `${tafsirBookName}, Tafsir of ${surah}:${ayah}`;
     return row.title || 'Tafsir source';
   }
+  if (row.source_type === 'fatwa') {
+    const scholarName = toTrimmedString(row.scholar_name_en) || toTrimmedString(row.scholar_name_ar) || toTrimmedString(row.scholar_name);
+    const fatwaNumber = toTrimmedString(row.fatwa_number) || toTrimmedString(row.fatwa_reference) || toTrimmedString(row.reference_number);
+    if (scholarName && fatwaNumber) return `${scholarName}, Fatwa ${fatwaNumber}`;
+    if (toTrimmedString(row.title)) return toTrimmedString(row.title);
+    return 'Fatwa source';
+  }
+  if (['scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(row.source_type) || ['classical_book', 'book_excerpt'].includes(row.source_kind)) {
+    const workTitle = toTrimmedString(row.work_title) || toTrimmedString(row.work_title_en) || toTrimmedString(row.work_title_ar);
+    const pageNumber = toInteger(row.page_number);
+    const scholarName = toTrimmedString(row.scholar_name_en) || toTrimmedString(row.scholar_name_ar) || toTrimmedString(row.scholar_name);
+    if (workTitle && pageNumber) return `${workTitle}, p. ${pageNumber}`;
+    if (workTitle) return workTitle;
+    if (scholarName) return `${scholarName} source`;
+    return 'Scholar source';
+  }
   return row.display_title || row.title || row.collection_name || row.book_name || row.scholar_name || row.id || 'Approved source';
 }
 
@@ -200,7 +224,7 @@ function normalizeSourceRecord(row) {
   const hadithNumber = resolveHadithNumber(row);
   const title = toTrimmedString(row.title) || displayTitle;
   const sourceUrl = toTrimmedString(row.source_url);
-  const fatwaReference = toTrimmedString(row.fatwa_reference);
+  const fatwaReference = toTrimmedString(row.fatwa_reference) || toTrimmedString(row.fatwa_number) || toTrimmedString(row.reference_number);
   const bookName = resolveBookName(row);
   const chapterName = resolveChapterName(row);
 
@@ -214,6 +238,8 @@ function normalizeSourceRecord(row) {
     title,
     display_title: displayTitle,
     source_title: displayTitle,
+    source_kind: toTrimmedString(row.source_kind),
+    work_type: toTrimmedString(row.work_type),
     collection_slug: toTrimmedString(row.collection_slug),
     collection_name: toTrimmedString(row.collection_name) || toTrimmedString(row.collection_name_en) || toTrimmedString(row.collection_name_ar),
     collection_name_ar: toTrimmedString(row.collection_name_ar),
@@ -263,9 +289,38 @@ function normalizeSourceRecord(row) {
     translation_text: toTrimmedString(row.translation_text),
     explanation_text: toTrimmedString(row.explanation_text),
     scholar_name: toTrimmedString(row.scholar_name),
+    scholar_slug: toTrimmedString(row.scholar_slug),
+    scholar_name_ar: toTrimmedString(row.scholar_name_ar),
+    scholar_name_en: toTrimmedString(row.scholar_name_en),
+    scholar_full_name: toTrimmedString(row.scholar_full_name),
+    scholar_death_year: toInteger(row.scholar_death_year),
+    madhhab: toTrimmedString(row.madhhab),
+    creed_school: toTrimmedString(row.creed_school),
+    work_slug: toTrimmedString(row.work_slug),
+    work_title: toTrimmedString(row.work_title),
+    work_title_ar: toTrimmedString(row.work_title_ar),
+    work_title_en: toTrimmedString(row.work_title_en),
+    work_author: toTrimmedString(row.work_author),
+    work_language: toTrimmedString(row.work_language),
+    collection_title: toTrimmedString(row.collection_title),
+    website_name: toTrimmedString(row.website_name),
+    volume: toTrimmedString(row.volume),
+    page_range: toTrimmedString(row.page_range),
+    chapter_title: toTrimmedString(row.chapter_title),
+    section_title: toTrimmedString(row.section_title),
     fatwa_reference: fatwaReference,
     fatwa_number: fatwaReference,
     reference_number: fatwaReference,
+    question_number: toTrimmedString(row.question_number),
+    lecture_title: toTrimmedString(row.lecture_title),
+    lecture_date: toTrimmedString(row.lecture_date),
+    timestamp_start: toTrimmedString(row.timestamp_start),
+    timestamp_end: toTrimmedString(row.timestamp_end),
+    question_text: toTrimmedString(row.question_text),
+    answer_text: toTrimmedString(row.answer_text),
+    summary_text: toTrimmedString(row.summary_text),
+    quote_text: toTrimmedString(row.quote_text),
+    language: toTrimmedString(row.language),
     grade: toTrimmedString(row.grade),
     translator: toTrimmedString(row.translator),
     translation_name: toTrimmedString(row.translation_name),
@@ -281,10 +336,17 @@ function normalizeSourceRecord(row) {
     attribution_url: toTrimmedString(row.attribution_url),
     requires_attribution: toBoolean(row.requires_attribution, false),
     requires_sharealike_review: toBoolean(row.requires_sharealike_review, false),
+    publisher: toTrimmedString(row.publisher),
+    edition: toTrimmedString(row.edition),
     dataset_name: toTrimmedString(row.dataset_name),
     dataset_version: toTrimmedString(row.dataset_version),
     dataset_url: toTrimmedString(row.dataset_url),
     original_source: toTrimmedString(row.original_source),
+    source_usage_notes: toTrimmedString(row.source_usage_notes),
+    admin_review_status: toTrimmedString(row.admin_review_status),
+    review_notes: toTrimmedString(row.review_notes),
+    reviewed_by: toTrimmedString(row.reviewed_by),
+    reviewed_at: row.reviewed_at || null,
     import_batch_id: toTrimmedString(row.import_batch_id),
     topic_tags: normalizeTopicTags(row.topic_tags),
     approved_for_answers: toBoolean(row.approved_for_answers, true),
@@ -367,6 +429,8 @@ function searchableText(record) {
   return normalizeText([
     record.id,
     record.source_type,
+    record.source_kind,
+    record.work_type,
     record.title,
     record.display_title,
     record.collection_slug,
@@ -412,7 +476,31 @@ function searchableText(record) {
     record.explanation_text,
     record.english_narrator,
     record.scholar_name,
+    record.scholar_slug,
+    record.scholar_name_ar,
+    record.scholar_name_en,
+    record.scholar_full_name,
+    record.work_slug,
+    record.work_title,
+    record.work_title_ar,
+    record.work_title_en,
+    record.work_author,
+    record.work_language,
+    record.collection_title,
+    record.website_name,
+    record.volume,
+    record.page_range,
+    record.chapter_title,
+    record.section_title,
     record.fatwa_reference,
+    record.fatwa_number,
+    record.question_number,
+    record.lecture_title,
+    record.question_text,
+    record.answer_text,
+    record.summary_text,
+    record.quote_text,
+    record.language,
     record.source_url,
     record.dataset_name,
     record.original_source,
@@ -428,7 +516,9 @@ function sourceScore(record, normalizedQuery) {
     'a', 'an', 'about', 'give', 'show', 'share', 'find', 'quote', 'tell',
     'me', 'i', 'please', 'source', 'sources', 'hadith', 'quran', 'ayah',
     'verse', 'tafsir', 'explain', 'explanation', 'islamic', 'islam', 'the',
-    'of', 'for', 'with', 'تفسير', 'اشرح', 'شرح'
+    'of', 'for', 'with', 'fatwa', 'scholar', 'scholars', 'ruling', 'rulings',
+    'book', 'books', 'statement', 'statements', 'lecture', 'lectures',
+    'تفسير', 'اشرح', 'شرح', 'فتوى', 'فتاوى', 'قول', 'كتاب', 'كتب', 'عالم'
   ]);
 
   const quranRef = quranReferenceFromQuery(normalizedQuery);
@@ -460,6 +550,8 @@ function sourceScore(record, normalizedQuery) {
   const haystack = normalizeText([
     record.id,
     record.title,
+    record.source_kind,
+    record.work_type,
     record.collection_name,
     record.collection_name_ar,
     record.collection_name_en,
@@ -500,7 +592,38 @@ function sourceScore(record, normalizedQuery) {
     record.explanation_text,
     record.english_narrator,
     record.scholar_name,
+    record.scholar_slug,
+    record.scholar_name_ar,
+    record.scholar_name_en,
+    record.scholar_full_name,
+    record.madhhab,
+    record.creed_school,
+    record.work_slug,
+    record.work_title,
+    record.work_title_ar,
+    record.work_title_en,
+    record.work_author,
+    record.work_language,
+    record.collection_title,
+    record.website_name,
+    record.volume,
+    record.page_number,
+    record.page_range,
+    record.chapter_title,
+    record.section_title,
     record.fatwa_reference,
+    record.fatwa_number,
+    record.question_number,
+    record.lecture_title,
+    record.lecture_date,
+    record.timestamp_start,
+    record.timestamp_end,
+    record.question_text,
+    record.answer_text,
+    record.summary_text,
+    record.quote_text,
+    record.language,
+    record.source_url,
     ...topicTags,
     ...Object.values(metadata).map((value) => (
       typeof value === 'string' || typeof value === 'number' ? String(value) : ''
@@ -684,6 +807,8 @@ function toDatabaseRow(record) {
   const row = {
     id: toTrimmedString(record.id),
     source_type: toTrimmedString(record.source_type || record.type),
+    source_kind: toTrimmedString(record.source_kind),
+    work_type: toTrimmedString(record.work_type),
     title: toTrimmedString(record.title || record.display_title || record.source_title),
     collection_slug: toTrimmedString(record.collection_slug),
     collection_name: toTrimmedString(record.collection_name),
@@ -734,7 +859,37 @@ function toDatabaseRow(record) {
     explanation_text: toTrimmedString(record.explanation_text),
     english_narrator: toTrimmedString(record.english_narrator),
     scholar_name: toTrimmedString(record.scholar_name),
+    scholar_slug: toTrimmedString(record.scholar_slug),
+    scholar_name_ar: toTrimmedString(record.scholar_name_ar),
+    scholar_name_en: toTrimmedString(record.scholar_name_en),
+    scholar_full_name: toTrimmedString(record.scholar_full_name),
+    scholar_death_year: toInteger(record.scholar_death_year),
+    madhhab: toTrimmedString(record.madhhab),
+    creed_school: toTrimmedString(record.creed_school),
+    work_slug: toTrimmedString(record.work_slug),
+    work_title: toTrimmedString(record.work_title),
+    work_title_ar: toTrimmedString(record.work_title_ar),
+    work_title_en: toTrimmedString(record.work_title_en),
+    work_author: toTrimmedString(record.work_author),
+    work_language: toTrimmedString(record.work_language),
+    collection_title: toTrimmedString(record.collection_title),
+    website_name: toTrimmedString(record.website_name),
+    volume: toTrimmedString(record.volume),
+    page_range: toTrimmedString(record.page_range),
+    chapter_title: toTrimmedString(record.chapter_title),
+    section_title: toTrimmedString(record.section_title),
     fatwa_reference: toTrimmedString(record.fatwa_reference || record.fatwa_number || record.reference_number),
+    fatwa_number: toTrimmedString(record.fatwa_number || record.fatwa_reference || record.reference_number),
+    question_number: toTrimmedString(record.question_number),
+    lecture_title: toTrimmedString(record.lecture_title),
+    lecture_date: toTrimmedString(record.lecture_date),
+    timestamp_start: toTrimmedString(record.timestamp_start),
+    timestamp_end: toTrimmedString(record.timestamp_end),
+    question_text: toTrimmedString(record.question_text),
+    answer_text: toTrimmedString(record.answer_text),
+    summary_text: toTrimmedString(record.summary_text),
+    quote_text: toTrimmedString(record.quote_text),
+    language: toTrimmedString(record.language),
     grade: toTrimmedString(record.grade),
     translator: toTrimmedString(record.translator),
     translation_name: toTrimmedString(record.translation_name),
@@ -750,10 +905,17 @@ function toDatabaseRow(record) {
     attribution_url: toTrimmedString(record.attribution_url),
     requires_attribution: toBoolean(record.requires_attribution, false),
     requires_sharealike_review: toBoolean(record.requires_sharealike_review, false),
+    publisher: toTrimmedString(record.publisher),
+    edition: toTrimmedString(record.edition),
     dataset_name: toTrimmedString(record.dataset_name),
     dataset_version: toTrimmedString(record.dataset_version),
     dataset_url: toTrimmedString(record.dataset_url),
     original_source: toTrimmedString(record.original_source),
+    source_usage_notes: toTrimmedString(record.source_usage_notes),
+    admin_review_status: toTrimmedString(record.admin_review_status),
+    review_notes: toTrimmedString(record.review_notes),
+    reviewed_by: toTrimmedString(record.reviewed_by),
+    reviewed_at: record.reviewed_at || null,
     import_batch_id: toTrimmedString(record.import_batch_id),
     topic_tags: normalizeTopicTags(record.topic_tags),
     approved_for_answers: toBoolean(record.approved_for_answers, false),

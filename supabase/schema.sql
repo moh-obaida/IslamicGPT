@@ -6,6 +6,8 @@
 create table if not exists public.islamic_sources (
   id text primary key,
   source_type text not null,
+  source_kind text,
+  work_type text,
   title text,
   collection_slug text,
   collection_name text,
@@ -56,7 +58,37 @@ create table if not exists public.islamic_sources (
   explanation_text text,
   english_narrator text,
   scholar_name text,
+  scholar_slug text,
+  scholar_name_ar text,
+  scholar_name_en text,
+  scholar_full_name text,
+  scholar_death_year integer,
+  madhhab text,
+  creed_school text,
+  work_slug text,
+  work_title text,
+  work_title_ar text,
+  work_title_en text,
+  work_author text,
+  work_language text,
+  collection_title text,
+  website_name text,
+  volume text,
+  page_range text,
+  chapter_title text,
+  section_title text,
   fatwa_reference text,
+  fatwa_number text,
+  question_number text,
+  lecture_title text,
+  lecture_date text,
+  timestamp_start text,
+  timestamp_end text,
+  question_text text,
+  answer_text text,
+  summary_text text,
+  quote_text text,
+  language text,
   grade text,
   translator text,
   translation_name text,
@@ -72,10 +104,17 @@ create table if not exists public.islamic_sources (
   attribution_url text,
   requires_attribution boolean default false,
   requires_sharealike_review boolean default false,
+  publisher text,
+  edition text,
   dataset_name text,
   dataset_version text,
   dataset_url text,
   original_source text,
+  source_usage_notes text,
+  admin_review_status text,
+  review_notes text,
+  reviewed_by text,
+  reviewed_at timestamptz,
   import_batch_id text,
   topic_tags text[] default '{}'::text[],
   approved_for_answers boolean not null default true,
@@ -88,6 +127,8 @@ create table if not exists public.islamic_sources (
 );
 
 create index if not exists islamic_sources_source_type_idx on public.islamic_sources (source_type);
+create index if not exists islamic_sources_source_kind_idx on public.islamic_sources (source_kind);
+create index if not exists islamic_sources_work_type_idx on public.islamic_sources (work_type);
 create index if not exists islamic_sources_collection_slug_idx on public.islamic_sources (collection_slug);
 create index if not exists islamic_sources_collection_name_idx on public.islamic_sources (collection_name);
 create index if not exists islamic_sources_book_id_idx on public.islamic_sources (book_id);
@@ -108,12 +149,23 @@ create index if not exists islamic_sources_tafsir_edition_slug_idx on public.isl
 create index if not exists islamic_sources_tafsir_book_name_idx on public.islamic_sources (tafsir_book_name);
 create index if not exists islamic_sources_tafsir_author_idx on public.islamic_sources (tafsir_author);
 create index if not exists islamic_sources_tafsir_language_idx on public.islamic_sources (tafsir_language);
+create index if not exists islamic_sources_scholar_slug_idx on public.islamic_sources (scholar_slug);
+create index if not exists islamic_sources_scholar_name_en_idx on public.islamic_sources (scholar_name_en);
+create index if not exists islamic_sources_scholar_name_ar_idx on public.islamic_sources (scholar_name_ar);
+create index if not exists islamic_sources_work_slug_idx on public.islamic_sources (work_slug);
+create index if not exists islamic_sources_work_title_idx on public.islamic_sources (work_title);
+create index if not exists islamic_sources_fatwa_number_idx on public.islamic_sources (fatwa_number);
+create index if not exists islamic_sources_question_number_idx on public.islamic_sources (question_number);
+create index if not exists islamic_sources_language_idx on public.islamic_sources (language);
+create index if not exists islamic_sources_madhhab_idx on public.islamic_sources (madhhab);
+create index if not exists islamic_sources_creed_school_idx on public.islamic_sources (creed_school);
 create index if not exists islamic_sources_translator_idx on public.islamic_sources (translator);
 create index if not exists islamic_sources_translation_name_idx on public.islamic_sources (translation_name);
 create index if not exists islamic_sources_translation_language_idx on public.islamic_sources (translation_language);
 create index if not exists islamic_sources_license_status_idx on public.islamic_sources (license_status);
 create index if not exists islamic_sources_approved_idx on public.islamic_sources (approved_for_answers);
 create index if not exists islamic_sources_verified_idx on public.islamic_sources (verified_by_admin);
+create index if not exists islamic_sources_admin_review_status_idx on public.islamic_sources (admin_review_status);
 create index if not exists islamic_sources_admin_managed_idx on public.islamic_sources (admin_managed);
 create index if not exists islamic_sources_dataset_name_idx on public.islamic_sources (dataset_name);
 create index if not exists islamic_sources_import_batch_idx on public.islamic_sources (import_batch_id);
@@ -136,6 +188,17 @@ create index if not exists islamic_sources_search_tsv_idx on public.islamic_sour
     coalesce(tafsir_author, '') || ' ' ||
     coalesce(tafsir_author_ar, '') || ' ' ||
     coalesce(tafsir_author_en, '') || ' ' ||
+    coalesce(source_kind, '') || ' ' ||
+    coalesce(work_type, '') || ' ' ||
+    coalesce(scholar_name, '') || ' ' ||
+    coalesce(scholar_name_en, '') || ' ' ||
+    coalesce(scholar_name_ar, '') || ' ' ||
+    coalesce(scholar_full_name, '') || ' ' ||
+    coalesce(work_title, '') || ' ' ||
+    coalesce(work_title_ar, '') || ' ' ||
+    coalesce(work_title_en, '') || ' ' ||
+    coalesce(chapter_title, '') || ' ' ||
+    coalesce(section_title, '') || ' ' ||
     coalesce(chapter_name, '') || ' ' ||
     coalesce(chapter_name_ar, '') || ' ' ||
     coalesce(chapter_name_en, '') || ' ' ||
@@ -144,9 +207,33 @@ create index if not exists islamic_sources_search_tsv_idx on public.islamic_sour
     coalesce(arabic_text, '') || ' ' ||
     coalesce(translation_text, '') || ' ' ||
     coalesce(explanation_text, '') || ' ' ||
+    coalesce(question_text, '') || ' ' ||
+    coalesce(answer_text, '') || ' ' ||
+    coalesce(summary_text, '') || ' ' ||
+    coalesce(quote_text, '') || ' ' ||
     coalesce(english_narrator, '') || ' ' ||
     coalesce(translator, '') || ' ' ||
     coalesce(translation_name, '')
+  )
+);
+create index if not exists islamic_sources_scholar_search_tsv_idx on public.islamic_sources using gin (
+  to_tsvector(
+    'simple',
+    coalesce(title, '') || ' ' ||
+    coalesce(scholar_name_en, '') || ' ' ||
+    coalesce(scholar_name_ar, '') || ' ' ||
+    coalesce(scholar_full_name, '') || ' ' ||
+    coalesce(work_title, '') || ' ' ||
+    coalesce(work_title_ar, '') || ' ' ||
+    coalesce(work_title_en, '') || ' ' ||
+    coalesce(chapter_title, '') || ' ' ||
+    coalesce(section_title, '') || ' ' ||
+    coalesce(question_text, '') || ' ' ||
+    coalesce(answer_text, '') || ' ' ||
+    coalesce(arabic_text, '') || ' ' ||
+    coalesce(translation_text, '') || ' ' ||
+    coalesce(summary_text, '') || ' ' ||
+    coalesce(quote_text, '')
   )
 );
 create index if not exists islamic_sources_tafsir_search_tsv_idx on public.islamic_sources using gin (
