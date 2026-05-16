@@ -10,6 +10,8 @@ const { buildIslamicSourceIndex } = require('./src/sourceStore');
 let serverProcess;
 let baseUrl;
 let sourceRoot;
+let mockOllamaServer;
+let mockOllamaBaseUrl;
 
 const ADMIN_EMAIL = 'owner@example.com';
 const ADMIN_PASSWORD = 'correct-password';
@@ -23,6 +25,16 @@ function getFreePort() {
       const { port } = server.address();
       server.close(() => resolve(port));
     });
+  });
+}
+
+function readRequestBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+    req.on('end', () => resolve(body));
   });
 }
 
@@ -52,13 +64,15 @@ before(async () => {
     {
       id: 'seed-hadith-approved',
       source_type: 'hadith',
-      title: 'Intention hadith seed',
+      title: 'Actions are judged by intention',
       collection_name: 'Sahih Seed',
       hadith_number: '1',
       grade: 'Sahih',
+      arabic_text: 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ',
       translation_text: 'Actions are judged by intention.',
       verified_by_admin: true,
       approved_for_answers: true,
+      topic_tags: ['intention', 'niyyah'],
     },
     {
       id: 'seed-hadith-unapproved',
@@ -73,6 +87,34 @@ before(async () => {
   ], null, 2));
   buildIslamicSourceIndex({ root: sourceRoot, allowTestSources: true, write: true });
 
+  const ollamaPort = await getFreePort();
+  mockOllamaBaseUrl = `http://127.0.0.1:${ollamaPort}`;
+  mockOllamaServer = http.createServer(async (req, res) => {
+    if (req.url === '/api/tags' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ models: [{ name: 'mock-local-model' }] }));
+      return;
+    }
+
+    if (req.url === '/api/generate' && req.method === 'POST') {
+      const payload = JSON.parse(await readRequestBody(req) || '{}');
+      const prompt = String(payload.prompt || '');
+      let responseText = 'I can only answer from approved sources.';
+
+      if (/Explain the hadith about intention simply/i.test(prompt)) {
+        responseText = 'The approved source explains that actions are judged by intention. In Sahih Seed, Hadith 1, the source meaning is: "Actions are judged by intention." This shows that deeds are evaluated according to the intention behind them.';
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ response: responseText }));
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not_found' }));
+  });
+  await new Promise((resolve) => mockOllamaServer.listen(ollamaPort, resolve));
+
   const port = await getFreePort();
   baseUrl = `http://127.0.0.1:${port}`;
   serverProcess = spawn(process.execPath, ['backend/server.js'], {
@@ -83,6 +125,7 @@ before(async () => {
       ADMIN_PASSWORD,
       JWT_SECRET,
       ISLAMIC_SOURCES_ROOT: sourceRoot,
+      OLLAMA_BASE_URL: mockOllamaBaseUrl,
       PORT: String(port),
       MAX_CHAT_REQUEST_BYTES: '4096',
     },
@@ -93,6 +136,7 @@ before(async () => {
 
 after(() => {
   if (serverProcess) serverProcess.kill();
+  if (mockOllamaServer) mockOllamaServer.close();
   if (sourceRoot) fs.rmSync(sourceRoot, { recursive: true, force: true });
 });
 
@@ -155,6 +199,7 @@ test('unknown mode names do not bypass non-Islamic request filtering', async () 
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.isIslamicQuestion, false);
   assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.confidence, 'normal_chat');
 });
 
 test('GET /api/sources returns only approved indexed sources', async () => {
@@ -164,6 +209,22 @@ test('GET /api/sources returns only approved indexed sources', async () => {
   assert.strictEqual(response.status, 200);
   assert(body.sources.some((source) => source.id === 'seed-hadith-approved'));
   assert(!body.sources.some((source) => source.id === 'seed-hadith-unapproved'));
+  assert.strictEqual(body.sourceBackend, 'local');
+});
+
+test('GET /health and /api/health expose local fallback supabase status', async () => {
+  const healthResponse = await fetch(`${baseUrl}/health`);
+  const healthBody = await healthResponse.json();
+  const apiHealthResponse = await fetch(`${baseUrl}/api/health`);
+  const apiHealthBody = await apiHealthResponse.json();
+
+  assert.strictEqual(healthResponse.status, 200);
+  assert.strictEqual(apiHealthResponse.status, 200);
+  assert.strictEqual(healthBody.services.backend.status, 'online');
+  assert.strictEqual(healthBody.services.local_ai.status, 'online');
+  assert.strictEqual(healthBody.services.source_mode, 'local_fallback');
+  assert.strictEqual(healthBody.services.supabase.configured, false);
+  assert.strictEqual(apiHealthBody.services.source_mode, 'local_fallback');
 });
 
 test('admin login rejects wrong password', async () => {
@@ -250,9 +311,9 @@ test('admin search-test returns matches without calling Ollama', async () => {
   assert(body.matches.some((source) => source.id === 'admin-valid-unavailable-hadith'));
 });
 
-test('/api/chat still answers direct approved Hadith matches without Ollama in fast mode', async () => {
+test('/api/chat still answers direct approved Hadith lookups without Ollama in fast mode', async () => {
   const { response, body } = await postJson('/api/chat', {
-    message: 'remote intention',
+    message: 'Give me a hadith about intention',
     mode: 'hadith_mode',
     modelMode: 'fast',
   });
@@ -260,5 +321,80 @@ test('/api/chat still answers direct approved Hadith matches without Ollama in f
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.errorState, null);
   assert.strictEqual(body.llmCalled, false);
-  assert.strictEqual(body.resolvedModelMode, 'direct_source');
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+});
+
+test('/api/chat blocks Islamic answers when no approved source exists', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Give me a hadith about xyzabcunknown',
+    mode: 'hadith_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.confidence, 'no_approved_source_found');
+  assert.strictEqual(body.hallucinationGuard.status, 'blocked');
+  assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
+  assert.strictEqual(body.sourceCards.length, 0);
+  assert.strictEqual(body.answer.includes('I could not find enough reliable evidence in the approved sources.'), true);
+});
+
+test('/api/chat uses template answers for direct source lookup', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Give me a hadith about intention',
+    mode: 'hadith_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.confidence, 'source_backed');
+  assert.strictEqual(body.hallucinationGuard.status, 'passed');
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sourceCards.length > 0, true);
+  assert.strictEqual(body.answer.includes('A relevant hadith is found in Sahih Seed, Hadith 1.'), true);
+});
+
+test('/api/chat uses model with validation for explanations', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Explain the hadith about intention simply',
+    mode: 'hadith_mode',
+    modelMode: 'balanced',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, true);
+  assert.strictEqual(body.confidence, 'source_backed');
+  assert.strictEqual(body.hallucinationGuard.status, 'passed');
+  assert.strictEqual(body.hallucinationGuard.method, 'model_with_validation');
+  assert.strictEqual(body.sourceCards.length > 0, true);
+  assert.strictEqual(body.answer.includes('Actions are judged by intention.'), true);
+});
+
+test('/api/chat adds scholar note to sensitive no-source questions', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Is my prayer valid if I forgot something xyzabc?',
+    mode: 'fiqh_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.confidence, 'no_approved_source_found');
+  assert.strictEqual(body.hallucinationGuard.status, 'blocked');
+  assert.strictEqual(body.answer.includes('Please consult a qualified scholar'), true);
+});
+
+test('/api/chat keeps hello as normal chat without source requirements', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'hello',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.isIslamicQuestion, false);
+  assert.strictEqual(body.confidence, 'normal_chat');
+  assert.strictEqual(body.hallucinationGuard.status, 'not_required');
+  assert.strictEqual(body.llmCalled, false);
 });

@@ -1,0 +1,14 @@
+.env
+.env.*
+backend/.env
+backend/.env.*
+node_modules/
+backend/node_modules/
+*.log
+*.bak
+*.save
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/imports/
+data/dumps/

@@ -93,7 +93,7 @@ function typeGroupMatches(sourceType, group) {
 }
 
 function exactReference(source) {
-  return source.reference_number || source.fatwa_number || source.page_number || source.timestamp || source.url || source.local_reference || '';
+  return source.reference_number || source.fatwa_reference || source.fatwa_number || source.page_number || source.timestamp || source.source_url || source.url || source.local_reference || '';
 }
 
 function copyCitation(source) {
@@ -103,7 +103,7 @@ function copyCitation(source) {
   }
 
   if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
-    return `${source.collection_name || 'Hadith'} #${source.hadith_number || 'N/A'}`;
+    return `${source.collection_name || 'Hadith'} #${source.hadith_number || source.hadith_number_global || source.hadith_number_in_book || 'N/A'}`;
   }
 
   if (['scholar_statement', 'fatwa', 'book', 'lecture', 'video_transcript', 'educational_explanation'].includes(source.source_type)) {
@@ -117,17 +117,33 @@ function publicSourceCard(source) {
   return {
     id: source.id,
     source_type: source.source_type,
+    type: source.type || source.source_type,
     title: source.title || source.source_title || source.collection_name || source.document_title || source.source_name || source.id,
     source_title: source.source_title,
     collection_name: source.collection_name,
+    book_name: source.book_name,
+    chapter_name: source.chapter_name,
     surah_name_en: source.surah_name_en,
     surah_name_ar: source.surah_name_ar,
-    surah_number: source.surah_number,
-    ayah_number: source.ayah_number,
+    surah: source.surah || source.surah_number,
+    ayah: source.ayah || source.ayah_number,
+    surah_number: source.surah || source.surah_number,
+    ayah_number: source.ayah || source.ayah_number,
     ayah_range: source.ayah_range,
-    hadith_number: source.hadith_number,
+    hadith_number: source.hadith_number || source.hadith_number_global || source.hadith_number_in_book,
+    hadith_number_global: source.hadith_number_global,
+    hadith_number_in_book: source.hadith_number_in_book,
     hadith_number_unavailable: source.hadith_number_unavailable,
+    arabic_text: source.arabic_text,
+    translation_text: source.translation_text,
     scholar_name: source.scholar_name,
+    fatwa_reference: source.fatwa_reference || source.fatwa_number || source.reference_number,
+    topic_tags: Array.isArray(source.topic_tags) ? source.topic_tags : [],
+    approved_for_answers: source.approved_for_answers === true,
+    verified_by_admin: source.verified_by_admin === true,
+    admin_managed: source.admin_managed === true,
+    source_url: source.source_url || source.url || null,
+    metadata: source.metadata || {},
     exact_reference: exactReference(source),
     grade: source.grade,
     approved_status: source.verified_by_admin && source.approved_for_answers ? 'approved' : 'not_approved',
