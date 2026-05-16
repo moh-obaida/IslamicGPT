@@ -240,16 +240,39 @@ function verseNumber(verse = {}, index = 0) {
     verse.ayah_number,
     verse.verse_number,
     verse.number_in_surah,
+    verse.number,
     verse.id,
     index + 1,
   );
 }
 
-function globalVerseNumber(verse = {}) {
+function fileGlobalVerseNumber(filePath) {
+  const match = String(filePath || '').replace(/\\/g, '/').match(/\/dist\/verses\/(?:\d+\/)?(\d+)\.json$/i);
+  return match ? toInteger(match[1]) : null;
+}
+
+function globalVerseNumber(verse = {}, filePath = null) {
+  const chapterId = pickNumber(verse.chapter?.id, verse.chapter_id, verse.surah, verse.surah_number);
+  const localNumber = pickNumber(verse.number, verse.ayah, verse.aya, verse.ayah_number, verse.verse_number, verse.number_in_surah);
+  const fileGlobal = fileGlobalVerseNumber(filePath);
+
+  if (chapterId && localNumber !== null) {
+    return pickNumber(
+      verse.ayah_global_number,
+      verse.global_number,
+      verse.global_id,
+      fileGlobal,
+      verse.id,
+      verse.absolute_number,
+    );
+  }
+
   return pickNumber(
     verse.ayah_global_number,
     verse.global_number,
     verse.global_id,
+    fileGlobal,
+    verse.id,
     verse.number,
     verse.absolute_number,
   );
@@ -365,14 +388,16 @@ function scanFile(filePath, parsed, verseMap, chapterMap, translationLanguage = 
     const verses = extractVerseCandidates(chapter);
     verses.forEach((verse, index) => {
       const ref = parseVerseReference(verse.verse_key || verse.key || verse.reference);
-      const surah = pickNumber(ref.surah, verse.surah, verse.surah_number, verse.chapter_id, meta.surah);
-      const ayah = verseNumber(verse, index);
+      const chapterId = pickNumber(verse.chapter?.id, verse.chapter_id);
+      const chapterNumber = pickNumber(verse.number);
+      const surah = pickNumber(ref.surah, verse.surah, verse.surah_number, chapterId, meta.surah);
+      const ayah = (chapterId && chapterNumber !== null) ? chapterNumber : verseNumber(verse, index);
       const text = extractVerseText(verse, { englishContext, translationLanguage });
       if (addOrMergeVerse(verseMap, {
         ...meta,
         surah,
         ayah,
-        ayah_global_number: globalVerseNumber(verse),
+        ayah_global_number: globalVerseNumber(verse, filePath),
         juz: pickNumber(verse.juz, verse.juz_number),
         hizb: pickString(verse.hizb, verse.hizb_quarter),
         page_number: pickNumber(verse.page, verse.page_number),
@@ -386,13 +411,15 @@ function scanFile(filePath, parsed, verseMap, chapterMap, translationLanguage = 
   if (!chapters.length && directVerses.length) {
     directVerses.forEach((verse, index) => {
       const ref = parseVerseReference(verse.verse_key || verse.key || verse.reference);
-      const surah = pickNumber(ref.surah, verse.surah, verse.surah_number, verse.chapter_id);
-      const ayah = verseNumber(verse, index);
+      const chapterId = pickNumber(verse.chapter?.id, verse.chapter_id);
+      const chapterNumber = pickNumber(verse.number);
+      const surah = pickNumber(ref.surah, verse.surah, verse.surah_number, chapterId);
+      const ayah = (chapterId && chapterNumber !== null) ? chapterNumber : verseNumber(verse, index);
       const text = extractVerseText(verse, { englishContext, translationLanguage });
       if (addOrMergeVerse(verseMap, {
         surah,
         ayah,
-        ayah_global_number: globalVerseNumber(verse),
+        ayah_global_number: globalVerseNumber(verse, filePath),
         juz: pickNumber(verse.juz, verse.juz_number),
         hizb: pickString(verse.hizb, verse.hizb_quarter),
         page_number: pickNumber(verse.page, verse.page_number),
@@ -407,13 +434,17 @@ function scanFile(filePath, parsed, verseMap, chapterMap, translationLanguage = 
     const ref = parseVerseReference(parsed.verse_key || parsed.key || parsed.reference);
     const meta = chapterMeta(parsed.chapter || parsed.surah || {}, englishContext);
     const surah = pickNumber(ref.surah, parsed.surah, parsed.surah_number, parsed.chapter_id, meta.surah);
-    const ayah = pickNumber(ref.ayah, parsed.ayah, parsed.ayah_number, parsed.verse_number, parsed.id);
+    const chapterId = pickNumber(parsed.chapter?.id, parsed.chapter_id);
+    const chapterNumber = pickNumber(parsed.number);
+    const ayah = (chapterId && chapterNumber !== null)
+      ? chapterNumber
+      : pickNumber(ref.ayah, parsed.ayah, parsed.ayah_number, parsed.verse_number, parsed.id);
     const text = extractVerseText(parsed, { englishContext, translationLanguage });
     if (addOrMergeVerse(verseMap, {
       ...meta,
       surah,
       ayah,
-      ayah_global_number: globalVerseNumber(parsed),
+      ayah_global_number: globalVerseNumber(parsed, filePath),
       juz: pickNumber(parsed.juz, parsed.juz_number),
       hizb: pickString(parsed.hizb, parsed.hizb_quarter),
       page_number: pickNumber(parsed.page, parsed.page_number),
@@ -516,6 +547,14 @@ function normalizeQuranDataset(rootDir, options = {}) {
       if (translationLanguage === 'en' && row.translation_text && !translationMatchesLanguage(row.translation_text, 'en')) {
         warnings.push(`${row.id}: translation_text does not appear to match requested translation_language=en.`);
       }
+      const records = toArray(mergedEntry.metadata_records || mergedEntry.original_record);
+      const suspicious = records.some((record) => {
+        const chapterId = pickNumber(record?.chapter?.id, record?.chapter_id);
+        const localNumber = pickNumber(record?.number);
+        const globalId = pickNumber(record?.id);
+        return chapterId && localNumber !== null && globalId !== null && row.ayah_number === globalId && globalId !== localNumber;
+      });
+      if (suspicious) warnings.push(`${row.id}: ayah_number may reflect a global verse id instead of chapter-local verse.number.`);
       return row;
     })
     .filter((row) => {
