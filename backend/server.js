@@ -189,9 +189,12 @@ function buildTemplateAnswer(source) {
 
   if (['quran', 'quran_translation', 'tafsir'].includes(source.source_type)) {
     const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
+    const verseLabel = source.surah_name_en && (source.surah_number || source.surah) && (source.ayah_number || source.ayah)
+      ? `${source.surah_name_en} ${ref}`
+      : `Quran ${ref}`;
+    const translationCredit = source.translation_name || source.translator || '';
     return [
-      `A relevant Quran verse is ${ref}.`,
-      source.title ? `Title:\n${source.title}` : '',
+      `A relevant Quran verse is ${verseLabel}.`,
       '',
       'Arabic:',
       source.arabic_text || 'Arabic text is not available in the approved source record.',
@@ -201,6 +204,9 @@ function buildTemplateAnswer(source) {
       '',
       'Source:',
       `Quran ${ref}`,
+      translationCredit ? '' : null,
+      translationCredit ? 'Translation:' : null,
+      translationCredit || null,
     ].filter(Boolean).join('\n');
   }
 
@@ -227,7 +233,9 @@ function templateSourceResponse({ sources, mode, modelMode, classification, sour
     modelUsed: null,
     modelSelectionReason: 'Direct source lookup answered from approved source fields without model generation.',
     isIslamicQuestion: true,
-    confidence: resolveIslamicConfidence({ sources, classification }),
+    confidence: ['quran', 'quran_translation'].includes(sources[0]?.source_type)
+      ? 'source_backed'
+      : resolveIslamicConfidence({ sources, classification }),
     sources,
     sourceCards: formatSourceCards(sources),
     warnings: sourceWarnings(sources, classification, warnings),

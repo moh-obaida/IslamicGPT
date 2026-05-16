@@ -85,6 +85,29 @@ before(async () => {
       approved_for_answers: false,
     },
   ], null, 2));
+  fs.writeFileSync(path.join(sourceRoot, 'quran', 'seed.json'), JSON.stringify([
+    {
+      id: 'quran-2-255',
+      source_type: 'quran',
+      title: 'Al-Baqarah 2:255',
+      collection_name: 'Quran',
+      surah: 2,
+      ayah: 255,
+      surah_number: 2,
+      ayah_number: 255,
+      surah_name_ar: 'البقرة',
+      surah_name_en: 'Al-Baqarah',
+      arabic_text: 'الله لا إله إلا هو الحي القيوم',
+      translation_text: 'Allah - there is no deity except Him, the Ever-Living, the Sustainer of existence.',
+      translator: 'Umm Muhammad',
+      translation_name: 'Saheeh International',
+      translation_source: 'Tanzil',
+      license_status: 'CC-BY-SA-4.0',
+      verified_by_admin: true,
+      approved_for_answers: true,
+      topic_tags: ['ayat al-kursi', 'kursi'],
+    },
+  ], null, 2));
   buildIslamicSourceIndex({ root: sourceRoot, allowTestSources: true, write: true });
 
   const ollamaPort = await getFreePort();
@@ -354,6 +377,22 @@ test('/api/chat uses template answers for direct source lookup', async () => {
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.sourceCards.length > 0, true);
   assert.strictEqual(body.answer.includes('A relevant hadith is found in Sahih Seed, Hadith 1.'), true);
+});
+
+test('/api/chat uses template answers for direct Quran lookups without Ollama', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Give me Ayat al-Kursi',
+    mode: 'quran_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.confidence, 'source_backed');
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.answer.includes('A relevant Quran verse is Al-Baqarah 2:255.'), true);
+  assert.strictEqual(body.answer.includes('Translation:\nSaheeh International'), true);
+  assert.strictEqual(body.sourceCards[0].metadata.translation_source, 'Tanzil');
 });
 
 test('/api/chat uses model with validation for explanations', async () => {

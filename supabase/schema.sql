@@ -31,6 +31,15 @@ create table if not exists public.islamic_sources (
   hadith_number_in_chapter text,
   surah integer,
   ayah integer,
+  surah_number integer,
+  ayah_number integer,
+  ayah_global_number integer,
+  surah_name_ar text,
+  surah_name_en text,
+  juz integer,
+  hizb text,
+  page_number integer,
+  revelation_place text,
   arabic_text text,
   translation_text text,
   english_narrator text,
@@ -38,8 +47,21 @@ create table if not exists public.islamic_sources (
   fatwa_reference text,
   grade text,
   translator text,
+  translation_name text,
+  translation_language text,
+  translation_source text,
+  translation_source_url text,
+  quran_text_style text,
+  quran_arabic_source text,
+  quran_edition text,
+  license_status text,
+  attribution_text text,
+  attribution_url text,
+  requires_attribution boolean default false,
+  requires_sharealike_review boolean default false,
   dataset_name text,
   dataset_version text,
+  dataset_url text,
   original_source text,
   import_batch_id text,
   topic_tags text[] default '{}'::text[],
@@ -60,6 +82,17 @@ create index if not exists islamic_sources_chapter_id_idx on public.islamic_sour
 create index if not exists islamic_sources_hadith_number_idx on public.islamic_sources (hadith_number);
 create index if not exists islamic_sources_hadith_number_global_idx on public.islamic_sources (hadith_number_global);
 create index if not exists islamic_sources_hadith_number_in_book_idx on public.islamic_sources (hadith_number_in_book);
+create index if not exists islamic_sources_surah_idx on public.islamic_sources (surah);
+create index if not exists islamic_sources_ayah_idx on public.islamic_sources (ayah);
+create index if not exists islamic_sources_surah_number_idx on public.islamic_sources (surah_number);
+create index if not exists islamic_sources_ayah_number_idx on public.islamic_sources (ayah_number);
+create index if not exists islamic_sources_ayah_global_number_idx on public.islamic_sources (ayah_global_number);
+create index if not exists islamic_sources_surah_name_en_idx on public.islamic_sources (surah_name_en);
+create index if not exists islamic_sources_surah_name_ar_idx on public.islamic_sources (surah_name_ar);
+create index if not exists islamic_sources_translator_idx on public.islamic_sources (translator);
+create index if not exists islamic_sources_translation_name_idx on public.islamic_sources (translation_name);
+create index if not exists islamic_sources_translation_language_idx on public.islamic_sources (translation_language);
+create index if not exists islamic_sources_license_status_idx on public.islamic_sources (license_status);
 create index if not exists islamic_sources_approved_idx on public.islamic_sources (approved_for_answers);
 create index if not exists islamic_sources_verified_idx on public.islamic_sources (verified_by_admin);
 create index if not exists islamic_sources_admin_managed_idx on public.islamic_sources (admin_managed);
@@ -81,9 +114,25 @@ create index if not exists islamic_sources_search_tsv_idx on public.islamic_sour
     coalesce(chapter_name, '') || ' ' ||
     coalesce(chapter_name_ar, '') || ' ' ||
     coalesce(chapter_name_en, '') || ' ' ||
+    coalesce(surah_name_en, '') || ' ' ||
+    coalesce(surah_name_ar, '') || ' ' ||
     coalesce(arabic_text, '') || ' ' ||
     coalesce(translation_text, '') || ' ' ||
-    coalesce(english_narrator, '')
+    coalesce(english_narrator, '') || ' ' ||
+    coalesce(translator, '') || ' ' ||
+    coalesce(translation_name, '')
+  )
+);
+create index if not exists islamic_sources_quran_search_tsv_idx on public.islamic_sources using gin (
+  to_tsvector(
+    'simple',
+    coalesce(title, '') || ' ' ||
+    coalesce(surah_name_en, '') || ' ' ||
+    coalesce(surah_name_ar, '') || ' ' ||
+    coalesce(arabic_text, '') || ' ' ||
+    coalesce(translation_text, '') || ' ' ||
+    coalesce(translator, '') || ' ' ||
+    coalesce(translation_name, '')
   )
 );
 
