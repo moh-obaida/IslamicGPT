@@ -6,8 +6,10 @@
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
     "ingest": "node scripts/ingest-islamic-sources.js",
+    "supabase:seed": "node scripts/seed-supabase-essential-sources.js",
+    "supabase:import": "node scripts/import-json-sources-to-supabase.js",
     "test": "node --test",
-    "check": "node --check backend/server.js && node --check scripts/ingest-islamic-sources.js"
+    "check": "node --check backend/server.js && node --check backend/src/supabaseSourceDb.js && node --check scripts/ingest-islamic-sources.js && node --check scripts/seed-supabase-essential-sources.js && node --check scripts/import-json-sources-to-supabase.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4"

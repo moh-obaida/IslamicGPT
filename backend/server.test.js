@@ -164,6 +164,21 @@ test('GET /api/sources returns only approved indexed sources', async () => {
   assert.strictEqual(response.status, 200);
   assert(body.sources.some((source) => source.id === 'seed-hadith-approved'));
   assert(!body.sources.some((source) => source.id === 'seed-hadith-unapproved'));
+  assert.strictEqual(body.sourceBackend, 'local');
+});
+
+test('GET /health and /api/health expose local fallback supabase status', async () => {
+  const healthResponse = await fetch(`${baseUrl}/health`);
+  const healthBody = await healthResponse.json();
+  const apiHealthResponse = await fetch(`${baseUrl}/api/health`);
+  const apiHealthBody = await apiHealthResponse.json();
+
+  assert.strictEqual(healthResponse.status, 200);
+  assert.strictEqual(apiHealthResponse.status, 200);
+  assert.strictEqual(healthBody.services.backend.status, 'online');
+  assert.strictEqual(healthBody.services.source_mode, 'local_fallback');
+  assert.strictEqual(healthBody.services.supabase.configured, false);
+  assert.strictEqual(apiHealthBody.services.source_mode, 'local_fallback');
 });
 
 test('admin login rejects wrong password', async () => {

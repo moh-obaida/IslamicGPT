@@ -1,4 +1,5 @@
 const { loadIndexSources, normalizeText, sourceScore } = require('./sourceStore');
+const { searchSources } = require('./supabaseSourceDb');
 
 function modeAllowedTypes(mode) {
   return {
@@ -14,7 +15,7 @@ function modeAllowedTypes(mode) {
   }[mode] || null;
 }
 
-function searchIslamicKnowledgeBase(question, mode) {
+function searchLocalIslamicKnowledgeBase(question, mode, limit = 8) {
   const allowTestSources = String(process.env.ALLOW_TEST_SOURCES || 'false').toLowerCase() === 'true';
   const debug = { query: question, normalizedQuery: normalizeText(question), totalSearched: 0, matchedApproved: 0, rejected: [], modeFilter: mode, openWebDisabled: true };
   const all = loadIndexSources();
@@ -29,11 +30,74 @@ function searchIslamicKnowledgeBase(question, mode) {
     return true;
   });
 
-  const matches = approved.map((s) => ({ s, sc: sourceScore(s, question) })).filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 8).map((x) => x.s);
+  const matches = approved.map((s) => ({ s, sc: sourceScore(s, question) })).filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, limit).map((x) => x.s);
   debug.matchedApproved = matches.length;
   debug.matchedSourceIds = matches.map((m) => m.id);
 
   return { matches, debug };
 }
 
-module.exports = { searchIslamicKnowledgeBase };
+async function searchIslamicKnowledgeBase(question, mode, options = {}) {
+  const limit = Number(options.limit) || 8;
+  const local = searchLocalIslamicKnowledgeBase(question, mode, limit);
+  const debug = {
+    ...local.debug,
+    sourceBackend: local.matches.length ? 'local' : 'none',
+    local: {
+      matchedSourceIds: local.matches.map((match) => match.id),
+      matchedApproved: local.matches.length,
+    },
+    supabase: {
+      configured: false,
+      ok: false,
+      matchedSourceIds: [],
+      error: null,
+    },
+  };
+
+  try {
+    const supabase = await searchSources({
+      q: question,
+      type: mode,
+      limit,
+      approvedOnly: true,
+    });
+
+    debug.supabase = {
+      configured: supabase.configured === true,
+      ok: supabase.ok === true,
+      matchedSourceIds: (supabase.records || []).map((record) => record.id),
+      error: supabase.error || null,
+    };
+
+    if (supabase.ok && supabase.records.length) {
+      debug.matchedApproved = supabase.records.length;
+      debug.matchedSourceIds = supabase.records.map((record) => record.id);
+      debug.sourceBackend = 'supabase';
+      return {
+        matches: supabase.records,
+        debug,
+        sourceBackend: 'supabase',
+      };
+    }
+  } catch (error) {
+    debug.supabase = {
+      configured: true,
+      ok: false,
+      matchedSourceIds: [],
+      error: error.message,
+    };
+  }
+
+  return {
+    matches: local.matches,
+    debug,
+    sourceBackend: local.matches.length ? 'local' : 'none',
+  };
+}
+
+module.exports = {
+  modeAllowedTypes,
+  searchIslamicKnowledgeBase,
+  searchLocalIslamicKnowledgeBase,
+};

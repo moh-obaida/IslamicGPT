@@ -1,10 +1,27 @@
 const http = require('http');
 const crypto = require('crypto');
+const path = require('path');
+
+try {
+  const dotenv = require('dotenv');
+  dotenv.config({ path: path.join(__dirname, '.env') });
+  dotenv.config({ path: path.join(__dirname, '..', '.env') });
+  dotenv.config();
+} catch (_) {}
+
 const { callOllama, checkOllamaHealth } = require('./src/ollamaClient');
 const { resolveModelMode, modelTimeoutMs } = require('./src/modelRouter');
 const { searchIslamicKnowledgeBase } = require('./src/retrieval');
 const { formatSourceCards } = require('./src/sourceCards');
 const { validateIslamicCitations } = require('./src/citationValidation');
+const {
+  deleteSource,
+  getHealthSummary,
+  isSupabaseConfigured,
+  listSources,
+  searchSources,
+  upsertSource,
+} = require('./src/supabaseSourceDb');
 const {
   addAdminSource,
   buildIslamicSourceIndex,
@@ -39,16 +56,21 @@ const classifyIslamicQuestion = (q = '') => /(allah|quran|hadith|sunnah|fiqh|fat
 const detectLanguage = (m = '') => /[\u0600-\u06FF]/.test(m) ? 'arabic' : /[a-zA-Z]/.test(m) ? 'english' : 'auto';
 const fatwaRisk = (q = '') => /(divorce|marriage dispute|inheritance|contract|medical|oath|takfir|apostasy|legal|custody)/i.test(q);
 const wantsExplanation = (q = '') => /(explain|why|how|detail|detailed|compare|analyze|meaning|lesson|benefit|شرح|لماذا|كيف|تفصيل|قارن|معنى)/i.test(q);
+const wantsDirectEvidence = (q = '', mode = DEFAULT_MODE) => (
+  /(give|show|share|find|quote).*(hadith|quran|ayah|verse)/i.test(q)
+  || /^(hadith|quran|ayah|verse)\b/i.test(q.trim())
+  || (['hadith_mode', 'quran_mode'].includes(mode) && q.trim().split(/\s+/).length <= 8 && !wantsExplanation(q))
+);
 const isSupportedMode = (mode) => SUPPORTED_MODES.has(mode);
 const normalizeMode = (mode) => isSupportedMode(mode) ? mode : DEFAULT_MODE;
 const ADMIN_TOKEN_TTL_SECONDS = Number(process.env.ADMIN_TOKEN_TTL_SECONDS || 60 * 60 * 12);
 
 function buildPrompt({ question, mode, language, sources }) {
-  const context = sources.map((s) => `SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nSURAH:${s.surah_name_en || ''}\nSURAH NUMBER:${s.surah_number || ''}\nAYAH:${s.ayah_number || s.ayah_range || ''}\nCOLLECTION:${s.collection_name || ''}\nHADITH NUMBER:${s.hadith_number || (s.hadith_number_unavailable ? 'Hadith number not available in this source.' : '')}\nSCHOLAR:${s.scholar_name || ''}\nREFERENCE:${s.reference_number || s.fatwa_number || s.page_number || s.timestamp || s.local_reference || s.url || ''}\nARABIC:${s.arabic_text || ''}\nTRANSLATION:${s.translation_text || ''}`).join('\n\n');
+  const context = sources.map((s) => `SOURCE ID: ${s.id}\nTYPE:${s.source_type}\nTITLE:${s.title || s.source_title || ''}\nSURAH:${s.surah_name_en || ''}\nSURAH NUMBER:${s.surah_number || s.surah || ''}\nAYAH:${s.ayah_number || s.ayah || s.ayah_range || ''}\nCOLLECTION:${s.collection_name || ''}\nHADITH NUMBER:${s.hadith_number || (s.hadith_number_unavailable ? 'Hadith number not available in this source.' : '')}\nSCHOLAR:${s.scholar_name || ''}\nREFERENCE:${s.reference_number || s.fatwa_reference || s.fatwa_number || s.page_number || s.timestamp || s.local_reference || s.source_url || s.url || ''}\nTOPICS:${Array.isArray(s.topic_tags) ? s.topic_tags.join(', ') : ''}\nARABIC:${s.arabic_text || ''}\nTRANSLATION:${s.translation_text || ''}`).join('\n\n');
   return `SYSTEM:\nYou are IslamicGPT, a reliable Islamic knowledge assistant. Use only approved source context. If insufficient, return exactly: ${REFUSAL_MESSAGE}\n\nUSER QUESTION:\n${question}\nMODE:${mode}\nLANGUAGE:${language}\n\nAPPROVED SOURCE CONTEXT:\n${context}\n\nREQUIRED ANSWER FORMAT: Answer / Evidence from Quran / Evidence from Hadith / Scholarly Explanation / Explanation / Confidence`;
 }
 
-function noSourceResponse(mode, modelMode) {
+function noSourceResponse(mode, modelMode, sourceBackend = 'none') {
   return {
     answer: REFUSAL_MESSAGE,
     mode,
@@ -63,19 +85,20 @@ function noSourceResponse(mode, modelMode) {
     warnings: [],
     errorState: 'no_sources_found',
     llmCalled: false,
+    sourceBackend,
     validation: { passed: false, attempts: 0, issues: ['no_sources_found'] },
     loadingStagesCompleted: ['classified_question', 'searched_approved_sources'],
   };
 }
 
-function directSourceResponse({ source, mode, modelMode, sourceCards, loading }) {
+function directSourceResponse({ source, mode, modelMode, sourceCards, loading, sourceBackend }) {
   let answer = '';
 
   if (source.source_type === 'hadith') {
     const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
     answer = [
       'Answer:',
-      source.translation_text || source.arabic_text || 'The approved source text is available in the source card.',
+      source.translation_text ? `The Prophet ﷺ taught: "${source.translation_text}"` : (source.arabic_text || 'The approved source text is available in the source card.'),
       '',
       'Evidence from Hadith:',
       `${ref}.`,
@@ -83,13 +106,13 @@ function directSourceResponse({ source, mode, modelMode, sourceCards, loading })
       source.grade ? `Grade: ${source.grade}.` : '',
       '',
       'Explanation:',
-      'This is a direct source-based answer from the approved Islamic source database.',
+      'This answer is grounded only in the approved hadith source shown in the source card.',
       '',
       'Confidence: High',
     ].filter(Boolean).join('\n');
   } else if (source.source_type === 'quran') {
-    const ayah = source.ayah_number || source.ayah_range || '';
-    const ref = `${source.surah_name_en || 'Quran'}${source.surah_number ? ` ${source.surah_number}` : ''}${ayah ? `:${ayah}` : ''}`;
+    const ayah = source.ayah_number || source.ayah || source.ayah_range || '';
+    const ref = `${source.surah_name_en || source.title || 'Quran'}${source.surah_number || source.surah ? ` ${source.surah_number || source.surah}` : ''}${ayah ? `:${ayah}` : ''}`;
     answer = [
       'Answer:',
       source.translation_text || source.arabic_text || 'The approved Quran text is available in the source card.',
@@ -99,7 +122,7 @@ function directSourceResponse({ source, mode, modelMode, sourceCards, loading })
       source.arabic_text ? `Arabic: ${source.arabic_text}` : '',
       '',
       'Explanation:',
-      'This is a direct source-based answer from the approved Quran source database.',
+      'This answer is grounded only in the approved Quran source shown in the source card.',
       '',
       'Confidence: High',
     ].filter(Boolean).join('\n');
@@ -121,6 +144,7 @@ function directSourceResponse({ source, mode, modelMode, sourceCards, loading })
     warnings: [],
     errorState: null,
     llmCalled: false,
+    sourceBackend,
     validation: { passed: true, attempts: 0, issues: [] },
     loadingStagesCompleted: [...loading, 'built_source_context', 'validated_citations', 'prepared_answer'],
   };
@@ -228,21 +252,81 @@ function send(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Max-Age': '86400',
   });
   res.end(JSON.stringify(data));
 }
 
-function publicSourcesResponse(url) {
+function localSourcesResponse(url) {
   const q = url.searchParams.get('q') || '';
   const type = url.searchParams.get('type') || 'all';
-  const result = searchCompiledSources({ q, type, limit: 200 });
+  const limit = Number(url.searchParams.get('limit') || 200);
+  const result = searchCompiledSources({ q, type, limit });
   return {
-    generated_at: result.generated_at,
+    generated_at: result.generated_at || new Date().toISOString(),
     total: result.records.length,
     sources: result.records.map(publicSourceCard),
+    warnings: loadIngestWarnings(),
+    sourceBackend: 'local',
+  };
+}
+
+async function publicSourcesResponse(url) {
+  const q = url.searchParams.get('q') || '';
+  const type = url.searchParams.get('type') || 'all';
+  const limit = Number(url.searchParams.get('limit') || 200);
+
+  if (!isSupabaseConfigured()) return localSourcesResponse(url);
+
+  try {
+    const supabaseResult = q
+      ? await searchSources({ q, type, limit, approvedOnly: true })
+      : await listSources({ type, limit, offset: 0, approvedOnly: true });
+
+    if (supabaseResult.ok && supabaseResult.records.length) {
+      return {
+        generated_at: new Date().toISOString(),
+        total: supabaseResult.records.length,
+        sources: supabaseResult.records.map(publicSourceCard),
+        warnings: [],
+        sourceBackend: 'supabase',
+      };
+    }
+  } catch (error) {
+    console.error('Supabase public source lookup failed:', error.message);
+  }
+
+  return localSourcesResponse(url);
+}
+
+async function buildHealthPayload() {
+  const [ollama, supabase, sources] = await Promise.all([
+    checkOllamaHealth(),
+    getHealthSummary(),
+    Promise.resolve(listAllSourceRecords({ includeSourceMeta: false })),
+  ]);
+
+  return {
+    ok: true,
+    timestamp: Date.now(),
+    version: '0.2.0',
+    services: {
+      backend: { status: 'online' },
+      local_ai: { status: ollama.ok ? 'online' : 'offline', details: ollama.error || null },
+      rag: { status: sources.records.length > 0 ? 'ready' : 'empty', count: sources.records.length },
+      supabase: {
+        status: supabase.status,
+        configured: supabase.configured,
+        count: supabase.count,
+        approved: supabase.approved,
+        verified: supabase.verified,
+        byType: supabase.byType,
+        error: supabase.error,
+      },
+      source_mode: supabase.configured && supabase.status === 'ready' ? 'supabase' : 'local_fallback',
+    },
   };
 }
 
@@ -260,7 +344,18 @@ function handleAdminLogin(payload, res) {
   return send(res, 200, { token: signAdminToken(email), admin: true });
 }
 
-function allAdminSourceRecords() {
+async function allAdminSourceRecords() {
+  if (isSupabaseConfigured()) {
+    const supabase = await listSources({ limit: 500, offset: 0, approvedOnly: false });
+    if (supabase.ok) {
+      return {
+        sources: supabase.records,
+        warnings: loadIngestWarnings(),
+        sourceBackend: 'supabase',
+      };
+    }
+  }
+
   const { records, warnings } = listAllSourceRecords({ includeSourceMeta: true });
   return {
     sources: records.map((record) => {
@@ -271,14 +366,32 @@ function allAdminSourceRecords() {
       };
     }),
     warnings,
+    sourceBackend: 'local',
   };
 }
 
 function sendSourceMutationResult(res, result, successStatus = 200) {
   if (!result.ok) {
-    return send(res, result.status || 400, { errors: result.errors, errorState: 'source_validation_failed' });
+    return send(res, result.status || 400, {
+      errors: result.errors || (result.error ? [result.error] : ['Source mutation failed.']),
+      errorState: 'source_validation_failed',
+    });
   }
-  return send(res, successStatus, { source: result.source });
+  return send(res, successStatus, {
+    source: result.source || result.record,
+    sourceBackend: result.configured ? 'supabase' : 'local',
+  });
+}
+
+function normalizeSupabaseAdminPayload(payload, id) {
+  return {
+    ...(payload || {}),
+    id: String(id || payload?.id || `admin-${Date.now()}`).trim(),
+    source_type: String(payload?.source_type || payload?.type || '').trim(),
+    admin_managed: payload?.admin_managed !== false,
+    approved_for_answers: payload?.approved_for_answers === true,
+    verified_by_admin: payload?.verified_by_admin === true,
+  };
 }
 
 async function handleAdminSources(req, res, url) {
@@ -289,44 +402,55 @@ async function handleAdminSources(req, res, url) {
 
   try {
     if (pathname === '/api/admin/sources' && req.method === 'GET') {
-      return send(res, 200, allAdminSourceRecords());
+      return send(res, 200, await allAdminSourceRecords());
     }
 
     if (pathname === '/api/admin/sources' && req.method === 'POST') {
       const payload = await readJsonBody(req, res);
       if (!payload) return;
+      if (isSupabaseConfigured()) {
+        return sendSourceMutationResult(res, await upsertSource(normalizeSupabaseAdminPayload(payload)), 201);
+      }
       return sendSourceMutationResult(res, addAdminSource(payload), 201);
     }
 
     if (sourceIdMatch && req.method === 'PUT') {
       const payload = await readJsonBody(req, res);
       if (!payload) return;
+      if (isSupabaseConfigured()) {
+        return sendSourceMutationResult(res, await upsertSource(normalizeSupabaseAdminPayload(payload, decodeURIComponent(sourceIdMatch[1]))));
+      }
       return sendSourceMutationResult(res, updateAdminSource(decodeURIComponent(sourceIdMatch[1]), payload));
     }
 
     if (sourceIdMatch && req.method === 'DELETE') {
-      const result = deleteAdminSource(decodeURIComponent(sourceIdMatch[1]));
-      if (!result.ok) return send(res, result.status || 400, { errors: result.errors, errorState: 'source_delete_failed' });
-      return send(res, 200, { ok: true });
+      const result = isSupabaseConfigured()
+        ? await deleteSource(decodeURIComponent(sourceIdMatch[1]))
+        : deleteAdminSource(decodeURIComponent(sourceIdMatch[1]));
+      if (!result.ok) return send(res, result.status || 400, { errors: result.errors || (result.error ? [result.error] : []), errorState: 'source_delete_failed' });
+      return send(res, 200, { ok: true, sourceBackend: isSupabaseConfigured() ? 'supabase' : 'local' });
     }
 
     if (pathname === '/api/admin/sources/reindex' && req.method === 'POST') {
       const result = buildIslamicSourceIndex({ write: true });
+      const supabase = await getHealthSummary();
       return send(res, 200, {
         total_indexed: result.total_indexed,
         warnings: result.warnings,
         rejected_count: result.rejected_count,
+        supabase,
       });
     }
 
     if (pathname === '/api/admin/sources/search-test' && req.method === 'POST') {
       const payload = await readJsonBody(req, res);
       if (!payload) return;
-      const { matches, debug } = searchIslamicKnowledgeBase(String(payload.q || payload.query || ''), normalizeMode(payload.mode || DEFAULT_MODE));
+      const { matches, debug, sourceBackend } = await searchIslamicKnowledgeBase(String(payload.q || payload.query || ''), normalizeMode(payload.mode || DEFAULT_MODE));
       return send(res, 200, {
         matches,
         debug,
         llmCalled: false,
+        sourceBackend,
       });
     }
 
@@ -401,18 +525,18 @@ async function handleChat(payload, res) {
       });
     }
 
-    const { matches, debug } = searchIslamicKnowledgeBase(question, mode);
+    const { matches, debug, sourceBackend } = await searchIslamicKnowledgeBase(question, mode);
     loading.push('searched_approved_sources');
     if (!matches.length) {
-      const out = noSourceResponse(mode, modelMode);
+      const out = noSourceResponse(mode, modelMode, sourceBackend);
       if (DEBUG_SOURCES || payload.debug) out.debug = debug;
       return send(res, 200, out);
     }
 
     const sourceCards = formatSourceCards(matches);
     const directMatch = matches.find((m) => ['hadith', 'quran'].includes(m.source_type));
-    if (directMatch && !wantsExplanation(question) && String(modelMode).toLowerCase() === 'fast') {
-      const direct = directSourceResponse({ source: directMatch, mode, modelMode, sourceCards, loading });
+    if (directMatch && ((!wantsExplanation(question) && String(modelMode).toLowerCase() === 'fast') || wantsDirectEvidence(question, mode))) {
+      const direct = directSourceResponse({ source: directMatch, mode, modelMode, sourceCards, loading, sourceBackend });
       if (direct) {
         if (DEBUG_SOURCES || payload.debug) direct.debug = { ...debug, llmCalled: false, directSourceAnswer: true, openWebDisabled: true };
         return send(res, 200, direct);
@@ -447,6 +571,7 @@ async function handleChat(payload, res) {
         warnings: [],
         errorState: first.error,
         llmCalled: true,
+        sourceBackend,
         validation: { passed: false, attempts: 1, issues: [first.error] },
         loadingStagesCompleted: loading,
       });
@@ -482,6 +607,7 @@ async function handleChat(payload, res) {
         warnings: [],
         errorState: 'citation_validation_failed',
         llmCalled: true,
+        sourceBackend,
         validation: { passed: false, attempts, issues: validation.issues },
         loadingStagesCompleted: [...loading, 'prepared_answer'],
       });
@@ -505,6 +631,7 @@ async function handleChat(payload, res) {
       warnings,
       errorState: null,
       llmCalled: true,
+      sourceBackend,
       validation: { passed: true, attempts, issues: [] },
       loadingStagesCompleted: [...loading, 'prepared_answer'],
     };
@@ -536,19 +663,8 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (req.method === 'OPTIONS') return send(res, 204, {});
 
-  if (url.pathname === '/health' && req.method === 'GET') {
-    const ollama = await checkOllamaHealth();
-    const sources = listAllSourceRecords({ includeSourceMeta: false });
-    return send(res, 200, {
-      ok: true,
-      timestamp: Date.now(),
-      version: '0.2.0',
-      services: {
-        backend: { status: 'online' },
-        local_ai: { status: ollama.ok ? 'online' : 'offline', details: ollama.error || null },
-        rag: { status: sources.records.length > 0 ? 'ready' : 'empty', count: sources.records.length }
-      }
-    });
+  if ((url.pathname === '/health' || url.pathname === '/api/health') && req.method === 'GET') {
+    return send(res, 200, await buildHealthPayload());
   }
 
   if (url.pathname === '/api/local-ai/health' && req.method === 'GET') {
@@ -566,11 +682,11 @@ http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/sources' && req.method === 'GET') {
-    return send(res, 200, publicSourcesResponse(url));
+    return send(res, 200, await publicSourcesResponse(url));
   }
 
   if (url.pathname === '/api/sources/search' && req.method === 'GET') {
-    return send(res, 200, publicSourcesResponse(url));
+    return send(res, 200, await publicSourcesResponse(url));
   }
 
   if (url.pathname === '/api/admin/login' && req.method === 'POST') {
