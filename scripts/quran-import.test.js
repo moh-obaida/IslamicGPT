@@ -140,7 +140,18 @@ test('quran_mode maps to Quran source type', () => {
 
 test('direct Quran lookup intent is detected', () => {
   assert.strictEqual(classifyQuestion('Quran 2:255', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran Aya 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran Aya 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Quran Ayah 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran Ayah 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Quran verse 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Quran verse 2:152', 'islamic_search_mode').sourceType, 'quran');
+  assert.strictEqual(classifyQuestion('Ayah 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Aya 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('آية 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('ايه 2:152', 'islamic_search_mode').intent, 'direct_source_lookup');
   assert.strictEqual(classifyQuestion('Give me Ayat al-Kursi', 'islamic_search_mode').intent, 'direct_source_lookup');
+  assert.strictEqual(classifyQuestion('Explain Quran 2:152', 'islamic_search_mode').intent, 'explanation');
   assert.strictEqual(classifyQuestion('اشرح آية الكرسي', 'islamic_search_mode').intent, 'explanation');
 });
 
