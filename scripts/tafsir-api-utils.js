@@ -323,6 +323,29 @@ function buildNormalizedRow(entry, context, editionMetadata, options = {}) {
   };
 }
 
+
+function parseTafsirPathKind(rel = '') {
+  let match = rel.match(/^tafsir\/([^/]+)\/(\d+)\.json$/i);
+  if (match) return { kind: 'aggregate', editionSlug: match[1], surah: Number(match[2]), ayah: null };
+  match = rel.match(/^tafsir\/([^/]+)\/(\d+)\/(\d+)\.json$/i);
+  if (match) return { kind: 'ayah', editionSlug: match[1], surah: Number(match[2]), ayah: Number(match[3]) };
+  return { kind: 'other', editionSlug: null, surah: null, ayah: null };
+}
+
+function isExpectedMirrorDuplicate(existingFile, incomingFile, row) {
+  const existing = parseTafsirPathKind(existingFile);
+  const incoming = parseTafsirPathKind(incomingFile);
+  if (!existing.editionSlug || !incoming.editionSlug) return false;
+  if (existing.editionSlug !== incoming.editionSlug) return false;
+  if (existing.surah !== incoming.surah) return false;
+  if (Number(row?.ayah) !== Number(row?.ayah_number)) return false;
+  if (incoming.kind === 'ayah' && incoming.ayah !== Number(row?.ayah)) return false;
+  if (existing.kind === 'ayah' && existing.ayah !== Number(row?.ayah)) return false;
+  return (
+    (existing.kind === 'aggregate' && incoming.kind === 'ayah') ||
+    (existing.kind === 'ayah' && incoming.kind === 'aggregate')
+  );
+}
 function normalizeTafsirApiDataset(rootDir, options = {}) {
   const datasetRoot = path.resolve(rootDir || 'data/imports/tafsir-api');
   const files = collectJsonFiles(datasetRoot);
@@ -332,6 +355,7 @@ function normalizeTafsirApiDataset(rootDir, options = {}) {
   const rows = [];
   const rowsById = new Map();
   let filesAnalyzed = 0;
+  let duplicateMirrorRowsSkipped = 0;
 
   for (const file of files) {
     const context = pathContext(datasetRoot, file);
@@ -358,7 +382,20 @@ function normalizeTafsirApiDataset(rootDir, options = {}) {
       if (!editions.has(context.editionSlug)) warnings.push(`${context.rel}: edition metadata missing for ${context.editionSlug}.`);
       const existing = rowsById.get(row.id);
       if (existing) {
-        warnings.push(`Duplicate tafsir id "${row.id}" detected in ${context.rel}; canonical row from ${existing.metadata?.original_file || 'unknown'} retained.`);
+        const existingFile = existing.metadata?.original_file || '';
+        const expectedMirror = isExpectedMirrorDuplicate(existingFile, context.rel, row);
+        if (expectedMirror) {
+          duplicateMirrorRowsSkipped += 1;
+          const existingKind = parseTafsirPathKind(existingFile).kind;
+          const incomingKind = parseTafsirPathKind(context.rel).kind;
+          if (existingKind === 'ayah' && incomingKind === 'aggregate') {
+            const existingIndex = rows.findIndex((candidate) => candidate.id === row.id);
+            if (existingIndex >= 0) rows[existingIndex] = row;
+            rowsById.set(row.id, row);
+          }
+          continue;
+        }
+        warnings.push(`Duplicate tafsir id "${row.id}" detected in ${context.rel}; canonical row from ${existingFile || 'unknown'} retained.`);
         continue;
       }
       rowsById.set(row.id, row);
@@ -380,6 +417,7 @@ function normalizeTafsirApiDataset(rootDir, options = {}) {
     totalSurahs: new Set(rows.map((row) => row.surah_number).filter(Boolean)).size,
     totalTafsirRows: rows.length,
     warnings: [...new Set(warnings)],
+    duplicateMirrorRowsSkipped,
     sampleRow: rows[0] || null,
   };
 }

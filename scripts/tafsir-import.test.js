@@ -15,6 +15,7 @@ before(() => {
   tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'islamicgpt-tafsir-api-'));
   datasetRoot = path.join(tempRoot, 'tafsir-api');
   fs.mkdirSync(path.join(datasetRoot, 'tafsir', 'en-tafisr-ibn-kathir'), { recursive: true });
+  fs.mkdirSync(path.join(datasetRoot, 'tafsir', 'en-tafisr-ibn-kathir', '1'), { recursive: true });
   fs.mkdirSync(path.join(datasetRoot, 'tafsir', 'en-al-jalalayn', '2'), { recursive: true });
   fs.writeFileSync(path.join(datasetRoot, 'tafsir', 'editions.json'), JSON.stringify([
     {
@@ -44,6 +45,13 @@ before(() => {
       text: 'Duplicate entry for testing duplicate normalized ids.',
     },
   ], null, 2));
+
+  fs.writeFileSync(path.join(datasetRoot, 'tafsir', 'en-tafisr-ibn-kathir', '1', '1.json'), JSON.stringify({
+    ayah: 1,
+    surah_name_en: 'Al-Fatihah',
+    text: 'Ibn Kathir explains the opening verse of Al-Fatihah.',
+  }, null, 2));
+
   fs.writeFileSync(path.join(datasetRoot, 'tafsir', 'en-al-jalalayn', '2', '255.json'), JSON.stringify({
     ayah: 255,
     surah_name_en: 'Al-Baqarah',
@@ -136,6 +144,7 @@ test('Tafsir importer dry-run runs without Supabase env', () => {
   assert.strictEqual(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Mode: dry-run/);
   assert.match(result.stdout, /Rows prepared: 1/);
+  assert.match(result.stdout, /Duplicate mirror rows skipped: 1/);
   assert.match(result.stdout, /Dry-run only\. No Supabase writes performed/);
 });
 
@@ -151,10 +160,17 @@ test('Tafsir importer uses stable tafsir-{edition_slug}-{surah}-{ayah} IDs', () 
   assert(analysis.rows.some((row) => row.id === 'tafsir-en-al-jalalayn-2-255'));
 });
 
-test('Tafsir normalization dedupes duplicate normalized IDs and warns', () => {
+test('Tafsir normalization treats aggregate/ayah mirrors as expected duplicates', () => {
   const analysis = normalizeTafsirApiDataset(datasetRoot, {});
   const duplicateRows = analysis.rows.filter((row) => row.id === 'tafsir-en-tafisr-ibn-kathir-1-1');
   assert.strictEqual(duplicateRows.length, 1);
+  assert.strictEqual(analysis.duplicateMirrorRowsSkipped, 1);
+  assert.strictEqual(duplicateRows[0].metadata.original_file, 'tafsir/en-tafisr-ibn-kathir/1.json');
+  assert(!analysis.warnings.some((warning) => warning.includes('tafsir/en-tafisr-ibn-kathir/1/1.json')));
+});
+
+test('Tafsir normalization still warns for unexpected duplicates', () => {
+  const analysis = normalizeTafsirApiDataset(datasetRoot, {});
   assert(analysis.warnings.some((warning) => warning.includes('Duplicate tafsir id "tafsir-en-tafisr-ibn-kathir-1-1"')));
 });
 
@@ -162,7 +178,8 @@ test('Tafsir importer dry-run does not produce duplicate IDs', () => {
   const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--editions=en-tafisr-ibn-kathir', '--limit=10']);
   assert.strictEqual(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Rows prepared: 1/);
-  assert.match(result.stdout, /Duplicate tafsir id "tafsir-en-tafisr-ibn-kathir-1-1"/);
+  assert.match(result.stdout, /Duplicate mirror rows skipped: 1/);
+  assert.doesNotMatch(result.stdout, /tafsir\/en-tafisr-ibn-kathir\/1\/1\.json/);
 });
 
 test('Tafsir import pipeline does not require frontend changes', () => {

@@ -35,6 +35,7 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`Dataset detected: ${analysis.datasetDetected}`);
   console.log(`Mode: ${options.execute ? 'execute' : 'dry-run'}`);
   console.log(`Rows prepared: ${rows.length}`);
+  console.log(`Duplicate mirror rows skipped: ${analysis.duplicateMirrorRowsSkipped || 0}`);
   console.log(`Editions selected: ${options.editions && options.editions.size ? [...options.editions].join(', ') : 'all detected editions'}`);
   console.log(`Approved editions: ${options.approveEditions.size ? [...options.approveEditions].join(', ') : 'none'}`);
   console.log(`Verified editions: ${options.verifyEditions.size ? [...options.verifyEditions].join(', ') : 'none'}`);
