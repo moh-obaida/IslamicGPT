@@ -1,3 +1,8 @@
+process.env.NODE_ENV = 'test';
+process.env.ISLAMICGPT_SKIP_DOTENV = '1';
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -172,6 +177,10 @@ before(async () => {
       ADMIN_EMAIL,
       ADMIN_PASSWORD,
       JWT_SECRET,
+      NODE_ENV: 'test',
+      ISLAMICGPT_SKIP_DOTENV: '1',
+      SUPABASE_URL: '',
+      SUPABASE_SERVICE_ROLE_KEY: '',
       ISLAMIC_SOURCES_ROOT: sourceRoot,
       OLLAMA_BASE_URL: mockOllamaBaseUrl,
       PORT: String(port),
