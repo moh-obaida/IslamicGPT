@@ -108,13 +108,7 @@
     .side-stat { padding: 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(0,0,0,0.15); }
     .side-stat strong { display: block; font-size: 15px; margin-bottom: 2px; }
     .side-stat span { color: var(--soft); font-size: 10px; line-height: 1.3; }
-    .mode-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .side-mode { border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: left; background: rgba(255,255,255,0.02); color: var(--muted); font-size: 11px; font-weight: 800; transition: all 0.2s; }
-    .side-mode:hover, .side-mode.active { color: var(--turq); border-color: var(--turqLine); background: var(--softTurq); transform: translateY(-1px); }
-    .trust-list { display: grid; gap: 9px; }
-    .trust-item { display: grid; grid-template-columns: 20px 1fr; gap: 9px; align-items: start; color: var(--muted); font-size: 11px; line-height: 1.4; }
-    .trust-item b { color: var(--text); font-size: 12px; }
-    .trust-icon { width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center; color: var(--turq); background: var(--softTurq); border: 1px solid var(--turqLine); font-size: 10px; font-weight: 900; }
+    .sidebar-note { color: var(--muted); font-size: 11px; line-height: 1.55; }
     .recent-list { display: grid; gap: 8px; }
     .recent-chip { width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,0.02); text-align: left; color: var(--muted); font-size: 12px; line-height: 1.35; transition: all 0.2s; }
     .recent-chip:hover { color: var(--text); border-color: var(--turqLine); background: rgba(18,200,178,0.08); }
@@ -318,32 +312,16 @@
           </div>
           <div class="side-stat-grid">
             <div class="side-stat"><strong id="sideApprovedCount">—</strong><span>Approved sources</span></div>
-            <div class="side-stat"><strong id="sideVerifiedCount">—</strong><span>Verified records</span></div>
+            <div class="side-stat"><strong>Safe</strong><span>No source, no answer</span></div>
           </div>
         </div>
 
         <div class="sidebar-panel">
           <div class="side-panel-head">
-            <div class="side-panel-title">Research Modes</div>
-            <span class="side-chip">Fast switch</span>
+            <div class="side-panel-title">User Promise</div>
+            <span class="side-chip">Clean UX</span>
           </div>
-          <div class="mode-shortcuts">
-            <button class="side-mode" data-short-mode="quran_mode" onclick="selectSidebarMode('quran_mode')">Quran</button>
-            <button class="side-mode" data-short-mode="hadith_mode" onclick="selectSidebarMode('hadith_mode')">Hadith</button>
-            <button class="side-mode" data-short-mode="tafsir_mode" onclick="selectSidebarMode('tafsir_mode')">Tafsir</button>
-            <button class="side-mode" data-short-mode="fiqh_mode" onclick="selectSidebarMode('fiqh_mode')">Fiqh</button>
-          </div>
-        </div>
-
-        <div class="sidebar-panel">
-          <div class="side-panel-head">
-            <div class="side-panel-title">Trust Protocol</div>
-          </div>
-          <div class="trust-list">
-            <div class="trust-item"><span class="trust-icon">1</span><span><b>Retrieve</b><br>Search approved source records first.</span></div>
-            <div class="trust-item"><span class="trust-icon">2</span><span><b>Answer</b><br>Use only retrieved source evidence.</span></div>
-            <div class="trust-item"><span class="trust-icon">3</span><span><b>Block</b><br>No approved source means no religious answer.</span></div>
-          </div>
+          <div class="sidebar-note">IslamicGPT only answers religious questions when approved sources are available. Personal rulings still need qualified scholars.</div>
         </div>
 
         <div class="section-card">
@@ -458,7 +436,7 @@
             </div>
 
             <div class="settings-section">
-              <span class="settings-label">Developer & Diagnostics</span>
+              <span class="settings-label">Display</span>
               <div class="settings-item"><label><input type="checkbox"> Compact Message Mode</label></div>
               <div class="settings-item"><label><input type="checkbox" checked> Show Progress Tracker</label></div>
             </div>
@@ -653,17 +631,6 @@
 
     function clearInput() { const i = document.getElementById('input'); i.value = ''; autoResize(i); }
     function setExample(t) { const i = document.getElementById('input'); i.value = t; autoResize(i); sendMessage(); }
-    function selectSidebarMode(mode) {
-      document.getElementById('modeSelect').value = mode;
-      updateComposerState();
-      switchView('chat');
-      document.getElementById('input').focus();
-    }
-    function renderModeShortcuts() {
-      document.querySelectorAll('[data-short-mode]').forEach((button) => {
-        button.classList.toggle('active', button.dataset.shortMode === currentMode);
-      });
-    }
     function getRecentChats() {
       try { return JSON.parse(localStorage.getItem(recentChatsKey) || '[]'); } catch { return []; }
     }
@@ -882,7 +849,6 @@
       document.getElementById('activeThinkingBadge').textContent = `${thinkingLabelMap[thinking] || 'Balanced'} AI`;
       document.getElementById('activeSourceRuleBadge').textContent = sourceRule;
       document.getElementById('sourceIndicator').textContent = sourceIndicator;
-      renderModeShortcuts();
     }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
@@ -956,7 +922,6 @@
           libraryCount.textContent = `${sourceCount} approved source${sourceCount === 1 ? '' : 's'}`;
           document.getElementById('sideBackendLabel').textContent = 'Online';
           document.getElementById('sideApprovedCount').textContent = sourceCount;
-          document.getElementById('sideVerifiedCount').textContent = Number(data.services?.supabase?.verified || 0);
         } else {
           statusText.textContent = 'Backend Offline';
           statusSub.textContent = 'v0.2.0 • Islamic answers require the source backend';
@@ -965,7 +930,6 @@
           libraryCount.textContent = 'Approved source count unavailable';
           document.getElementById('sideBackendLabel').textContent = 'Offline';
           document.getElementById('sideApprovedCount').textContent = '—';
-          document.getElementById('sideVerifiedCount').textContent = '—';
         }
       } catch (e) { 
         pill.textContent = 'Backend Offline'; 
@@ -978,7 +942,6 @@
         libraryCount.textContent = 'Approved source count unavailable';
         document.getElementById('sideBackendLabel').textContent = 'Offline';
         document.getElementById('sideApprovedCount').textContent = '—';
-        document.getElementById('sideVerifiedCount').textContent = '—';
       }
     }
 
