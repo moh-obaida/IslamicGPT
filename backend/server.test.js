@@ -497,6 +497,12 @@ test('/api/chat answers direct Tafsir reference queries with deterministic previ
   assert.strictEqual(body.answer.includes('Explanation:'), true);
   assert.strictEqual(body.answer.includes(LONG_TAFSIR_EXPLANATION), false);
   assert.strictEqual(body.answer.includes('…'), true);
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
+  assert.strictEqual(body.sources[0].explanation_text.length <= 1502, true);
+  assert.strictEqual(body.sources[0].full_text_length > body.sources[0].explanation_text.length, true);
+  assert.strictEqual(body.sources[0].has_full_text, true);
+  assert.strictEqual(body.sources[0].metadata?.original_record?.text, undefined);
+  assert.strictEqual(typeof body.sources[0].metadata?.original_record_text_length, 'number');
 });
 
 test('/api/chat prefers Tafsir template source when mixed matches include non-Tafsir first', async () => {
@@ -510,6 +516,30 @@ test('/api/chat prefers Tafsir template source when mixed matches include non-Ta
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.answer.startsWith('A relevant Tafsir source is Tafsir Ibn Kathir, Tafsir of 1:1.'), true);
   assert.strictEqual(body.sources[0].source_type, 'tafsir');
+});
+
+test('/api/sources/search returns capped Tafsir payload previews', async () => {
+  const response = await fetch(`${baseUrl}/api/sources/search?q=Tafsir%20of%20Quran%201:1&type=tafsir`);
+  const body = await response.json();
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.sources.length > 0, true);
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
+  assert.strictEqual(body.sources[0].explanation_text.length <= 1502, true);
+  assert.strictEqual(body.sources[0].full_text_length > body.sources[0].explanation_text.length, true);
+  assert.strictEqual(body.sources[0].has_full_text, true);
+  assert.strictEqual(body.sources[0].metadata?.original_record?.text, undefined);
+});
+
+test('/api/sources/search keeps hadith payload behavior unchanged', async () => {
+  const response = await fetch(`${baseUrl}/api/sources/search?q=intention&type=hadith`);
+  const body = await response.json();
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.sources.length > 0, true);
+  assert.strictEqual(body.sources[0].source_type, 'hadith');
+  assert.strictEqual(typeof body.sources[0].translation_text, 'string');
+  assert.strictEqual(body.sources[0].full_text_length, undefined);
 });
 
 test('/api/chat uses model with validation for explanations', async () => {

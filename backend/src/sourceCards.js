@@ -2,6 +2,12 @@ function sourceReference(s) {
   return s.reference_number || s.fatwa_number || s.page_number || s.timestamp || s.url || s.local_reference || '';
 }
 
+function previewText(value, maxChars = 300) {
+  const full = String(value || '').trim();
+  if (!full) return '';
+  return full.length > maxChars ? `${full.slice(0, maxChars).trim()}…` : full;
+}
+
 function formatSourceCards(sources) {
   return sources.map((s) => {
     if (['quran', 'quran_translation', 'tafsir'].includes(s.source_type)) {
@@ -14,7 +20,9 @@ function formatSourceCards(sources) {
         title,
         reference: s.source_title || s.title || '',
         arabic: s.arabic_text || '',
-        preview: s.translation_text || s.summary || '',
+        preview: s.source_type === 'tafsir'
+          ? previewText(s.explanation_preview || s.explanation_text || s.translation_text || s.summary || '')
+          : (s.translation_text || s.summary || ''),
         metadata: {
           translator: s.translator || '',
           translation_name: s.translation_name || '',
