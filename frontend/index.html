@@ -207,6 +207,12 @@
     .bubble { padding: 16px 20px; border-radius: 20px; line-height: 1.6; max-width: 85%; position: relative; white-space: pre-wrap; }
     .message.ai .bubble { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadowSoft); }
     .message.user .bubble { background: var(--softTurq); border: 1px solid rgba(18, 200, 178, 0.2); }
+    .assistant-content { white-space: normal; display: grid; gap: 10px; }
+    .assistant-content h3 { margin: 0; font-size: 18px; color: #7be2d5; }
+    .assistant-content p { margin: 0; color: var(--text); }
+    .assistant-content blockquote { margin: 4px 0; padding: 10px 12px; border-left: 3px solid var(--turq); background: rgba(18,200,178,0.08); border-radius: 8px; color: #dff7f3; }
+    .assistant-content .assistant-arabic { direction: rtl; text-align: right; font-size: 20px; line-height: 1.9; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,0.18); border: 1px solid var(--line); }
+    .assistant-content .source-badge { display: inline-block; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); color: var(--soft); font-size: 12px; }
 
     /* Composer */
     .composer-container { padding: 0 24px 24px; width: 100%; max-width: 940px; margin: 0 auto; }
@@ -658,6 +664,57 @@
     function escapeHtml(value) {
       return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     }
+    function isArabicText(value) {
+      return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(value || ''));
+    }
+    function renderAssistantMessage(answer) {
+      const lines = String(answer || '').split('\n');
+      const out = [];
+      let inSource = false;
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) {
+          out.push('<br>');
+          continue;
+        }
+        if (line.startsWith('### ')) {
+          out.push(`<h3>${escapeHtml(line.slice(4))}</h3>`);
+          inSource = false;
+          continue;
+        }
+        if (line.startsWith('> ')) {
+          out.push(`<blockquote>${escapeHtml(line.slice(2))}</blockquote>`);
+          continue;
+        }
+        if (/^\*\*Source:\*\*$/i.test(line)) {
+          inSource = true;
+          out.push('<p><strong>Source:</strong></p>');
+          continue;
+        }
+        if (inSource) {
+          out.push(`<div class="source-badge">${escapeHtml(line)}</div>`);
+          inSource = false;
+          continue;
+        }
+        const boldLabel = line.match(/^\*\*(.+?):\*\*\s*(.*)$/);
+        if (boldLabel) {
+          const [, label, content] = boldLabel;
+          if (content) {
+            const body = isArabicText(content) ? `<span class="assistant-arabic">${escapeHtml(content)}</span>` : escapeHtml(content);
+            out.push(`<p><strong>${escapeHtml(label)}:</strong> ${body}</p>`);
+          } else {
+            out.push(`<p><strong>${escapeHtml(label)}:</strong></p>`);
+          }
+          continue;
+        }
+        if (isArabicText(line)) {
+          out.push(`<div class="assistant-arabic">${escapeHtml(line)}</div>`);
+          continue;
+        }
+        out.push(`<p>${escapeHtml(line)}</p>`);
+      }
+      return `<div class="assistant-content">${out.join('')}</div>`;
+    }
     function sourceTypeLabel(type) {
       const labels = { quran: 'Quran', quran_translation: 'Quran', hadith: 'Hadith', hadith_explanation: 'Hadith', tafsir: 'Tafsir', fatwa: 'Fatwa', scholar_statement: 'Scholar', book: 'Book', lecture: 'Lecture', educational_explanation: 'Explanation' };
       return labels[type] || type || 'Source';
@@ -882,14 +939,14 @@
           }
           return a || 'No answer returned.';
         })();
-        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${escapeHtml(cleanAssistantAnswer)}</div></div>`;
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${renderAssistantMessage(cleanAssistantAnswer)}</div></div>`;
         sourcesPanel.innerHTML = '';
         if (data.sourceCards && data.sourceCards.length) {
           sourcesPanel.innerHTML = renderSourceCards(data.sourceCards, data.sources || []);
         }
       } catch (e) {
         sourcesPanel.innerHTML = '';
-        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">Backend Offline\n\nIslamic answers require the source backend. Start the VM/backend to continue.</div></div>`;
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${renderAssistantMessage('### Backend Offline\n\nIslamic answers require the source backend. Start the VM/backend to continue.')}</div></div>`;
       }
     }
 

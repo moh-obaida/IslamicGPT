@@ -170,8 +170,16 @@ function resolveIslamicConfidence({ sources, classification, validationFailed = 
 }
 
 function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'none', warnings = [] }) {
+  const friendlyRefusal = [
+    'I could not find enough approved source evidence to answer this safely.',
+    '',
+    'Try asking with a specific reference, such as:',
+    '- Quran 2:255',
+    '- Sahih al-Bukhari Hadith 1',
+    '- Tafsir of Surah Al-Fatihah 1:1',
+  ].join('\n');
   return {
-    answer: appendScholarNote(REFUSAL_MESSAGE, classification),
+    answer: appendScholarNote(friendlyRefusal, classification),
     mode,
     modelMode,
     resolvedModelMode: null,
@@ -199,61 +207,74 @@ function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'no
 function buildTemplateAnswer(source) {
   if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
     const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
+    const heading = source.title ? `### ${source.title}` : '### Hadith';
+    const quoteText = source.translation_text || source.meaning_text || source.explanation_text || 'Translation text is not available in the approved source record.';
+    const meaningCandidate = source.explanation_text || source.meaning_text || '';
+    const shouldShowMeaning = Boolean(
+      meaningCandidate
+      && meaningCandidate.trim()
+      && meaningCandidate.trim() !== String(source.translation_text || '').trim()
+    );
     return [
-      `A relevant hadith is found in ${ref}.`,
-      source.title ? `Title:\n${source.title}` : '',
+      heading,
       '',
-      'Arabic:',
-      source.arabic_text || 'Arabic text is not available in the approved source record.',
+      'The Prophet ﷺ said:',
       '',
-      'Meaning:',
-      source.translation_text || 'Meaning text is not available in the approved source record.',
+      `> ${quoteText}`,
       '',
-      'Source:',
+      source.arabic_text ? '**Arabic:**' : null,
+      source.arabic_text || null,
+      '',
+      shouldShowMeaning ? '**Meaning:**' : null,
+      shouldShowMeaning ? meaningCandidate : null,
+      shouldShowMeaning ? '' : null,
+      source.grade ? `**Grade:** ${source.grade}` : null,
+      source.grade ? '' : null,
+      '**Source:**',
       ref,
     ].filter(Boolean).join('\n');
   }
 
   if (source.source_type === 'tafsir') {
     const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_range || source.ayah_number || source.ayah || '?'}`;
+    const surahName = source.surah_name_en || source.surah_name_ar || `Surah ${source.surah_number || source.surah || '?'}`;
     const tafsirBookName = source.tafsir_book_name || source.tafsir_book_name_en || source.tafsir_book_name_ar || source.title || 'Tafsir source';
     return [
-      `A relevant tafsir source is ${tafsirBookName}, explaining Quran ${ref}.`,
+      `### Tafsir of Surah ${surahName} ${ref}`,
       '',
-      'Explanation:',
+      source.translation_text || source.arabic_text ? '**Verse:**' : null,
+      source.translation_text || source.arabic_text || null,
+      source.translation_text || source.arabic_text ? '' : null,
+      '**Tafsir:**',
       source.explanation_text || source.translation_text || 'Explanation text is not available in the approved source record.',
       '',
-      'Source:',
-      tafsirBookName,
+      '**Source:**',
+      `${tafsirBookName}, Surah ${surahName} ${ref}`,
       source.tafsir_author ? '' : null,
-      source.tafsir_author ? 'Author:' : null,
-      source.tafsir_author || null,
+      source.tafsir_author ? `Author: ${source.tafsir_author}` : null,
       source.original_source ? '' : null,
-      source.original_source ? 'Original source:' : null,
-      source.original_source || null,
+      source.original_source ? `Original source: ${source.original_source}` : null,
     ].filter(Boolean).join('\n');
   }
 
   if (['quran', 'quran_translation'].includes(source.source_type)) {
     const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
-    const verseLabel = source.surah_name_en && (source.surah_number || source.surah) && (source.ayah_number || source.ayah)
-      ? `${source.surah_name_en} ${ref}`
-      : `Quran ${ref}`;
+    const verseLabel = source.surah_name_en ? `${source.surah_name_en} ${ref}` : ref;
     const translationCredit = source.translation_name || source.translator || '';
     return [
-      `A relevant Quran verse is ${verseLabel}.`,
+      '### Quran verse',
       '',
-      'Arabic:',
-      source.arabic_text || 'Arabic text is not available in the approved source record.',
+      `**Surah:** ${verseLabel}`,
       '',
-      'Meaning:',
-      source.translation_text || 'Meaning text is not available in the approved source record.',
+      source.translation_text ? `> ${source.translation_text}` : null,
+      source.translation_text ? '' : null,
+      source.arabic_text ? '**Arabic:**' : null,
+      source.arabic_text || null,
       '',
-      'Source:',
+      '**Source:**',
       `Quran ${ref}`,
       translationCredit ? '' : null,
-      translationCredit ? 'Translation:' : null,
-      translationCredit || null,
+      translationCredit ? `Translation: ${translationCredit}` : null,
     ].filter(Boolean).join('\n');
   }
 

@@ -394,7 +394,8 @@ test('/api/chat blocks Islamic answers when no approved source exists', async ()
   assert.strictEqual(body.hallucinationGuard.status, 'blocked');
   assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
   assert.strictEqual(body.sourceCards.length, 0);
-  assert.strictEqual(body.answer.includes('I could not find enough reliable evidence in the approved sources.'), true);
+  assert.strictEqual(body.answer.includes('I could not find enough approved source evidence to answer this safely.'), true);
+  assert.strictEqual(body.answer.includes('Try asking with a specific reference'), true);
 });
 
 test('/api/chat uses template answers for direct source lookup', async () => {
@@ -410,7 +411,11 @@ test('/api/chat uses template answers for direct source lookup', async () => {
   assert.strictEqual(body.hallucinationGuard.status, 'passed');
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.sourceCards.length > 0, true);
-  assert.strictEqual(body.answer.includes('A relevant hadith is found in Sahih Seed, Hadith 1.'), true);
+  assert.strictEqual(body.answer.includes('### Actions are judged by intention'), true);
+  assert.strictEqual(body.answer.includes('**Source:**\nSahih Seed, Hadith 1'), true);
+  assert.strictEqual(body.answer.includes('**Meaning:**'), false);
+  assert.strictEqual(body.answer.includes('Title:'), false);
+  assert.strictEqual(body.answer.includes('Arabic: إِن'), false);
 });
 
 test('/api/chat uses template answers for direct Quran lookups without Ollama', async () => {
@@ -424,8 +429,9 @@ test('/api/chat uses template answers for direct Quran lookups without Ollama', 
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.confidence, 'source_backed');
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
-  assert.strictEqual(body.answer.includes('A relevant Quran verse is Al-Baqarah 2:255.'), true);
-  assert.strictEqual(body.answer.includes('Translation:\nSaheeh International'), true);
+  assert.strictEqual(body.answer.includes('### Quran verse'), true);
+  assert.strictEqual(body.answer.includes('**Source:**\nQuran 2:255'), true);
+  assert.strictEqual(body.answer.includes('Translation: Saheeh International'), true);
   assert.strictEqual(body.sourceCards[0].metadata.translation_source, 'Tanzil');
 });
 
@@ -440,8 +446,8 @@ test('/api/chat uses template answers for Quran Aya references without Ollama', 
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.confidence, 'source_backed');
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
-  assert.strictEqual(body.answer.includes('A relevant Quran verse is Al-Baqarah 2:255.'), true);
-  assert.strictEqual(body.answer.includes('Source:\nQuran 2:255'), true);
+  assert.strictEqual(body.answer.includes('### Quran verse'), true);
+  assert.strictEqual(body.answer.includes('**Source:**\nQuran 2:255'), true);
 });
 
 test('/api/chat uses template answers for direct Tafsir lookups without Ollama', async () => {
@@ -454,8 +460,8 @@ test('/api/chat uses template answers for direct Tafsir lookups without Ollama',
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
-  assert.strictEqual(body.answer.includes('A relevant tafsir source is Tafsir Ibn Kathir, explaining Quran 1:1.'), true);
-  assert.strictEqual(body.answer.includes('Original source:\nQuran.com'), true);
+  assert.strictEqual(body.answer.includes('### Tafsir of Surah Al-Fatihah 1:1'), true);
+  assert.strictEqual(body.answer.includes('Original source: Quran.com'), true);
 });
 
 test('/api/chat uses model with validation for explanations', async () => {
