@@ -801,10 +801,11 @@ async function handleChat(payload, res) {
       return send(res, 200, out);
     }
 
-    const directTafsirLookup = isDirectTafsirLookup(question) && sources.some((source) => source.source_type === 'tafsir');
+    const tafsirSources = sources.filter((source) => source.source_type === 'tafsir');
+    const directTafsirLookup = isDirectTafsirLookup(question) && tafsirSources.length > 0;
     if (classification.intent === 'direct_source_lookup' || directTafsirLookup) {
       const out = templateSourceResponse({
-        sources,
+        sources: directTafsirLookup ? tafsirSources : sources,
         mode,
         modelMode,
         classification,

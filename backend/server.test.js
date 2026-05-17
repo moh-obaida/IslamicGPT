@@ -93,6 +93,22 @@ before(async () => {
   ], null, 2));
   fs.writeFileSync(path.join(sourceRoot, 'quran', 'seed.json'), JSON.stringify([
     {
+      id: 'quran-1-1-mixed',
+      source_type: 'quran',
+      title: 'Tafsir of Quran 1:1 keyword match seed',
+      collection_name: 'Quran',
+      surah: 1,
+      ayah: 1,
+      surah_number: 1,
+      ayah_number: 1,
+      surah_name_en: 'Al-Fatihah',
+      translation_text: 'In the name of Allah, the Entirely Merciful, the Especially Merciful.',
+      translation_name: 'Saheeh International',
+      verified_by_admin: true,
+      approved_for_answers: true,
+      topic_tags: ['tafsir', 'fatihah'],
+    },
+    {
       id: 'quran-2-255',
       source_type: 'quran',
       title: 'Al-Baqarah 2:255',
@@ -481,6 +497,19 @@ test('/api/chat answers direct Tafsir reference queries with deterministic previ
   assert.strictEqual(body.answer.includes('Explanation:'), true);
   assert.strictEqual(body.answer.includes(LONG_TAFSIR_EXPLANATION), false);
   assert.strictEqual(body.answer.includes('…'), true);
+});
+
+test('/api/chat prefers Tafsir template source when mixed matches include non-Tafsir first', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Tafsir of Quran 1:1',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.answer.startsWith('A relevant Tafsir source is Tafsir Ibn Kathir, Tafsir of 1:1.'), true);
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
 });
 
 test('/api/chat uses model with validation for explanations', async () => {
