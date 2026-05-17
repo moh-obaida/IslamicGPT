@@ -674,7 +674,6 @@ async function handleAdminSources(req, res, url) {
     if (pathname === '/api/admin/sources/reindex' && req.method === 'POST') {
       const result = buildIslamicSourceIndex({ write: true });
       const supabase = await getHealthSummary();
-      const sanitizedSources = sanitizeSourcesForResponse(sources);
       return send(res, 200, {
         total_indexed: result.total_indexed,
         warnings: result.warnings,
@@ -791,6 +790,7 @@ async function handleChat(payload, res) {
       limit: 8,
     });
     const sources = retrieval.sources || [];
+    const sanitizedSources = sanitizeSourcesForResponse(sources);
     loading.push('searched_approved_sources');
 
     if (!sources.length) {
@@ -910,7 +910,6 @@ Your previous answer risked unsupported claims. Rewrite the answer using only th
       return send(res, 200, blocked);
     }
 
-    const sanitizedSources = sanitizeSourcesForResponse(sources);
     const out = {
       answer: appendScholarNote(answer || REFUSAL_MESSAGE, classification),
       mode,
