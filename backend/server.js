@@ -143,6 +143,14 @@ function appendScholarNote(answer, classification) {
   return `${safeAnswer}\n\n${scholarConsultationNote()}`;
 }
 
+
+function capText(value, maxChars = 1000) {
+  const full = String(value || '').trim();
+  if (!full) return '';
+  const preview = full.slice(0, maxChars).trim();
+  return full.length > preview.length ? `${preview}…` : preview;
+}
+
 function scholarReference(source) {
   return [
     source.work_title || source.work_title_en || source.work_title_ar,

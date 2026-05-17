@@ -148,6 +148,39 @@ test('Scholar and fatwa intent is detected', () => {
   assert.strictEqual(classifyQuestion('شرح النووي', 'islamic_search_mode').intent, 'explanation');
 });
 
+
+test('Curated scholar sample file normalizes and preserves key fields', () => {
+  const sampleRoot = path.join(process.cwd(), 'data', 'samples');
+  const analysis = normalizeScholarDataset(sampleRoot, {});
+  const row = analysis.rows.find((entry) => entry.id === 'scholar-sample-binbaz-prayer-001');
+
+  assert(row);
+  assert.strictEqual(row.scholar_name, 'Shaykh Ibn Baz');
+  assert.strictEqual(typeof row.question_text, 'string');
+  assert.strictEqual(typeof row.answer_text, 'string');
+  assert.strictEqual(typeof row.summary_text, 'string');
+  assert.strictEqual(row.fatwa_reference, 'Sample Ref SB-001');
+  assert.strictEqual(row.source_url, 'https://example.com/scholar/ibn-baz/prayer-sample');
+  assert.strictEqual(row.source_type, 'fatwa');
+});
+
+test('Scholar importer emits warnings for missing reference/source_url/attribution metadata', () => {
+  const analysis = normalizeScholarDataset(datasetRoot, {});
+  const warnings = analysis.warnings.join('\n');
+  assert.strictEqual(warnings.includes('missing reference'), true);
+  assert.strictEqual(warnings.includes('missing attribution_text'), true);
+});
+
+test('Scholar importer dry-run supports curated sample file path', () => {
+  const sampleFile = path.join(process.cwd(), 'data', 'samples', 'scholar-curated-sample.json');
+  const result = runNodeScript('scripts/import-scholar-json-to-supabase.js', [sampleFile, '--dry-run']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Mode: dry-run/);
+  assert.match(result.stdout, /Rows prepared: 3/);
+  assert.match(result.stdout, /Dry-run only\. No Supabase writes performed/);
+});
+
+
 test('Scholar analyzer runs without Supabase env', () => {
   const result = runNodeScript('scripts/analyze-scholar-json-dataset.js', [datasetRoot]);
   assert.strictEqual(result.status, 0, result.stderr || result.stdout);

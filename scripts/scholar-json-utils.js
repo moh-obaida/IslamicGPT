@@ -10,8 +10,8 @@ const DEFAULTS = {
   adapter: 'generic-curated-json',
   sourceFamily: 'scholar',
 };
-const VALID_SOURCE_TYPES = new Set(['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation']);
-const SCHOLAR_SOURCE_TYPES = new Set(['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation']);
+const VALID_SOURCE_TYPES = new Set(['fatwa', 'scholar', 'scholar_statement', 'book', 'lecture', 'educational_explanation']);
+const SCHOLAR_SOURCE_TYPES = new Set(['fatwa', 'scholar', 'scholar_statement', 'book', 'lecture', 'educational_explanation']);
 
 function toTrimmedString(value) {
   if (value === undefined || value === null) return null;
@@ -153,7 +153,7 @@ function inferSourceType(record = {}) {
   if (sourceKind.includes('lecture') || ['lecture', 'transcript'].includes(workType)) return 'lecture';
   if (sourceKind.includes('article') || ['article', 'curated_json'].includes(workType)) return 'educational_explanation';
   if (sourceKind.includes('statement')) return 'scholar_statement';
-  return 'scholar_statement';
+  return 'scholar';
 }
 
 function stableSourceTypeSlug(sourceType) {
@@ -272,8 +272,8 @@ function normalizeScholarRecord(record = {}, context = {}) {
     attribution_url: pickString(record.attribution_url),
     requires_attribution: toBoolean(record.requires_attribution, false),
     source_usage_notes: pickString(record.source_usage_notes),
-    approved_for_answers: approved === true,
-    verified_by_admin: verified === true,
+    approved_for_answers: record.approved_for_answers === true || approved === true,
+    verified_by_admin: record.verified_by_admin === true || verified === true,
     admin_review_status: pickString(record.admin_review_status),
     review_notes: pickString(record.review_notes),
     reviewed_by: pickString(record.reviewed_by),
@@ -298,6 +298,9 @@ function validateScholarRow(row) {
   if (!(row.source_type || row.source_kind)) warnings.push('missing source_type/source_kind');
   if (!(row.title || row.question_text || row.answer_text || row.arabic_text || row.translation_text)) warnings.push('missing title/content text');
   if (!(row.scholar_name_en || row.scholar_name_ar || row.work_title || row.source_url)) warnings.push('missing scholar/work/source identity');
+  if (!(row.fatwa_reference || row.fatwa_number || row.reference_number)) warnings.push('missing reference');
+  if (!row.source_url) warnings.push('missing source_url');
+  if (!row.attribution_text) warnings.push('missing attribution_text');
   if (!SCHOLAR_SOURCE_TYPES.has(row.source_type)) warnings.push(`unsupported source_type: ${row.source_type}`);
   return warnings;
 }

@@ -130,6 +130,28 @@ before(async () => {
       topic_tags: ['ayat al-kursi', 'kursi'],
     },
   ], null, 2));
+  fs.writeFileSync(path.join(sourceRoot, 'fatwas', 'seed.json'), JSON.stringify([
+    {
+      id: 'scholar-sample-binbaz-prayer-001',
+      source_type: 'fatwa',
+      title: 'Sample fatwa about prayer',
+      scholar_name: 'Shaykh Ibn Baz',
+      scholar_slug: 'ibn-baz',
+      work_type: 'fatwa',
+      question_text: 'What is a brief reminder about preserving prayer on time?',
+      answer_text: 'This sample excerpt reminds the believer to protect the obligatory prayers and avoid neglecting them.',
+      summary_text: 'Sample-only summary: preserve obligatory prayer and seek detailed rulings from qualified scholars.',
+      fatwa_reference: 'Sample Ref SB-001',
+      source_url: 'https://example.com/scholar/ibn-baz/prayer-sample',
+      topic_tags: ['prayer', 'fatwa', 'sample'],
+      approved_for_answers: true,
+      verified_by_admin: false,
+      admin_review_status: 'sample_only',
+      attribution_text: 'Curated sample record for pipeline testing.',
+      license_status: 'sample_only_review_required',
+      metadata: { sample: true },
+    },
+  ], null, 2));
   fs.writeFileSync(path.join(sourceRoot, 'tafsir', 'seed.json'), JSON.stringify([
     {
       id: 'tafsir-en-tafisr-ibn-kathir-1-1',
@@ -590,6 +612,49 @@ test('/api/chat adds scholar note to sensitive no-source questions', async () =>
   assert.strictEqual(body.hallucinationGuard.status, 'blocked');
   assert.strictEqual(body.answer.includes('Please consult a qualified scholar'), true);
 });
+
+
+test('/api/sources/search returns scholar sample with source metadata', async () => {
+  const response = await fetch(`${baseUrl}/api/sources/search?q=Ibn%20Baz%20prayer&type=scholar`);
+  const body = await response.json();
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.sources.length > 0, true);
+  assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
+  assert.strictEqual(body.sources[0].scholar_name, 'Shaykh Ibn Baz');
+  assert.strictEqual(typeof body.sources[0].fatwa_reference, 'string');
+  assert.strictEqual(typeof body.sources[0].source_url, 'string');
+});
+
+test('/api/chat answers direct scholar lookup with deterministic template and no LLM call', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Ibn Baz fatwa about prayer',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
+  assert.strictEqual(body.answer.includes('Shaykh Ibn Baz'), true);
+  assert.strictEqual(body.answer.includes('source-backed excerpt'), true);
+  assert.strictEqual(body.answer.includes('not a personalized fatwa'), true);
+});
+
+test('/api/chat blocks unknown scholar fatwa lookup safely', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Bin Baz fatwa about a made up topic xyz',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
+  assert.strictEqual(body.confidence, 'no_approved_source_found');
+});
+
 
 test('/api/chat keeps hello as normal chat without source requirements', async () => {
   const { response, body } = await postJson('/api/chat', {

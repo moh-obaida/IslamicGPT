@@ -90,7 +90,8 @@ function typeGroupMatches(sourceType, group) {
     quran: ['quran', 'quran_translation'],
     hadith: ['hadith', 'hadith_explanation'],
     tafsir: ['tafsir'],
-    scholars: ['scholar_statement', 'book', 'lecture', 'video_transcript', 'educational_explanation'],
+    scholars: ['scholar_statement', 'fatwa', 'book', 'lecture', 'video_transcript', 'educational_explanation'],
+    scholar: ['scholar_statement', 'fatwa', 'book', 'lecture', 'video_transcript', 'educational_explanation'],
     fatwas: ['fatwa'],
     documents: ['uploaded_document', 'approved_pdf'],
   };
