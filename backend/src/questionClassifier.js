@@ -33,6 +33,24 @@ const SENSITIVE_KEYWORDS = [
   'هل صلاتي', 'هل صومي', 'طلاق', 'زواج', 'ميراث', 'ربا',
 ];
 
+
+const ARABIC_SCHOLAR_VARIANTS = [
+  'ابن باز', 'بن باز', 'الشيخ ابن باز', 'الشيخ عبد العزيز بن باز', 'عبد العزيز بن باز',
+];
+
+const DIRECT_SCHOLAR_LOOKUP_PATTERNS = [
+  /\b(?:ibn|bin)\s+baz\b.*\b(?:fatwa|ruling|opinion|view|said|quote)\b/i,
+  /\b(?:fatwa|ruling|opinion|view)\b.*\b(?:ibn|bin)\s+baz\b/i,
+  /ما\s+حكم.+(?:عند|للشيخ)\s+(?:ابن|بن)\s+باز/,
+  /حكم.+عند\s+(?:ابن|بن)\s+باز/,
+  /فتوى\s+(?:ابن|بن)\s+باز\s+(?:عن|في)/,
+  /ما\s+فتوى\s+(?:ابن|بن)\s+باز\s+في/,
+  /(?:ابن|بن)\s+باز.+(?:حكم|فتوى)/,
+  /(?:الشيخ\s+)?(?:ابن|بن)\s+باز.+(?:حكم|فتوى)/,
+  /قول\s+(?:ابن|بن)\s+باز\s+في/,
+  /رأي\s+(?:ابن|بن)\s+باز\s+في/,
+];
+
 const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /give me a hadith/i,
   /show me a hadith/i,
@@ -128,6 +146,7 @@ function detectIntent(message, mode) {
   if (COMPARISON_PATTERNS.some((pattern) => pattern.test(message)) || mode === 'compare_opinions_mode') return 'comparison';
   if (/\bshow\s+(?:me\s+)?tafsir\b/i.test(message) || /اعرض.*تفسير/.test(message)) return 'direct_source_lookup';
   if (/\bfatwa\s+(?:by|from|of|about)\b/i.test(message) || /\b(?:show|give|find|share)\s+(?:me\s+)?(?:a\s+)?fatwa\b/i.test(message) || /(?:ibn|bin)\s+[\w-]+\s+fatwa\b/i.test(message) || /فتوى\s+(?:ابن|بن|الشيخ)/.test(message)) return 'direct_source_lookup';
+  if (DIRECT_SCHOLAR_LOOKUP_PATTERNS.some((pattern) => pattern.test(message)) || ARABIC_SCHOLAR_VARIANTS.some((variant) => message.includes(variant))) return 'direct_source_lookup';
   if (PERSONAL_RULING_PATTERNS.some((pattern) => pattern.test(message))) return 'personal_ruling';
   if (EXPLANATION_PATTERNS.some((pattern) => pattern.test(message)) || ['explain_simply_mode', 'student_explanation_mode'].includes(mode)) return 'explanation';
   if (DIRECT_SOURCE_LOOKUP_PATTERNS.some((pattern) => pattern.test(message))) return 'direct_source_lookup';

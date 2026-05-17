@@ -342,6 +342,26 @@ function isDirectTafsirLookup(question = '') {
   ].some((pattern) => pattern.test(text));
 }
 
+function isDirectScholarLookup(question = '') {
+  const text = String(question || '').trim();
+  const lower = text.toLowerCase();
+  return [
+    /\b(?:ibn|bin)\s+baz\b.*\b(?:fatwa|ruling|opinion|view|said|quote)\b/i,
+    /\b(?:fatwa|ruling|opinion|view)\b.*\b(?:ibn|bin)\s+baz\b/i,
+    /\b(?:what is|show|give|find)\b.*\b(?:fatwa|ruling|opinion)\b.*\b(?:ibn|bin)\s+baz\b/i,
+    /ما\s+حكم.+(?:عند|للشيخ)\s+(?:ابن|بن)\s+باز/,
+    /حكم.+عند\s+(?:ابن|بن)\s+باز/,
+    /فتوى\s+(?:ابن|بن)\s+باز\s+(?:عن|في)/,
+    /ما\s+فتوى\s+(?:ابن|بن)\s+باز\s+في/,
+    /(?:ابن|بن)\s+باز.+(?:حكم|فتوى)/,
+    /(?:الشيخ\s+)?(?:ابن|بن)\s+باز.+(?:حكم|فتوى)/,
+    /قول\s+(?:ابن|بن)\s+باز\s+في/,
+    /رأي\s+(?:ابن|بن)\s+باز\s+في/,
+  ].some((pattern) => pattern.test(text))
+    || ['ابن باز', 'بن باز', 'الشيخ ابن باز', 'الشيخ عبد العزيز بن باز', 'عبد العزيز بن باز'].some((variant) => text.includes(variant))
+    || (lower.includes('ibn baz') || lower.includes('bin baz'));
+}
+
 function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [] }) {
   const sanitizedSources = sanitizeSourcesForResponse(sources);
   const answer = appendScholarNote(buildTemplateAnswer(sources[0]), classification);
@@ -818,10 +838,13 @@ async function handleChat(payload, res) {
     }
 
     const tafsirSources = sources.filter((source) => source.source_type === 'tafsir');
+    const scholarSources = sources.filter((source) => ['fatwa', 'scholar', 'scholar_statement', 'book', 'lecture', 'educational_explanation', 'video_transcript'].includes(source.source_type));
     const directTafsirLookup = isDirectTafsirLookup(question) && tafsirSources.length > 0;
-    if (classification.intent === 'direct_source_lookup' || directTafsirLookup) {
+    const directScholarLookup = isDirectScholarLookup(question) && scholarSources.length > 0;
+    if (classification.intent === 'direct_source_lookup' || directTafsirLookup || directScholarLookup) {
+      const directSources = directTafsirLookup ? tafsirSources : (directScholarLookup ? scholarSources : sources);
       const out = templateSourceResponse({
-        sources: directTafsirLookup ? tafsirSources : sources,
+        sources: directSources,
         mode,
         modelMode,
         classification,

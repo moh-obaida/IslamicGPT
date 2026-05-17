@@ -134,16 +134,16 @@ before(async () => {
     {
       id: 'scholar-sample-binbaz-prayer-001',
       source_type: 'fatwa',
-      title: 'Sample fatwa about prayer',
-      scholar_name: 'Shaykh Ibn Baz',
+      title: 'حكم الاستماع إلى الأغاني',
+      scholar_name: 'الشيخ عبد العزيز بن باز',
       scholar_slug: 'ibn-baz',
       work_type: 'fatwa',
-      question_text: 'What is a brief reminder about preserving prayer on time?',
-      answer_text: 'This sample excerpt reminds the believer to protect the obligatory prayers and avoid neglecting them.',
-      summary_text: 'Sample-only summary: preserve obligatory prayer and seek detailed rulings from qualified scholars.',
+      question_text: 'ما حكم الاستماع إلى الأغاني؟',
+      answer_text: 'الاستماع إلى الأغاني لا يجوز، ويجب على المسلم أن يشتغل بما ينفعه من القرآن والذكر.',
+      summary_text: 'ملخص المصدر: حكم الاستماع إلى الأغاني التحريم والتنبيه على سماع القرآن والذكر.',
       fatwa_reference: 'Sample Ref SB-001',
       source_url: 'https://example.com/scholar/ibn-baz/prayer-sample',
-      topic_tags: ['prayer', 'fatwa', 'sample'],
+      topic_tags: ['fatwa', 'ibn baz', 'songs', 'music', 'listening', 'ابن باز', 'الاغاني', 'الاستماع'],
       approved_for_answers: true,
       verified_by_admin: true,
       admin_review_status: 'sample_only',
@@ -621,14 +621,14 @@ test('/api/sources/search returns scholar sample with source metadata', async ()
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.sources.length > 0, true);
   assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
-  assert.strictEqual(body.sources[0].scholar_name, 'Shaykh Ibn Baz');
+  assert.strictEqual(body.sources[0].scholar_name, 'الشيخ عبد العزيز بن باز');
   assert.strictEqual(typeof body.sources[0].fatwa_reference, 'string');
   assert.strictEqual(typeof body.sources[0].source_url, 'string');
 });
 
 test('/api/chat answers direct scholar lookup with deterministic template and no LLM call', async () => {
   const { response, body } = await postJson('/api/chat', {
-    message: 'Ibn Baz fatwa about prayer',
+    message: 'Ibn Baz fatwa about songs',
     mode: 'islamic_search_mode',
     modelMode: 'quick',
   });
@@ -637,14 +637,56 @@ test('/api/chat answers direct scholar lookup with deterministic template and no
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
-  assert.strictEqual(body.answer.includes('Shaykh Ibn Baz'), true);
+  assert.strictEqual(body.answer.includes('الشيخ عبد العزيز بن باز'), true);
   assert.strictEqual(body.answer.includes('source-backed excerpt'), true);
   assert.strictEqual(body.answer.includes('not a personalized fatwa'), true);
+});
+
+test('/api/chat answers Arabic direct Bin Baz lookup with deterministic template and no LLM call', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'ما حكم الاستماع إلى الأغاني عند ابن باز؟',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sources[0].source_type, 'fatwa');
+  assert.strictEqual(body.answer.includes('الشيخ عبد العزيز بن باز'), true);
+  assert.strictEqual(body.answer.includes('source-backed excerpt') || body.answer.includes('ملخص المصدر'), true);
+  assert.strictEqual(body.answer.includes('not a personalized fatwa') || body.answer.includes('ليس فتوى شخصية'), true);
+});
+
+test('/api/chat answers Arabic direct fatwa wording with deterministic template and no LLM call', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'فتوى ابن باز عن الاستماع إلى الأغاني',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sources[0].source_type, 'fatwa');
 });
 
 test('/api/chat blocks unknown scholar fatwa lookup safely', async () => {
   const { response, body } = await postJson('/api/chat', {
     message: 'Bin Baz fatwa about a made up topic xyz',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
+  assert.strictEqual(body.confidence, 'no_approved_source_found');
+});
+
+test('/api/chat blocks unknown Arabic scholar fatwa lookup safely', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'ما حكم موضوع غير موجود xyz عند ابن باز؟',
     mode: 'islamic_search_mode',
     modelMode: 'quick',
   });
