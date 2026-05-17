@@ -208,20 +208,26 @@ function buildTemplateAnswer(source) {
   if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
     const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
     const heading = source.title ? `### ${source.title}` : '### Hadith';
-    const meaningText = source.translation_text || source.meaning_text || source.explanation_text || 'Meaning text is not available in the approved source record.';
+    const quoteText = source.translation_text || source.meaning_text || source.explanation_text || 'Translation text is not available in the approved source record.';
+    const meaningCandidate = source.explanation_text || source.meaning_text || '';
+    const shouldShowMeaning = Boolean(
+      meaningCandidate
+      && meaningCandidate.trim()
+      && meaningCandidate.trim() !== String(source.translation_text || '').trim()
+    );
     return [
       heading,
       '',
       'The Prophet ﷺ said:',
       '',
-      `> ${meaningText}`,
+      `> ${quoteText}`,
       '',
       source.arabic_text ? '**Arabic:**' : null,
       source.arabic_text || null,
       '',
-      '**Meaning:**',
-      meaningText,
-      '',
+      shouldShowMeaning ? '**Meaning:**' : null,
+      shouldShowMeaning ? meaningCandidate : null,
+      shouldShowMeaning ? '' : null,
       source.grade ? `**Grade:** ${source.grade}` : null,
       source.grade ? '' : null,
       '**Source:**',

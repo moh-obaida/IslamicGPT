@@ -413,6 +413,7 @@ test('/api/chat uses template answers for direct source lookup', async () => {
   assert.strictEqual(body.sourceCards.length > 0, true);
   assert.strictEqual(body.answer.includes('### Actions are judged by intention'), true);
   assert.strictEqual(body.answer.includes('**Source:**\nSahih Seed, Hadith 1'), true);
+  assert.strictEqual(body.answer.includes('**Meaning:**'), false);
   assert.strictEqual(body.answer.includes('Title:'), false);
   assert.strictEqual(body.answer.includes('Arabic: إِن'), false);
 });
