@@ -296,7 +296,7 @@ function buildTemplateAnswer(source) {
   if (['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(source.source_type)) {
     const scholarName = source.scholar_name_en || source.scholar_name_ar || source.scholar_name || '';
     return [
-      'I found an approved scholar/fatwa source.',
+      'I found an approved scholar source related to this question.',
       '',
       'Title:',
       source.title || source.source_title || 'Scholar source',
@@ -307,14 +307,14 @@ function buildTemplateAnswer(source) {
       source.question_text ? 'Question:' : null,
       source.question_text || null,
       '',
-      'Answer:',
+      'Answer excerpt:',
       source.answer_text || source.translation_text || source.arabic_text || source.summary_text || source.explanation_text || source.quote_text || 'Text is not available in the approved source record.',
       '',
       'Reference:',
       scholarReference(source) || source.source_title || source.title || source.id || 'Approved source',
       '',
       'Note:',
-      'If this is a personal religious ruling, consult a qualified scholar for your specific situation.',
+      'This is a source-backed excerpt. It is not a personalized fatwa. For personal circumstances, consult a qualified scholar.',
     ].filter(Boolean).join('\n');
   }
 

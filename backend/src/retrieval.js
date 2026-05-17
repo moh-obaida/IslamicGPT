@@ -115,12 +115,23 @@ function localSourceScore(source, message) {
   const text = localSearchText(source);
   const sourceTokens = new Set(text.split(' ').filter(Boolean));
   let score = text.includes(query) ? 12 : 0;
+  let matchedTokens = 0;
 
   meaningfulTokens.forEach((token) => {
     const variants = tokenVariants(token);
-    if (variants.some((variant) => sourceTokens.has(variant))) score += 4;
-    else if (variants.some((variant) => text.includes(` ${variant} `) || text.startsWith(`${variant} `) || text.endsWith(` ${variant}`))) score += 2;
+    if (variants.some((variant) => sourceTokens.has(variant))) {
+      score += 4;
+      matchedTokens += 1;
+    } else if (variants.some((variant) => text.includes(` ${variant} `) || text.startsWith(`${variant} `) || text.endsWith(` ${variant}`))) {
+      score += 2;
+      matchedTokens += 1;
+    }
   });
+
+  if (['fatwa', 'scholar', 'scholar_statement', 'book', 'lecture', 'educational_explanation', 'video_transcript'].includes(source.source_type)) {
+    const coverage = matchedTokens / meaningfulTokens.length;
+    if (coverage < 0.6) return 0;
+  }
 
   return score;
 }

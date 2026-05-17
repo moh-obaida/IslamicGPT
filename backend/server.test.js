@@ -87,7 +87,7 @@ before(async () => {
       collection_name: 'Sahih Seed',
       hadith_number: '2',
       translation_text: 'This should not be indexed.',
-      verified_by_admin: false,
+      verified_by_admin: true,
       approved_for_answers: false,
     },
   ], null, 2));
@@ -145,7 +145,7 @@ before(async () => {
       source_url: 'https://example.com/scholar/ibn-baz/prayer-sample',
       topic_tags: ['prayer', 'fatwa', 'sample'],
       approved_for_answers: true,
-      verified_by_admin: false,
+      verified_by_admin: true,
       admin_review_status: 'sample_only',
       attribution_text: 'Curated sample record for pipeline testing.',
       license_status: 'sample_only_review_required',
