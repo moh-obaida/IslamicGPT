@@ -299,6 +299,26 @@ test('GET /health and /api/health expose local fallback supabase status', async 
   assert.strictEqual(healthBody.services.source_mode, 'local_fallback');
   assert.strictEqual(healthBody.services.supabase.configured, false);
   assert.strictEqual(apiHealthBody.services.source_mode, 'local_fallback');
+  assert.strictEqual(healthBody.runtime.app, 'IslamicGPT');
+  assert.strictEqual(typeof healthBody.runtime.commit, 'string');
+  assert.strictEqual(typeof healthBody.runtime.branch, 'string');
+  assert.strictEqual(typeof healthBody.runtime.started_at, 'string');
+});
+
+test('GET /api/version returns safe runtime details and feature capabilities', async () => {
+  const response = await fetch(`${baseUrl}/api/version`);
+  const body = await response.json();
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.app, 'IslamicGPT');
+  assert.strictEqual(typeof body.started_at, 'string');
+  assert.strictEqual(typeof body.uptime_seconds, 'number');
+  assert(body.uptime_seconds >= 0);
+  assert.strictEqual(typeof body.commit, 'string');
+  assert.strictEqual(typeof body.branch, 'string');
+  assert.strictEqual(body.features.directTafsirTemplate, true);
+  assert.strictEqual(body.features.tafsirPayloadSanitizer, true);
+  assert.strictEqual(body.features.noSourceGate, true);
 });
 
 test('admin login rejects wrong password', async () => {

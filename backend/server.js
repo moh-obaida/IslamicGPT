@@ -18,6 +18,7 @@ const { formatSourceCards } = require('./src/sourceCards');
 const { sanitizeSourcesForResponse } = require('./src/sourceResponseSanitizer');
 const { validateIslamicCitations } = require('./src/citationValidation');
 const { validateIslamicAnswerAgainstSources } = require('./src/answerValidator');
+const { getRuntimeInfo } = require('./src/runtimeInfo');
 const { classifyQuestion } = require('./src/questionClassifier');
 const {
   deleteSource,
@@ -548,6 +549,8 @@ async function buildHealthPayload() {
     Promise.resolve(listAllSourceRecords({ includeSourceMeta: false })),
   ]);
 
+  const sourceBackend = supabase.configured && supabase.status === 'ready' ? 'supabase' : 'local_fallback';
+
   return {
     ok: true,
     timestamp: Date.now(),
@@ -565,8 +568,9 @@ async function buildHealthPayload() {
         byType: supabase.byType,
         error: supabase.error,
       },
-      source_mode: supabase.configured && supabase.status === 'ready' ? 'supabase' : 'local_fallback',
+      source_mode: sourceBackend,
     },
+    runtime: getRuntimeInfo({ sourceBackend }),
   };
 }
 
@@ -963,6 +967,11 @@ http.createServer(async (req, res) => {
 
   if ((url.pathname === '/health' || url.pathname === '/api/health') && req.method === 'GET') {
     return send(res, 200, await buildHealthPayload());
+  }
+
+  if (url.pathname === '/api/version' && req.method === 'GET') {
+    const supabaseReady = isSupabaseConfigured();
+    return send(res, 200, getRuntimeInfo({ sourceBackend: supabaseReady ? 'supabase' : 'local_fallback' }));
   }
 
   if (url.pathname === '/api/local-ai/health' && req.method === 'GET') {
