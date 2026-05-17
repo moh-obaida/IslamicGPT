@@ -392,15 +392,67 @@ function expandTerms(tokens) {
   return [...expanded].filter(Boolean);
 }
 
+
+function normalizeArabicText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[ً-ْٰ]/g, '')
+    .replace(/[آأإٱ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[^؀-ۿ\sa-z0-9-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function detectDirectSurahNameLookup(question) {
+  const raw = String(question || '').trim();
+  if (!raw) return null;
+  const ascii = raw.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const arabic = normalizeArabicText(raw);
+  const candidates = [
+    {
+      surahNumber: 1,
+      ayahNumber: 1,
+      matchers: [/\b(?:surah\s+)?(?:al[-\s]?)?fatihah\b/, /\b(?:surah\s+)?fatiha\b/, /الفاتحه/],
+    },
+    {
+      surahNumber: 112,
+      ayahNumber: 1,
+      matchers: [/\b(?:surah\s+)?(?:al[-\s]?)?ikhlas\b/, /\b(?:surah\s+)?ikhlas\b/, /الاخلاص/],
+    },
+    {
+      surahNumber: 113,
+      ayahNumber: 1,
+      matchers: [/\b(?:surah\s+)?(?:al[-\s]?)?falaq\b/, /\b(?:surah\s+)?falaq\b/, /الفلق/],
+    },
+    {
+      surahNumber: 114,
+      ayahNumber: 1,
+      matchers: [/\b(?:surah\s+)?(?:an[-\s]?)?nas\b/, /\b(?:surah\s+)?nas\b/, /الناس/],
+    },
+  ];
+  for (const candidate of candidates) {
+    if (candidate.matchers.some((pattern) => pattern.test(ascii) || pattern.test(arabic))) {
+      return { surahNumber: candidate.surahNumber, ayahNumber: candidate.ayahNumber, reason: 'surah_name_lookup' };
+    }
+  }
+  return null;
+}
 function normalizedQueryText(value) {
   return normalizeText(String(value || '').replace(/[^\p{L}\p{N}:/\s-]+/gu, ' ').replace(/\s+/g, ' ').trim());
 }
 
 function quranReferenceFromQuery(query) {
-  const text = normalizedQueryText(query.raw || query.cleaned || '');
+  const queryText = typeof query === 'string'
+    ? query
+    : String(query?.raw || query?.cleaned || query?.text || '');
+  const text = normalizedQueryText(queryText);
   const direct = text.match(/(?:quran|surah|aya|ayah|verse|آية|اية|ايه|الآية|الاية)?\s*(\d{1,3})\s*[:/-]\s*(\d{1,3})/i);
   if (direct) return `${Number.parseInt(direct[1], 10)}:${Number.parseInt(direct[2], 10)}`;
   if (/(ayat\s+al\s+kursi|ayatul\s+kursi|آية\s+الكرسي|ايه\s+الكرسي|kursi)/i.test(text)) return '2:255';
+  const surahLookup = detectDirectSurahNameLookup(queryText);
+  if (surahLookup) return `${surahLookup.surahNumber}:${surahLookup.ayahNumber}`;
   return null;
 }
 
@@ -408,10 +460,10 @@ function expandQuranQueryTerms(normalizedQuery) {
   const expanded = new Set(expandTerms(normalizedQuery.tokens));
   const text = normalizedQueryText(normalizedQuery.raw || normalizedQuery.cleaned);
   const phraseSynonyms = [
-    { pattern: /\bfatihah?\b|\bfatiha\b|الفاتحة/i, terms: ['al-fatihah', 'fatihah', 'fatiha', 'الفاتحة', '1'] },
+    { pattern: /\bfatihah?\b|\bfatiha\b|الفاتحة|الفاتحه/i, terms: ['al-fatihah', 'fatihah', 'fatiha', 'الفاتحة', 'الفاتحه', '1'] },
     { pattern: /\bbaqarah\b|\bal\s+baqarah\b|البقرة/i, terms: ['al-baqarah', 'baqarah', 'البقرة', '2'] },
     { pattern: /\b(?:ayat\s+al\s+kursi|ayatul\s+kursi|kursi)\b|آية\s+الكرسي|ايه\s+الكرسي/i, terms: ['2:255', 'ayat al kursi', 'ayatul kursi', 'آية الكرسي', 'ايه الكرسي', 'kursi'] },
-    { pattern: /الإخلاص|الاخلاص/i, terms: ['al-ikhlas', 'ikhlas', 'الإخلاص', 'الاخلاص', '112'] },
+    { pattern: /\b(?:surah\s+)?(?:al[-\s]?)?ikhlas\b|الإخلاص|الاخلاص/i, terms: ['al-ikhlas', 'al ikhlas', 'ikhlas', 'الإخلاص', 'الاخلاص', '112'] },
   ];
   phraseSynonyms.forEach(({ pattern, terms }) => {
     if (pattern.test(text)) terms.forEach((term) => expanded.add(term));
