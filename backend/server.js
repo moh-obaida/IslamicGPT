@@ -38,6 +38,7 @@ const {
 } = require('./src/sourceStore');
 
 const REFUSAL_MESSAGE = 'I could not find enough reliable evidence in the approved sources.';
+const TAFSIR_PREVIEW_MAX_CHARS = 1500;
 const DEBUG_SOURCES = String(process.env.ISLAMICGPT_DEBUG_SOURCES || process.env.DEBUG_SOURCES || process.env.VITE_DEBUG_SOURCES || 'false').toLowerCase() === 'true';
 const MAX_REQUEST_BYTES = Number(process.env.MAX_CHAT_REQUEST_BYTES || 64 * 1024);
 const DEFAULT_MODE = 'islamic_search_mode';
@@ -237,23 +238,27 @@ function buildTemplateAnswer(source) {
 
   if (source.source_type === 'tafsir') {
     const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_range || source.ayah_number || source.ayah || '?'}`;
-    const surahName = source.surah_name_en || source.surah_name_ar || `Surah ${source.surah_number || source.surah || '?'}`;
     const tafsirBookName = source.tafsir_book_name || source.tafsir_book_name_en || source.tafsir_book_name_ar || source.title || 'Tafsir source';
+    const previewSource = source.explanation_text || source.translation_text || 'Explanation text is not available in the approved source record.';
+    const preview = String(previewSource).slice(0, TAFSIR_PREVIEW_MAX_CHARS).trim();
+    const previewSuffix = String(previewSource).length > preview.length ? '…' : '';
     return [
-      `### Tafsir of Surah ${surahName} ${ref}`,
+      `A relevant Tafsir source is ${tafsirBookName}, Tafsir of ${ref}.`,
       '',
-      source.translation_text || source.arabic_text ? '**Verse:**' : null,
-      source.translation_text || source.arabic_text || null,
-      source.translation_text || source.arabic_text ? '' : null,
-      '**Tafsir:**',
-      source.explanation_text || source.translation_text || 'Explanation text is not available in the approved source record.',
+      'Explanation:',
+      `${preview}${previewSuffix}`,
       '',
-      '**Source:**',
-      `${tafsirBookName}, Surah ${surahName} ${ref}`,
-      source.tafsir_author ? '' : null,
-      source.tafsir_author ? `Author: ${source.tafsir_author}` : null,
-      source.original_source ? '' : null,
-      source.original_source ? `Original source: ${source.original_source}` : null,
+      'Source:',
+      `${tafsirBookName}, Tafsir of ${ref}`,
+      '',
+      'Reference:',
+      `Quran ${ref}`,
+      '',
+      'Edition:',
+      source.tafsir_edition_slug || 'Unknown edition',
+      '',
+      'Note:',
+      'This is a source-backed Tafsir excerpt. Review the source card for full text and attribution.',
     ].filter(Boolean).join('\n');
   }
 
@@ -314,6 +319,17 @@ function buildTemplateAnswer(source) {
     'Source:',
     sourceTitle,
   ].filter(Boolean).join('\n');
+}
+
+function isDirectTafsirLookup(question = '') {
+  const text = String(question || '').trim().toLowerCase();
+  return [
+    /\btafsir\s+of\s+(?:quran\s*)?\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+    /\btafsir\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+    /\bexplain\s+tafsir\s+of\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+    /\bibn\s+kathir\s+tafsir\s+of\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+    /\btafsir\s+of\s+al[-\s]?fatihah\b/i,
+  ].some((pattern) => pattern.test(text));
 }
 
 function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [] }) {
@@ -785,7 +801,8 @@ async function handleChat(payload, res) {
       return send(res, 200, out);
     }
 
-    if (classification.intent === 'direct_source_lookup') {
+    const directTafsirLookup = isDirectTafsirLookup(question) && sources.some((source) => source.source_type === 'tafsir');
+    if (classification.intent === 'direct_source_lookup' || directTafsirLookup) {
       const out = templateSourceResponse({
         sources,
         mode,

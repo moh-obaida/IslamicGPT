@@ -21,6 +21,7 @@ let mockOllamaBaseUrl;
 const ADMIN_EMAIL = 'owner@example.com';
 const ADMIN_PASSWORD = 'correct-password';
 const JWT_SECRET = 'test-secret-that-is-long-enough';
+const LONG_TAFSIR_EXPLANATION = 'This tafsir explains the opening verse of Al-Fatihah. '.repeat(80);
 
 function getFreePort() {
   return new Promise((resolve, reject) => {
@@ -131,7 +132,7 @@ before(async () => {
       tafsir_book_name: 'Tafsir Ibn Kathir',
       tafsir_author: 'Ibn Kathir',
       tafsir_language: 'en',
-      explanation_text: 'This tafsir explains the opening verse of Al-Fatihah.',
+      explanation_text: LONG_TAFSIR_EXPLANATION,
       original_source: 'Quran.com',
       verified_by_admin: true,
       approved_for_answers: true,
@@ -460,8 +461,26 @@ test('/api/chat uses template answers for direct Tafsir lookups without Ollama',
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
-  assert.strictEqual(body.answer.includes('### Tafsir of Surah Al-Fatihah 1:1'), true);
-  assert.strictEqual(body.answer.includes('Original source: Quran.com'), true);
+  assert.strictEqual(body.answer.includes('A relevant Tafsir source is Tafsir Ibn Kathir, Tafsir of 1:1.'), true);
+  assert.strictEqual(body.answer.includes('Reference:\nQuran 1:1'), true);
+  assert.strictEqual(body.answer.includes('Edition:\nen-tafisr-ibn-kathir'), true);
+  assert.strictEqual(body.answer.includes('This is a source-backed Tafsir excerpt.'), true);
+});
+
+test('/api/chat answers direct Tafsir reference queries with deterministic preview without Ollama', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Tafsir of Quran 1:1',
+    mode: 'islamic_search_mode',
+    modelMode: 'balanced',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.answer.includes('Tafsir Ibn Kathir'), true);
+  assert.strictEqual(body.answer.includes('Quran 1:1'), true);
+  assert.strictEqual(body.answer.includes('Explanation:'), true);
+  assert.strictEqual(body.answer.includes(LONG_TAFSIR_EXPLANATION), false);
+  assert.strictEqual(body.answer.includes('…'), true);
 });
 
 test('/api/chat uses model with validation for explanations', async () => {
