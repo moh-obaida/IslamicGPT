@@ -1,5 +1,5 @@
 const { loadIndexSources, normalizeText } = require('./sourceStore');
-const { searchSources } = require('./supabaseSourceDb');
+const { searchSources, quranReferenceFromQuery } = require('./supabaseSourceDb');
 
 const SEARCH_FILLER_WORDS = new Set([
   'a', 'about', 'an', 'explain', 'explanation', 'give', 'hadith', 'i', 'if',
@@ -106,6 +106,23 @@ function tokenVariants(token) {
 }
 
 function localSourceScore(source, message) {
+  const quranRef = quranReferenceFromQuery(message);
+  if (quranRef && ['quran', 'quran_translation', 'tafsir'].includes(source.source_type)) {
+    const [surahNumber, ayahNumber] = quranRef.split(':').map((part) => Number.parseInt(part, 10));
+    const recordSurah = Number.parseInt(source.surah_number || source.surah, 10);
+    const recordAyah = Number.parseInt(source.ayah_number || source.ayah, 10);
+    const ayahStart = Number.parseInt(source.ayah_start || recordAyah, 10);
+    const ayahEnd = Number.parseInt(source.ayah_end || ayahStart, 10);
+    const exactMatch = recordSurah === surahNumber && recordAyah === ayahNumber;
+    const rangeMatch = source.source_type === 'tafsir'
+      && recordSurah === surahNumber
+      && ayahStart
+      && ayahEnd
+      && ayahNumber >= ayahStart
+      && ayahNumber <= ayahEnd;
+    return exactMatch || rangeMatch ? 120 : 0;
+  }
+
   const query = normalizeText(sanitizeSearchQuery(message));
   const queryTokens = query.split(' ').filter(Boolean);
   if (!queryTokens.length) return 0;

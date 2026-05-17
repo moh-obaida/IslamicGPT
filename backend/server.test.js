@@ -570,13 +570,15 @@ test('/api/chat routes Arabic surah-name Al-Ikhlas lookup to Quran 112:1 templat
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.sources[0].source_type, 'quran');
-  assert.strictEqual(body.sourceCards[0].title.includes('Al-Ikhlas 112:1'), true);
+  assert.strictEqual(body.sources[0].title.includes('Al-Ikhlas 112:1'), true);
   assert.strictEqual(body.sources[0].surah_number, 112);
   assert.strictEqual(body.sources[0].ayah_number, 1);
 });
 
 test('/api/chat routes Arabic surah-name Al-Fatihah lookup to Quran 1:1 template', async () => {
   const { body } = await postJson('/api/chat', { message: 'سورة الفاتحة', mode: 'quran_mode', modelMode: 'quick' });
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.sources[0].source_type, 'quran');
   assert.strictEqual(body.sources[0].surah_number, 1);
   assert.strictEqual(body.sources[0].ayah_number, 1);
@@ -598,6 +600,8 @@ test('/api/chat routes Arabic surah-name An-Nas lookup to Quran 114:1 template',
 
 test('/api/chat routes English surah-name Al-Ikhlas lookup to Quran 112:1 template', async () => {
   const { body } = await postJson('/api/chat', { message: 'Surah Al-Ikhlas', mode: 'quran_mode', modelMode: 'quick' });
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.sources[0].source_type, 'quran');
   assert.strictEqual(body.sources[0].surah_number, 112);
   assert.strictEqual(body.sources[0].ayah_number, 1);

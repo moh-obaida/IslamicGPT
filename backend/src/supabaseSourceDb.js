@@ -444,11 +444,14 @@ function normalizedQueryText(value) {
 }
 
 function quranReferenceFromQuery(query) {
-  const text = normalizedQueryText(query.raw || query.cleaned || '');
+  const queryText = typeof query === 'string'
+    ? query
+    : String(query?.raw || query?.cleaned || query?.text || '');
+  const text = normalizedQueryText(queryText);
   const direct = text.match(/(?:quran|surah|aya|ayah|verse|آية|اية|ايه|الآية|الاية)?\s*(\d{1,3})\s*[:/-]\s*(\d{1,3})/i);
   if (direct) return `${Number.parseInt(direct[1], 10)}:${Number.parseInt(direct[2], 10)}`;
   if (/(ayat\s+al\s+kursi|ayatul\s+kursi|آية\s+الكرسي|ايه\s+الكرسي|kursi)/i.test(text)) return '2:255';
-  const surahLookup = detectDirectSurahNameLookup(query.raw || query.cleaned || '');
+  const surahLookup = detectDirectSurahNameLookup(queryText);
   if (surahLookup) return `${surahLookup.surahNumber}:${surahLookup.ayahNumber}`;
   return null;
 }
@@ -457,10 +460,10 @@ function expandQuranQueryTerms(normalizedQuery) {
   const expanded = new Set(expandTerms(normalizedQuery.tokens));
   const text = normalizedQueryText(normalizedQuery.raw || normalizedQuery.cleaned);
   const phraseSynonyms = [
-    { pattern: /\bfatihah?\b|\bfatiha\b|الفاتحة/i, terms: ['al-fatihah', 'fatihah', 'fatiha', 'الفاتحة', '1'] },
+    { pattern: /\bfatihah?\b|\bfatiha\b|الفاتحة|الفاتحه/i, terms: ['al-fatihah', 'fatihah', 'fatiha', 'الفاتحة', 'الفاتحه', '1'] },
     { pattern: /\bbaqarah\b|\bal\s+baqarah\b|البقرة/i, terms: ['al-baqarah', 'baqarah', 'البقرة', '2'] },
     { pattern: /\b(?:ayat\s+al\s+kursi|ayatul\s+kursi|kursi)\b|آية\s+الكرسي|ايه\s+الكرسي/i, terms: ['2:255', 'ayat al kursi', 'ayatul kursi', 'آية الكرسي', 'ايه الكرسي', 'kursi'] },
-    { pattern: /الإخلاص|الاخلاص/i, terms: ['al-ikhlas', 'ikhlas', 'الإخلاص', 'الاخلاص', '112'] },
+    { pattern: /\b(?:surah\s+)?(?:al[-\s]?)?ikhlas\b|الإخلاص|الاخلاص/i, terms: ['al-ikhlas', 'al ikhlas', 'ikhlas', 'الإخلاص', 'الاخلاص', '112'] },
   ];
   phraseSynonyms.forEach(({ pattern, terms }) => {
     if (pattern.test(text)) terms.forEach((term) => expanded.add(term));
