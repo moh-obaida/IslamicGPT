@@ -84,6 +84,16 @@ const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /أعطني آية/,
   /اعطني آية/,
   /آية الكرسي/,
+  /\b(?:surah\s+)?(?:al[-\s]?)?fatihah\b/i,
+  /\b(?:surah\s+)?fatiha\b/i,
+  /\b(?:surah\s+)?(?:al[-\s]?)?ikhlas\b/i,
+  /\b(?:surah\s+)?(?:al[-\s]?)?falaq\b/i,
+  /\b(?:surah\s+)?(?:an[-\s]?)?nas\b/i,
+  /سورة\s+الفاتحة/,
+  /سورة\s+الإخلاص/,
+  /سورة\s+الاخلاص/,
+  /سورة\s+الفلق/,
+  /سورة\s+الناس/,
   /اعرض.*تفسير/,
 ];
 
