@@ -151,13 +151,54 @@ function capText(value, maxChars = 1000) {
   return full.length > preview.length ? `${preview}…` : preview;
 }
 
+function containsArabic(text) {
+  return /[\u0600-\u06FF]/.test(String(text || ''));
+}
+
+function shouldUseArabicScholarTemplate(question, source = {}) {
+  const normalizedQuestion = String(question || '').trim();
+  if (containsArabic(normalizedQuestion)) return true;
+  if (normalizedQuestion) return false;
+  if (String(source.language || '').toLowerCase() === 'arabic') return true;
+  return [source.title, source.question_text, source.answer_text, source.scholar_name, source.scholar_name_ar, source.arabic_text]
+    .some((value) => containsArabic(value));
+}
+
+function getSourceReference(source = {}) {
+  const candidates = [
+    source.fatwa_reference,
+    source.reference,
+    source.reference_number,
+    source.metadata?.reference,
+    source.metadata?.original_record?.reference,
+    source.fatwa_number,
+  ];
+  const seen = new Set();
+  for (const item of candidates) {
+    const value = String(item || '').trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    return value;
+  }
+  return '';
+}
+
+function getSourceUrl(source = {}) {
+  return String(source.source_url || source.url || source.metadata?.url || source.metadata?.original_record?.url || '').trim();
+}
+
 function scholarReference(source) {
+  const normalizedRef = getSourceReference(source);
+  const looksLikeFatwaPrefix = /^\s*fatwa\b/i.test(normalizedRef);
+  const fatwaLabel = source.fatwa_number && !normalizedRef ? `Fatwa ${source.fatwa_number}` : '';
   return [
     source.work_title || source.work_title_en || source.work_title_ar,
-    source.fatwa_number || source.fatwa_reference ? `Fatwa ${source.fatwa_number || source.fatwa_reference}` : '',
+    !looksLikeFatwaPrefix && normalizedRef ? normalizedRef : '',
+    fatwaLabel,
     source.page_number ? `p. ${source.page_number}` : '',
     source.page_range ? `pp. ${source.page_range}` : '',
-    source.source_url || '',
   ].filter(Boolean).join(' / ');
 }
 
@@ -215,7 +256,7 @@ function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'no
   };
 }
 
-function buildTemplateAnswer(source) {
+function buildTemplateAnswer(source, question = '') {
   if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
     const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
     const heading = source.title ? `### ${source.title}` : '### Hadith';
@@ -294,7 +335,37 @@ function buildTemplateAnswer(source) {
   }
 
   if (['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(source.source_type)) {
+    const useArabicTemplate = shouldUseArabicScholarTemplate(question, source);
     const scholarName = source.scholar_name_en || source.scholar_name_ar || source.scholar_name || '';
+    const answerExcerpt = capText(source.answer_text || source.translation_text || source.arabic_text || source.summary_text || source.explanation_text || source.quote_text || 'Text is not available in the approved source record.');
+    const sourceRef = getSourceReference(source) || scholarReference(source) || source.source_title || source.title || source.id || 'Approved source';
+    const sourceUrl = getSourceUrl(source);
+    if (useArabicTemplate) {
+      return [
+        'وجدت مصدرًا معتمدًا متعلقًا بهذا السؤال.',
+        '',
+        'العنوان:',
+        source.title || source.source_title || 'مصدر شرعي',
+        '',
+        scholarName ? 'العالم:' : null,
+        scholarName || null,
+        '',
+        source.question_text ? 'السؤال:' : null,
+        source.question_text || null,
+        '',
+        'مقتطف من الجواب:',
+        answerExcerpt,
+        '',
+        sourceRef ? 'المرجع:' : null,
+        sourceRef || null,
+        '',
+        sourceUrl ? 'الرابط:' : null,
+        sourceUrl || null,
+        sourceUrl ? '' : null,
+        'تنبيه:',
+        'هذا مقتطف موثق من المصدر، وليس فتوى شخصية. في الحالات الخاصة، يُرجى مراجعة عالم مؤهل.',
+      ].filter(Boolean).join('\n');
+    }
     return [
       'I found an approved scholar source related to this question.',
       '',
@@ -308,10 +379,14 @@ function buildTemplateAnswer(source) {
       source.question_text || null,
       '',
       'Answer excerpt:',
-      source.answer_text || source.translation_text || source.arabic_text || source.summary_text || source.explanation_text || source.quote_text || 'Text is not available in the approved source record.',
+      answerExcerpt,
       '',
       'Reference:',
-      scholarReference(source) || source.source_title || source.title || source.id || 'Approved source',
+      sourceRef,
+      '',
+      sourceUrl ? 'Link:' : null,
+      sourceUrl || null,
+      sourceUrl ? '' : null,
       '',
       'Note:',
       'This is a source-backed excerpt. It is not a personalized fatwa. For personal circumstances, consult a qualified scholar.',
@@ -362,9 +437,9 @@ function isDirectScholarLookup(question = '') {
     || (lower.includes('ibn baz') || lower.includes('bin baz'));
 }
 
-function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [] }) {
+function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [], question = '' }) {
   const sanitizedSources = sanitizeSourcesForResponse(sources);
-  const answer = appendScholarNote(buildTemplateAnswer(sources[0]), classification);
+  const answer = appendScholarNote(buildTemplateAnswer(sources[0], question), classification);
   return {
     answer,
     mode,
@@ -845,6 +920,7 @@ async function handleChat(payload, res) {
       const directSources = directTafsirLookup ? tafsirSources : (directScholarLookup ? scholarSources : sources);
       const out = templateSourceResponse({
         sources: directSources,
+        question,
         mode,
         modelMode,
         classification,
