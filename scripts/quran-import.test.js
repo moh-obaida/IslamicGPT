@@ -182,6 +182,53 @@ test('Quran importer dry-run runs without Supabase env', () => {
   assert.match(result.stdout, /Dry-run only\. No Supabase writes performed/);
 });
 
+test('Quran importer --help prints usage and exits without preparing rows', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', ['--help']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Usage: node scripts\/import-quran-json-to-supabase\.js/);
+  assert.doesNotMatch(result.stdout, /Rows prepared:/);
+});
+
+test('Quran importer --only filters exact refs', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1, 2:255']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 2/);
+  assert.match(result.stdout, /Counts by surah: {"1":1,"2":1}/);
+});
+
+test('Quran importer --surah filters by surah number', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--dry-run', '--surah', '1']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 1/);
+  assert.match(result.stdout, /Counts by surah: {"1":1}/);
+});
+
+test('Quran importer --limit caps filtered rows', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1,2:255', '--limit', '1']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 1/);
+});
+
+test('Quran importer defaults approved/verified flags to false', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Approved for answers: false/);
+  assert.match(result.stdout, /Verified by admin: false/);
+});
+
+test('Quran importer sets approved/verified flags with explicit switches', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1', '--approved-for-answers', '--verified-by-admin']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Approved for answers: true/);
+  assert.match(result.stdout, /Verified by admin: true/);
+});
+
+test('Quran importer fails clearly for invalid --only ref', () => {
+  const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1,2']);
+  assert.notStrictEqual(result.status, 0);
+  assert.match(result.stderr + result.stdout, /Invalid --only ref/);
+});
+
 test('Quran importer execute mode requires Supabase env', () => {
   const result = runNodeScript('scripts/import-quran-json-to-supabase.js', [datasetRoot, '--execute', '--approve', '--limit=1']);
   assert.notStrictEqual(result.status, 0);

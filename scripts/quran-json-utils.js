@@ -44,17 +44,21 @@ function camelOptionName(name) {
 
 function parseCliArgs(argv) {
   const options = {
+    help: false,
     dryRun: true,
     execute: false,
     limit: null,
     batchSize: 500,
     approve: false,
     verify: false,
+    onlyRefs: null,
+    surahNumbers: null,
     ...DEFAULT_QURAN_METADATA,
   };
   const positionals = [];
 
-  for (const arg of argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
     if (!arg.startsWith('--')) {
       positionals.push(arg);
       continue;
@@ -63,6 +67,10 @@ function parseCliArgs(argv) {
     if (arg === '--dry-run') {
       options.dryRun = true;
       options.execute = false;
+      continue;
+    }
+    if (arg === '--help') {
+      options.help = true;
       continue;
     }
     if (arg === '--execute') {
@@ -74,9 +82,31 @@ function parseCliArgs(argv) {
       options.approve = true;
       continue;
     }
+    if (arg === '--approved-for-answers') {
+      options.approve = true;
+      continue;
+    }
     if (arg === '--verify') {
       options.verify = true;
       continue;
+    }
+    if (arg === '--verified-by-admin') {
+      options.verify = true;
+      continue;
+    }
+
+    if (arg === '--only' || arg === '--surah' || arg === '--limit' || arg === '--batch-size') {
+      const nextArg = argv[index + 1];
+      if (nextArg && !nextArg.startsWith('--')) {
+        const name = camelOptionName(arg.slice(2));
+        const value = nextArg.replace(/^"|"$/g, '');
+        if (name === 'limit') options.limit = Number.parseInt(value, 10);
+        else if (name === 'batchSize') options.batchSize = Number.parseInt(value, 10) || 500;
+        else if (name === 'only') options.onlyRefs = value;
+        else if (name === 'surah') options.surahNumbers = value;
+        index += 1;
+        continue;
+      }
     }
 
     const match = arg.match(/^--([^=]+)=(.*)$/);
@@ -86,6 +116,8 @@ function parseCliArgs(argv) {
     const value = rawValue.replace(/^"|"$/g, '');
     if (name === 'limit') options.limit = Number.parseInt(value, 10);
     else if (name === 'batchSize') options.batchSize = Number.parseInt(value, 10) || 500;
+    else if (name === 'only') options.onlyRefs = value;
+    else if (name === 'surah') options.surahNumbers = value;
     else if (Object.prototype.hasOwnProperty.call(options, name)) options[name] = value;
   }
 
