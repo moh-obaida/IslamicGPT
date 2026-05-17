@@ -158,7 +158,7 @@ function containsArabic(text) {
 function shouldUseArabicScholarTemplate(question, source = {}) {
   const normalizedQuestion = String(question || '').trim();
   if (containsArabic(normalizedQuestion)) return true;
-  if (normalizedQuestion) return String(source.language || '').toLowerCase() === 'arabic';
+  if (normalizedQuestion) return false;
   if (String(source.language || '').toLowerCase() === 'arabic') return true;
   return [source.title, source.question_text, source.answer_text, source.scholar_name, source.scholar_name_ar, source.arabic_text]
     .some((value) => containsArabic(value));

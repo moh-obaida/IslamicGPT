@@ -717,6 +717,8 @@ test('/api/chat keeps English direct scholar lookup template labels', async () =
   assert.strictEqual(body.answer.includes('Scholar:'), true);
   assert.strictEqual(body.answer.includes('Answer excerpt:'), true);
   assert.strictEqual(body.answer.includes('Reference:'), true);
+  assert.strictEqual(body.answer.includes('العنوان:'), false);
+  assert.strictEqual(body.answer.includes('مقتطف من الجواب:'), false);
 });
 
 test('/api/chat blocks unknown scholar fatwa lookup safely', async () => {
