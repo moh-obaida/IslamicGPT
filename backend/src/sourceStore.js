@@ -142,6 +142,7 @@ function publicSourceCard(source) {
     hadith_number_unavailable: source.hadith_number_unavailable,
     arabic_text: source.arabic_text,
     translation_text: source.translation_text,
+    explanation_text: source.explanation_text,
     scholar_name: source.scholar_name,
     fatwa_reference: source.fatwa_reference || source.fatwa_number || source.reference_number,
     topic_tags: Array.isArray(source.topic_tags) ? source.topic_tags : [],

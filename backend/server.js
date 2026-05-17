@@ -15,6 +15,7 @@ const { callOllama, checkOllamaHealth } = require('./src/ollamaClient');
 const { resolveModelMode, modelTimeoutMs } = require('./src/modelRouter');
 const { retrieveApprovedSources, searchIslamicKnowledgeBase } = require('./src/retrieval');
 const { formatSourceCards } = require('./src/sourceCards');
+const { sanitizeSourcesForResponse } = require('./src/sourceResponseSanitizer');
 const { validateIslamicCitations } = require('./src/citationValidation');
 const { validateIslamicAnswerAgainstSources } = require('./src/answerValidator');
 const { classifyQuestion } = require('./src/questionClassifier');
@@ -333,6 +334,7 @@ function isDirectTafsirLookup(question = '') {
 }
 
 function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [] }) {
+  const sanitizedSources = sanitizeSourcesForResponse(sources);
   const answer = appendScholarNote(buildTemplateAnswer(sources[0]), classification);
   return {
     answer,
@@ -345,8 +347,8 @@ function templateSourceResponse({ sources, mode, modelMode, classification, sour
     confidence: ['quran', 'quran_translation'].includes(sources[0]?.source_type)
       ? 'source_backed'
       : resolveIslamicConfidence({ sources, classification }),
-    sources,
-    sourceCards: formatSourceCards(sources),
+    sources: sanitizedSources,
+    sourceCards: formatSourceCards(sanitizedSources),
     warnings: sourceWarnings(sources, classification, warnings),
     errorState: null,
     llmCalled: false,
@@ -361,6 +363,7 @@ function templateSourceResponse({ sources, mode, modelMode, classification, sour
 }
 
 function modelBlockedResponse({ mode, modelMode, classification, sourceBackend, loading, sources, warnings = [], reason, unsupportedClaims = [] }) {
+  const sanitizedSources = sanitizeSourcesForResponse(sources);
   return {
     answer: appendScholarNote('I found approved sources, but I could not safely generate an answer without risking unsupported claims.', classification),
     mode,
@@ -370,8 +373,8 @@ function modelBlockedResponse({ mode, modelMode, classification, sourceBackend, 
     modelSelectionReason: 'Model answer was blocked by hallucination guardrails.',
     isIslamicQuestion: true,
     confidence: 'validation_failed',
-    sources,
-    sourceCards: formatSourceCards(sources),
+    sources: sanitizedSources,
+    sourceCards: formatSourceCards(sanitizedSources),
     warnings: sourceWarnings(sources, classification, warnings),
     errorState: 'answer_validation_failed',
     llmCalled: true,
@@ -504,7 +507,7 @@ function localSourcesResponse(url) {
   return {
     generated_at: result.generated_at || new Date().toISOString(),
     total: result.records.length,
-    sources: result.records.map(publicSourceCard),
+    sources: sanitizeSourcesForResponse(result.records.map(publicSourceCard)),
     warnings: loadIngestWarnings(),
     sourceBackend: 'local',
   };
@@ -526,7 +529,7 @@ async function publicSourcesResponse(url) {
       return {
         generated_at: new Date().toISOString(),
         total: supabaseResult.records.length,
-        sources: supabaseResult.records.map(publicSourceCard),
+        sources: sanitizeSourcesForResponse(supabaseResult.records.map(publicSourceCard)),
         warnings: [],
         sourceBackend: 'supabase',
       };
@@ -787,6 +790,7 @@ async function handleChat(payload, res) {
       limit: 8,
     });
     const sources = retrieval.sources || [];
+    const sanitizedSources = sanitizeSourcesForResponse(sources);
     loading.push('searched_approved_sources');
 
     if (!sources.length) {
@@ -841,8 +845,8 @@ async function handleChat(payload, res) {
         modelSelectionReason: selection.reason,
         isIslamicQuestion: true,
         confidence: resolveIslamicConfidence({ sources, classification }),
-        sources,
-        sourceCards: formatSourceCards(sources),
+        sources: sanitizedSources,
+        sourceCards: formatSourceCards(sanitizedSources),
         warnings,
         errorState: first.error,
         llmCalled: true,
@@ -915,8 +919,8 @@ Your previous answer risked unsupported claims. Rewrite the answer using only th
       modelSelectionReason: selection.reason,
       isIslamicQuestion: true,
       confidence: resolveIslamicConfidence({ sources, classification }),
-      sources,
-      sourceCards: formatSourceCards(sources),
+      sources: sanitizedSources,
+      sourceCards: formatSourceCards(sanitizedSources),
       warnings: sourceWarnings(sources, classification, retrieval.warnings),
       errorState: null,
       llmCalled: true,
