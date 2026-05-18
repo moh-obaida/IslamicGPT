@@ -55,6 +55,34 @@ function parseSet(value) {
   return new Set(String(value).split(',').map((entry) => entry.trim()).filter(Boolean));
 }
 
+function parseOnlyRefs(value) {
+  const refs = String(value || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const parsed = new Set();
+  for (const ref of refs) {
+    if (!/^\d{1,3}:\d{1,3}$/.test(ref)) throw new Error(`Invalid --only ref "${ref}". Expected format surah:ayah (e.g. 2:255).`);
+    parsed.add(ref);
+  }
+  return parsed;
+}
+
+function parseSurahFilter(value) {
+  const parts = String(value || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const parsed = new Set();
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) throw new Error(`Invalid --surah value "${part}". Expected comma-separated surah numbers (e.g. 1,2,112).`);
+    const surah = Number.parseInt(part, 10);
+    if (!Number.isFinite(surah) || surah <= 0) throw new Error(`Invalid --surah value "${part}". Surah numbers must be positive integers.`);
+    parsed.add(surah);
+  }
+  return parsed;
+}
+
 function parseCliArgs(argv) {
   const options = {
     dryRun: true,
@@ -62,17 +90,29 @@ function parseCliArgs(argv) {
     limit: null,
     batchSize: 500,
     editions: null,
+    onlyRefs: null,
+    surahFilter: null,
+    showHelp: false,
+    approvedForAnswers: false,
+    verifiedByAdmin: false,
     approveEditions: new Set(),
     verifyEditions: new Set(),
     ...DEFAULT_TAFSIR_METADATA,
   };
   const positionals = [];
 
-  for (const arg of argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
     if (!arg.startsWith('--')) {
       positionals.push(arg);
       continue;
     }
+    const takeValue = () => {
+      const next = argv[i + 1];
+      if (!next || next.startsWith('--')) throw new Error(`Missing value for ${arg}.`);
+      i += 1;
+      return next;
+    };
     if (arg === '--dry-run') {
       options.dryRun = true;
       options.execute = false;
@@ -83,21 +123,54 @@ function parseCliArgs(argv) {
       options.dryRun = false;
       continue;
     }
+    if (arg === '--help') {
+      options.showHelp = true;
+      continue;
+    }
+    if (arg === '--approved-for-answers') {
+      options.approvedForAnswers = true;
+      continue;
+    }
+    if (arg === '--verified-by-admin') {
+      options.verifiedByAdmin = true;
+      continue;
+    }
+    if (arg === '--only') {
+      options.onlyRefs = parseOnlyRefs(takeValue());
+      continue;
+    }
+    if (arg === '--surah') {
+      options.surahFilter = parseSurahFilter(takeValue());
+      continue;
+    }
+    if (arg === '--limit') {
+      const value = Number.parseInt(takeValue(), 10);
+      if (!Number.isFinite(value) || value <= 0) throw new Error(`Invalid --limit value "${argv[i]}". Limit must be a positive integer.`);
+      options.limit = value;
+      continue;
+    }
 
     const match = arg.match(/^--([^=]+)=(.*)$/);
-    if (!match) continue;
+    if (!match) throw new Error(`Unknown option: ${arg}`);
     const [, rawName, rawValue] = match;
     const value = rawValue.replace(/^"|"$/g, '');
-    if (rawName === 'limit') options.limit = Number.parseInt(value, 10);
+    if (rawName === 'limit') {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) throw new Error(`Invalid --limit value "${value}". Limit must be a positive integer.`);
+      options.limit = parsed;
+    }
     else if (rawName === 'batch-size') options.batchSize = Number.parseInt(value, 10) || 500;
     else if (rawName === 'editions') options.editions = parseSet(value);
     else if (rawName === 'approve-editions') options.approveEditions = parseSet(value);
     else if (rawName === 'verify-editions') options.verifyEditions = parseSet(value);
+    else if (rawName === 'only') options.onlyRefs = parseOnlyRefs(value);
+    else if (rawName === 'surah') options.surahFilter = parseSurahFilter(value);
     else if (rawName === 'dataset-name') options.datasetName = value || options.datasetName;
     else if (rawName === 'dataset-version') options.datasetVersion = value || options.datasetVersion;
     else if (rawName === 'dataset-url') options.datasetUrl = value || options.datasetUrl;
     else if (rawName === 'repo-license') options.repoLicense = value || options.repoLicense;
     else if (rawName === 'license-status') options.licenseStatus = value || options.licenseStatus;
+    else throw new Error(`Unknown option: --${rawName}`);
   }
 
   return { options, positionals };

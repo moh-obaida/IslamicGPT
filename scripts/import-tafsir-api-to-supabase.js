@@ -20,12 +20,42 @@ function chunk(array, size) {
   return out;
 }
 
+function printHelp() {
+  console.log(`Usage: node scripts/import-tafsir-api-to-supabase.js [dataset-root] [options]
+
+Options:
+  --help                       Show this help message and exit
+  --dry-run                    Prepare rows only (default)
+  --execute                    Upsert prepared rows into Supabase
+  --only <refs>                Comma-separated Quran refs (e.g. "1:1, 1:2, 2:255")
+  --surah <numbers>            Comma-separated surah numbers (e.g. "1,112,113")
+  --limit <n>                  Positive integer cap applied after filtering
+  --approved-for-answers       Set approved_for_answers=true on prepared rows
+  --verified-by-admin          Set verified_by_admin=true on prepared rows
+  --editions=<slugs>           Optional edition slug filter
+  --approve-editions=<slugs>   Mark specific editions approved_for_answers=true
+  --verify-editions=<slugs>    Mark specific editions verified_by_admin=true`);
+}
+
 async function main(argv = process.argv.slice(2)) {
   const { options, positionals } = parseCliArgs(argv);
+  if (options.showHelp) {
+    printHelp();
+    return;
+  }
   const datasetRoot = path.resolve(positionals[0] || 'data/imports/tafsir-api');
   const importedAt = new Date().toISOString();
   const analysis = normalizeTafsirApiDataset(datasetRoot, { ...options, importedAt });
-  const rows = Number.isFinite(options.limit) && options.limit > 0 ? analysis.rows.slice(0, options.limit) : analysis.rows;
+  let rows = analysis.rows;
+  if (options.onlyRefs instanceof Set && options.onlyRefs.size) {
+    rows = rows.filter((row) => options.onlyRefs.has(`${row.surah_number}:${row.ayah_number}`));
+  }
+  if (options.surahFilter instanceof Set && options.surahFilter.size) {
+    rows = rows.filter((row) => options.surahFilter.has(row.surah_number));
+  }
+  if (options.approvedForAnswers) rows = rows.map((row) => ({ ...row, approved_for_answers: true }));
+  if (options.verifiedByAdmin) rows = rows.map((row) => ({ ...row, verified_by_admin: true }));
+  if (Number.isFinite(options.limit) && options.limit > 0) rows = rows.slice(0, options.limit);
   const countsByEdition = rows.reduce((acc, row) => {
     acc[row.tafsir_edition_slug] = (acc[row.tafsir_edition_slug] || 0) + 1;
     return acc;
@@ -39,6 +69,8 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`Editions selected: ${options.editions && options.editions.size ? [...options.editions].join(', ') : 'all detected editions'}`);
   console.log(`Approved editions: ${options.approveEditions.size ? [...options.approveEditions].join(', ') : 'none'}`);
   console.log(`Verified editions: ${options.verifyEditions.size ? [...options.verifyEditions].join(', ') : 'none'}`);
+  console.log(`Only refs: ${options.onlyRefs && options.onlyRefs.size ? [...options.onlyRefs].join(', ') : 'none'}`);
+  console.log(`Surah filter: ${options.surahFilter && options.surahFilter.size ? [...options.surahFilter].join(', ') : 'none'}`);
   console.log(`Counts by edition: ${JSON.stringify(countsByEdition)}`);
   console.log(`License status: ${options.licenseStatus}`);
   console.log(`Repo license: ${options.repoLicense}`);

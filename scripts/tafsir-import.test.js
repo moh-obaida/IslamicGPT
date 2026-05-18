@@ -148,6 +148,51 @@ test('Tafsir importer dry-run runs without Supabase env', () => {
   assert.match(result.stdout, /Dry-run only\. No Supabase writes performed/);
 });
 
+test('Tafsir importer --help prints usage and exits before dataset work', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', ['--help']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Usage: node scripts\/import-tafsir-api-to-supabase\.js/);
+  assert.doesNotMatch(result.stdout, /Rows prepared:/);
+});
+
+test('Tafsir importer --only filters exact refs', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1, 2:255']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 2/);
+});
+
+test('Tafsir importer --surah filters rows by surah', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--surah', '1']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 1/);
+});
+
+test('Tafsir importer --limit caps filtered rows', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1,2:255', '--limit', '1']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Rows prepared: 1/);
+});
+
+test('Tafsir importer approval flags are safe by default', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /"approved_for_answers": false/);
+  assert.match(result.stdout, /"verified_by_admin": false/);
+});
+
+test('Tafsir importer explicit approval flags set booleans true', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--only', '1:1', '--approved-for-answers', '--verified-by-admin']);
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /"approved_for_answers": true/);
+  assert.match(result.stdout, /"verified_by_admin": true/);
+});
+
+test('Tafsir importer invalid --only ref fails clearly', () => {
+  const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--dry-run', '--only', 'bad-ref']);
+  assert.notStrictEqual(result.status, 0);
+  assert.match(result.stderr + result.stdout, /Invalid --only ref/);
+});
+
 test('Tafsir importer execute mode requires Supabase env', () => {
   const result = runNodeScript('scripts/import-tafsir-api-to-supabase.js', [datasetRoot, '--execute', '--editions=en-tafisr-ibn-kathir', '--limit=1']);
   assert.notStrictEqual(result.status, 0);
