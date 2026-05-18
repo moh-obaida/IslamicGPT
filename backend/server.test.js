@@ -882,6 +882,9 @@ test('/api/chat keeps English direct scholar lookup template labels', async () =
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.match(body.sources?.[0]?.source_url || '', /^https?:\/\//);
+  assert.match(body.sourceCards?.[0]?.source_url || '', /^https?:\/\//);
+  assert.match(body.answer, /Official source \(/);
   assert.strictEqual(body.answer.includes('**Title:**'), true);
   assert.strictEqual(body.answer.includes('**Scholar:**'), true);
   assert.strictEqual(body.answer.includes('**Answer excerpt:**'), true);

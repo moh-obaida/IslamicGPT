@@ -1189,18 +1189,51 @@
       const text = decodeCopyPayload(encoded);
       await copyText(text, button);
     }
+    function isValidHttpUrl(value) {
+      const text = String(value || '').trim();
+      if (!text) return false;
+      try {
+        const parsed = new URL(text);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }
+    function getSourceUrl(source = {}) {
+      if (!source || typeof source !== 'object') return '';
+      const meta = source.metadata && typeof source.metadata === 'object' ? source.metadata : {};
+      const originalRecord = meta.original_record && typeof meta.original_record === 'object' ? meta.original_record : {};
+      const candidates = [
+        source.source_url,
+        source.url,
+        meta.url,
+        meta.source_url,
+        originalRecord.url,
+        meta.original_source,
+      ];
+      for (const candidate of candidates) {
+        const value = String(candidate || '').trim();
+        if (isValidHttpUrl(value)) return value;
+      }
+      return '';
+    }
     function resolveSourceOpenUrl(data = {}) {
-      const raw = data.sources?.[0] || {};
-      const card = data.sourceCards?.[0] || {};
-      return String(
-        raw.source_url
-        || raw.url
-        || card.source_url
-        || card.metadata?.original_source
-        || card.metadata?.translation_source_url
-        || card.metadata?.dataset_url
-        || '',
-      ).trim();
+      const sources = Array.isArray(data.sources) ? data.sources : [];
+      const cards = Array.isArray(data.sourceCards) ? data.sourceCards : [];
+      for (const source of sources) {
+        const url = getSourceUrl(source);
+        if (url) return url;
+      }
+      for (const card of cards) {
+        const url = getSourceUrl(card);
+        if (url) return url;
+      }
+      return '';
+    }
+    function openSourceFromBtn(button) {
+      const url = decodeCopyPayload(button?.dataset?.openUrlB64 || '');
+      if (!isValidHttpUrl(url)) return;
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
@@ -1240,7 +1273,8 @@
         const sourceUrl = resolveSourceOpenUrl(data);
         const copyAnswerB64 = encodeCopyPayload(cleanAssistantAnswer);
         const copyRefB64 = data.sourceCards?.[0]?.copyCitation ? encodeCopyPayload(data.sourceCards[0].copyCitation) : '';
-        const copyActions = `<div class="message-actions"><button type="button" class="copy-btn" data-copy-b64="${copyAnswerB64}" data-copied-label="Copied" onclick="copyFromBtn(this)">Copy answer</button>${copyRefB64 ? `<button type="button" class="copy-btn" data-copy-b64="${copyRefB64}" data-copied-label="Reference copied" onclick="copyFromBtn(this)">Copy reference</button>` : ''}${sourceUrl ? `<button type="button" onclick="window.open(${JSON.stringify(sourceUrl)}, '_blank', 'noopener,noreferrer')">Open source</button>` : ''}</div>`;
+        const openUrlB64 = sourceUrl ? encodeCopyPayload(sourceUrl) : '';
+        const copyActions = `<div class="message-actions"><button type="button" class="copy-btn" data-copy-b64="${copyAnswerB64}" data-copied-label="Copied" onclick="copyFromBtn(this)">Copy answer</button>${copyRefB64 ? `<button type="button" class="copy-btn" data-copy-b64="${copyRefB64}" data-copied-label="Reference copied" onclick="copyFromBtn(this)">Copy reference</button>` : ''}${openUrlB64 ? `<button type="button" class="open-source-btn" data-open-url-b64="${openUrlB64}" onclick="openSourceFromBtn(this)">Open source</button>` : ''}</div>`;
         messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${typeBadge}${renderAssistantMessage(cleanAssistantAnswer)}${copyActions}</div></div>`;
         sourcesPanel.innerHTML = '';
         if (data.sourceCards && data.sourceCards.length) {
