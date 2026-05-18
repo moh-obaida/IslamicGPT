@@ -11,6 +11,18 @@ const NO_SOURCE_AR = [
   'لم أجد مصدرًا معتمدًا كافيًا للإجابة بأمان. جرّب السؤال بمرجع محدد مثل: القرآن 2:255، أو حديث صحيح البخاري رقم 1، أو تفسير الفاتحة 1:1.',
 ].join('\n');
 
+const VALIDATION_BLOCKED_EN = [
+  'I found approved sources, but I could not safely generate an answer without risking unsupported claims.',
+  '',
+  'Try a direct source lookup, such as: Tafsir of Ayat al-Kursi.',
+].join('\n');
+
+const VALIDATION_BLOCKED_AR = [
+  'وجدت مصادر معتمدة، لكن لم أتمكن من توليد إجابة آمنة دون احتمال إضافة معلومات غير مدعومة من المصدر.',
+  '',
+  'جرّب سؤالًا مباشرًا مثل: تفسير آية الكرسي',
+].join('\n');
+
 function containsArabic(text) {
   return /[\u0600-\u06FF]/.test(String(text || ''));
 }
@@ -69,33 +81,28 @@ function scholarReference(source) {
   ].filter(Boolean).join(' / ');
 }
 
-function buildQuranAttribution(source) {
-  const parts = [];
-  if (source.quran_arabic_source) parts.push(`Arabic text: ${source.quran_arabic_source}`);
-  if (source.translation_name) parts.push(`Translation: ${source.translation_name}`);
-  if (source.translator && source.translator !== source.translation_name) parts.push(`Translator: ${source.translator}`);
-  if (source.translation_source) parts.push(`Translation source: ${source.translation_source}`);
-  if (source.translation_source_url) parts.push(source.translation_source_url);
-  if (source.dataset_name) parts.push(`Dataset: ${source.dataset_name}`);
-  if (source.attribution_text) parts.push(source.attribution_text);
-  if (source.attribution_url) parts.push(source.attribution_url);
-  if (source.license_status) parts.push(`License: ${source.license_status}`);
-  if (source.requires_attribution === true) parts.push('Attribution required');
-  if (source.requires_sharealike_review === true) parts.push('Share-alike review required');
-  return parts.filter(Boolean);
+function resolveAyahRef(source = {}) {
+  return `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
 }
 
-function buildTafsirAttribution(source) {
-  const parts = [];
-  if (source.tafsir_edition_slug) parts.push(`Edition: ${source.tafsir_edition_slug}`);
-  if (source.tafsir_book_name) parts.push(`Book: ${source.tafsir_book_name}`);
-  if (source.tafsir_author) parts.push(`Author: ${source.tafsir_author}`);
-  if (source.original_source) parts.push(`Original source: ${source.original_source}`);
-  if (source.dataset_url) parts.push(source.dataset_url);
-  if (source.repo_license) parts.push(`License: ${source.repo_license}`);
-  if (source.license_status) parts.push(`License status: ${source.license_status}`);
-  if (source.requires_attribution === true) parts.push('Attribution required');
-  return parts.filter(Boolean);
+function resolveSurahLabel(source = {}, useArabic = false) {
+  const surahNumber = source.surah_number || source.surah;
+  if (useArabic) {
+    return source.surah_name_ar || source.surah_name_en || (surahNumber ? String(surahNumber) : '?');
+  }
+  return source.surah_name_en || source.surah_name_ar || (surahNumber ? String(surahNumber) : '?');
+}
+
+function formatLinkDisplay(url, useArabic = false) {
+  const value = String(url || '').trim();
+  if (!value) return '';
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.replace(/^www\./i, '');
+    return useArabic ? `رابط المصدر الرسمي (${host})` : `Official source (${host})`;
+  } catch {
+    return useArabic ? 'رابط المصدر الرسمي' : 'Official source link';
+  }
 }
 
 function resolveAnswerType(source = {}) {
@@ -119,13 +126,15 @@ function buildNoSourceMessage(question = '') {
   return containsArabic(question) ? NO_SOURCE_AR : NO_SOURCE_EN;
 }
 
+function buildValidationBlockedMessage(question = '') {
+  return containsArabic(question) ? VALIDATION_BLOCKED_AR : VALIDATION_BLOCKED_EN;
+}
+
 function buildQuranTemplate(source, question = '') {
   const useArabic = containsArabic(question);
-  const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
-  const surahLabel = useArabic
-    ? (source.surah_name_ar || source.surah_name_en || ref)
-    : (source.surah_name_en || source.surah_name_ar || ref);
-  const attribution = buildQuranAttribution(source);
+  const ref = resolveAyahRef(source);
+  const surahLabel = resolveSurahLabel(source, useArabic);
+  const translationCredit = source.translation_name || source.translator || '';
 
   if (useArabic) {
     return [
@@ -145,7 +154,7 @@ function buildQuranTemplate(source, question = '') {
       source.translation_text ? '' : null,
       '**المصدر:**',
       `القرآن ${ref}`,
-      attribution.length ? attribution.join('\n') : null,
+      translationCredit ? `الترجمة: ${translationCredit}` : null,
       '',
       '**تنبيه:**',
       'هذا نص قرآني موثق من المصادر المعتمدة فقط، وليس تفسيرًا أو فتوى.',
@@ -169,7 +178,7 @@ function buildQuranTemplate(source, question = '') {
     source.translation_text ? '' : null,
     '**Source:**',
     `Quran ${ref}`,
-    attribution.length ? attribution.join('\n') : null,
+    translationCredit ? `Translation: ${translationCredit}` : null,
     '',
     '**Note:**',
     'This is stored Quranic text from approved sources only, not model-generated translation or tafsir.',
@@ -178,20 +187,20 @@ function buildQuranTemplate(source, question = '') {
 
 function buildTafsirTemplate(source, question = '') {
   const useArabic = containsArabic(question);
-  const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_range || source.ayah_number || source.ayah || '?'}`;
+  const ref = resolveAyahRef(source);
+  const surahLabel = resolveSurahLabel(source, useArabic);
   const tafsirBookName = source.tafsir_book_name || source.tafsir_book_name_en || source.tafsir_book_name_ar || source.title || 'Tafsir source';
   const previewSource = source.explanation_text || source.translation_text || 'Explanation text is not available in the approved source record.';
   const preview = String(previewSource).slice(0, TAFSIR_PREVIEW_MAX_CHARS).trim();
   const previewSuffix = String(previewSource).length > preview.length ? '…' : '';
-  const author = source.tafsir_author || source.original_source || '';
-  const attribution = buildTafsirAttribution(source);
+  const author = source.tafsir_author || '';
 
   if (useArabic) {
     return [
       '### تفسير الآية',
       '',
       '**السورة:**',
-      source.surah_name_ar || source.surah_name_en || ref,
+      surahLabel,
       '',
       '**الآية:**',
       ref,
@@ -207,7 +216,6 @@ function buildTafsirTemplate(source, question = '') {
       '',
       '**المصدر:**',
       `${tafsirBookName} — تفسير ${ref}`,
-      attribution.length ? attribution.join('\n') : null,
       '',
       '**تنبيه:**',
       'هذا مقتطف تفسير موثق من المصدر المعتمد فقط، وليس فتوى شخصية.',
@@ -218,7 +226,7 @@ function buildTafsirTemplate(source, question = '') {
     '### Tafsir',
     '',
     '**Surah:**',
-    source.surah_name_en || source.surah_name_ar || ref,
+    surahLabel,
     '',
     '**Ayah:**',
     ref,
@@ -234,7 +242,6 @@ function buildTafsirTemplate(source, question = '') {
     '',
     '**Source:**',
     `${tafsirBookName}, Tafsir of ${ref}`,
-    attribution.length ? attribution.join('\n') : null,
     '',
     '**Note:**',
     'This is a source-backed Tafsir excerpt from approved records only, not model paraphrase.',
@@ -249,6 +256,7 @@ function buildScholarTemplate(source, question = '') {
   );
   const sourceRef = getSourceReference(source) || scholarReference(source) || source.source_title || source.title || source.id || 'Approved source';
   const sourceUrl = getSourceUrl(source);
+  const linkLabel = sourceUrl ? formatLinkDisplay(sourceUrl, useArabic) : '';
 
   if (useArabic) {
     return [
@@ -269,9 +277,9 @@ function buildScholarTemplate(source, question = '') {
       sourceRef ? '**المرجع:**' : null,
       sourceRef || null,
       sourceRef ? '' : null,
-      sourceUrl ? '**الرابط:**' : null,
-      sourceUrl || null,
-      sourceUrl ? '' : null,
+      linkLabel ? '**الرابط:**' : null,
+      linkLabel || null,
+      linkLabel ? '' : null,
       '**تنبيه:**',
       SCHOLAR_NOTE_AR.replace(/^تنبيه:\s*/, ''),
     ].filter(Boolean).join('\n');
@@ -295,9 +303,9 @@ function buildScholarTemplate(source, question = '') {
     '**Reference:**',
     sourceRef,
     '',
-    sourceUrl ? '**Link:**' : null,
-    sourceUrl || null,
-    sourceUrl ? '' : null,
+    linkLabel ? '**Link:**' : null,
+    linkLabel || null,
+    linkLabel ? '' : null,
     '**Note:**',
     SCHOLAR_NOTE_EN.replace(/^Note:\s*/, ''),
   ].filter(Boolean).join('\n');
@@ -369,9 +377,13 @@ module.exports = {
   getSourceReference,
   getSourceUrl,
   scholarReference,
+  resolveSurahLabel,
+  resolveAyahRef,
+  formatLinkDisplay,
   resolveAnswerType,
   answerHasBuiltInScholarNote,
   buildNoSourceMessage,
+  buildValidationBlockedMessage,
   buildTemplateAnswer,
   buildQuranTemplate,
   buildTafsirTemplate,

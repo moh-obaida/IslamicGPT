@@ -285,6 +285,10 @@ before(async () => {
         responseText = 'The approved source explains that actions are judged by intention. In Sahih Seed, Hadith 1, the source meaning is: "Actions are judged by intention." This shows that deeds are evaluated according to the intention behind them.';
       }
 
+      if (/User question:\s*اشرح آية الكرسي/i.test(prompt)) {
+        responseText = 'According to Imam Maliki in Sahih Muslim Hadith 99999, Ayat al-Kursi is explained with details not present in the approved sources.';
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ response: responseText }));
       return;
@@ -728,6 +732,21 @@ test('/api/sources/search keeps hadith payload behavior unchanged', async () => 
   assert.strictEqual(body.sources[0].source_type, 'hadith');
   assert.strictEqual(typeof body.sources[0].translation_text, 'string');
   assert.strictEqual(body.sources[0].full_text_length, undefined);
+});
+
+test('/api/chat returns Arabic validation-blocked message for Arabic explanation queries', async () => {
+  const { body } = await postJson('/api/chat', {
+    message: 'اشرح آية الكرسي',
+    mode: 'islamic_search_mode',
+    modelMode: 'balanced',
+  });
+
+  assert.strictEqual(body.llmCalled, true);
+  assert.strictEqual(body.confidence, 'validation_failed');
+  assert.strictEqual(body.hallucinationGuard.status, 'blocked');
+  assert.match(body.answer, /لم أتمكن من توليد إجابة آمنة/);
+  assert.match(body.answer, /تفسير آية الكرسي/);
+  assert.doesNotMatch(body.answer, /could not safely generate an answer without risking unsupported claims/i);
 });
 
 test('/api/chat uses model with validation for explanations', async () => {

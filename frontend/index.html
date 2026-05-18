@@ -272,7 +272,11 @@
     .assistant-content p { margin: 0; color: var(--text); }
     .assistant-content blockquote { margin: 4px 0; padding: 10px 12px; border-left: 3px solid var(--turq); background: rgba(18,200,178,0.08); border-radius: 8px; color: #dff7f3; }
     .assistant-content .assistant-arabic { direction: rtl; text-align: right; font-size: 20px; line-height: 1.9; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,0.18); border: 1px solid var(--line); }
-    .assistant-content .source-badge { display: inline-block; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); color: var(--soft); font-size: 12px; }
+    .assistant-content .assistant-arabic.inline-arabic { display: inline-block; width: 100%; font-size: inherit; line-height: 1.7; padding: 0; background: transparent; border: 0; }
+    .assistant-content .source-badge { display: inline-block; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); color: var(--soft); font-size: 12px; line-height: 1.45; }
+    .assistant-content .compact-link { color: var(--turq); text-decoration: none; border-bottom: 1px dotted var(--turqLine); word-break: break-word; }
+    .assistant-content .compact-link:hover { color: var(--text); }
+    .source-ref.compact { font-size: 12px; color: var(--muted); word-break: break-word; }
 
     /* Composer */
     .composer-container {
@@ -819,32 +823,79 @@
     function isArabicText(value) {
       return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(value || ''));
     }
+    function isHttpUrl(value) {
+      return /^https?:\/\//i.test(String(value || '').trim());
+    }
+    function formatUrlDisplay(url) {
+      try {
+        const parsed = new URL(String(url || '').trim());
+        return parsed.hostname.replace(/^www\./i, '') || url;
+      } catch {
+        return String(url || '').trim();
+      }
+    }
+    function formatUrlLine(line) {
+      const trimmed = String(line || '').trim();
+      if (!isHttpUrl(trimmed)) return escapeHtml(trimmed);
+      const label = formatUrlDisplay(trimmed);
+      return `<a class="compact-link" href="${escapeHtml(trimmed)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+    }
+    function formatSourceRefText(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      return isHttpUrl(text) ? formatUrlDisplay(text) : text;
+    }
+    function isSourceHeading(line) {
+      return /^\*\*(?:Source|المصدر):\*\*$/i.test(String(line || '').trim());
+    }
+    function renderLabelParagraph(label, content) {
+      const trimmed = String(content || '').trim();
+      if (!trimmed) return `<p><strong>${escapeHtml(label)}:</strong></p>`;
+      if (isHttpUrl(trimmed)) {
+        return `<p><strong>${escapeHtml(label)}:</strong> ${formatUrlLine(trimmed)}</p>`;
+      }
+      const body = isArabicText(trimmed) ? `<span class="assistant-arabic inline-arabic">${escapeHtml(trimmed)}</span>` : escapeHtml(trimmed);
+      return `<p><strong>${escapeHtml(label)}:</strong> ${body}</p>`;
+    }
     function renderAssistantMessage(answer) {
       const lines = String(answer || '').split('\n');
       const out = [];
+      let pendingLabel = '';
       let inSource = false;
       for (const raw of lines) {
         const line = raw.trim();
         if (!line) {
+          if (pendingLabel) {
+            out.push(`<p><strong>${escapeHtml(pendingLabel)}:</strong></p>`);
+            pendingLabel = '';
+          }
+          inSource = false;
           out.push('<br>');
           continue;
         }
         if (line.startsWith('### ')) {
-          out.push(`<h3>${escapeHtml(line.slice(4))}</h3>`);
+          pendingLabel = '';
           inSource = false;
+          out.push(`<h3>${escapeHtml(line.slice(4))}</h3>`);
           continue;
         }
         if (line.startsWith('> ')) {
-          out.push(`<blockquote>${escapeHtml(line.slice(2))}</blockquote>`);
+          pendingLabel = '';
+          inSource = false;
+          const quote = line.slice(2);
+          const quoteBody = isArabicText(quote) ? `<span class="assistant-arabic inline-arabic">${escapeHtml(quote)}</span>` : escapeHtml(quote);
+          out.push(`<blockquote>${quoteBody}</blockquote>`);
           continue;
         }
-        if (/^\*\*Source:\*\*$/i.test(line)) {
+        if (isSourceHeading(line)) {
+          pendingLabel = '';
           inSource = true;
-          out.push('<p><strong>Source:</strong></p>');
+          const label = /المصدر/.test(line) ? 'المصدر' : 'Source';
+          out.push(`<p><strong>${escapeHtml(label)}:</strong></p>`);
           continue;
         }
         if (inSource) {
-          out.push(`<div class="source-badge">${escapeHtml(line)}</div>`);
+          out.push(`<div class="source-badge">${formatUrlLine(line)}</div>`);
           inSource = false;
           continue;
         }
@@ -852,11 +903,20 @@
         if (boldLabel) {
           const [, label, content] = boldLabel;
           if (content) {
-            const body = isArabicText(content) ? `<span class="assistant-arabic">${escapeHtml(content)}</span>` : escapeHtml(content);
-            out.push(`<p><strong>${escapeHtml(label)}:</strong> ${body}</p>`);
+            pendingLabel = '';
+            out.push(renderLabelParagraph(label, content));
           } else {
-            out.push(`<p><strong>${escapeHtml(label)}:</strong></p>`);
+            pendingLabel = label;
           }
+          continue;
+        }
+        if (pendingLabel) {
+          out.push(renderLabelParagraph(pendingLabel, line));
+          pendingLabel = '';
+          continue;
+        }
+        if (isHttpUrl(line)) {
+          out.push(`<p>${formatUrlLine(line)}</p>`);
           continue;
         }
         if (isArabicText(line)) {
@@ -865,6 +925,7 @@
         }
         out.push(`<p>${escapeHtml(line)}</p>`);
       }
+      if (pendingLabel) out.push(`<p><strong>${escapeHtml(pendingLabel)}:</strong></p>`);
       return `<div class="assistant-content">${out.join('')}</div>`;
     }
     function sourceTypeLabel(type) {
@@ -887,7 +948,7 @@
               <span class="source-verify ${verified ? 'good' : ''}">${escapeHtml(verifiedText)}</span>
             </div>
             <h4 class="source-title">${escapeHtml(card.title || raw.title || 'Approved source')}</h4>
-            <div class="source-ref">${escapeHtml(card.reference || raw.fatwa_number || raw.hadith_number || raw.source_url || '')}</div>
+            <div class="source-ref compact">${escapeHtml(formatSourceRefText(card.reference || raw.fatwa_reference || raw.fatwa_number || raw.hadith_number || raw.source_url || ''))}</div>
             ${arabic ? `<div class="source-arabic">${escapeHtml(arabic)}</div>` : ''}
             ${preview ? `<p class="source-preview">${escapeHtml(preview)}</p>` : '<p class="source-preview">Excerpt unavailable in the source card.</p>'}
           </article>

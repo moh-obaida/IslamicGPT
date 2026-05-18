@@ -25,6 +25,7 @@ const {
   answerHasBuiltInScholarNote,
   buildNoSourceMessage,
   buildTemplateAnswer,
+  buildValidationBlockedMessage,
   resolveAnswerType,
 } = require('./src/templateAnswers');
 const {
@@ -270,10 +271,10 @@ function templateSourceResponse({ sources, mode, modelMode, classification, sour
   };
 }
 
-function modelBlockedResponse({ mode, modelMode, classification, sourceBackend, loading, sources, warnings = [], reason, unsupportedClaims = [] }) {
+function modelBlockedResponse({ mode, modelMode, classification, sourceBackend, loading, sources, warnings = [], reason, unsupportedClaims = [], question = '' }) {
   const sanitizedSources = sanitizeSourcesForResponse(sources);
   return {
-    answer: appendScholarNote('I found approved sources, but I could not safely generate an answer without risking unsupported claims.', classification),
+    answer: appendScholarNote(buildValidationBlockedMessage(question), classification),
     mode,
     modelMode,
     resolvedModelMode: 'blocked_after_validation',
@@ -829,6 +830,7 @@ Your previous answer risked unsupported claims. Rewrite the answer using only th
         loading,
         sources,
         warnings: retrieval.warnings,
+        question,
         reason: answerValidation.reason || 'citation_validation_failed',
         unsupportedClaims: [...citationValidation.issues, ...(answerValidation.unsupportedClaims || [])],
       });
