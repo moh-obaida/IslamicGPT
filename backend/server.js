@@ -407,13 +407,19 @@ function buildTemplateAnswer(source, question = '') {
 }
 
 function isDirectTafsirLookup(question = '') {
-  const text = String(question || '').trim().toLowerCase();
+  const text = String(question || '').trim();
   return [
-    /\btafsir\s+of\s+(?:quran\s*)?\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
-    /\btafsir\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+    /\btafsir\s+(?:of\s+)?(?:quran\s+)?\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
+    /\btafsir\s+of\s+ayat\s+al\s+kursi\b/i,
     /\bexplain\s+tafsir\s+of\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
     /\bibn\s+kathir\s+tafsir\s+of\s+\d{1,3}\s*[:/-]\s*\d{1,3}\b/i,
     /\btafsir\s+of\s+al[-\s]?fatihah\b/i,
+    /تفسير\s+آية\s+الكرسي/,
+    /تفسير\s+اية\s+الكرسي/,
+    /تفسير\s+ايه\s+الكرسي/,
+    /تفسير\s+\d{1,3}\s*[:/-]\s*\d{1,3}/,
+    /تفسير\s+سورة\s+الفاتحة/,
+    /تفسير\s+الفاتحة/,
   ].some((pattern) => pattern.test(text));
 }
 
@@ -914,8 +920,22 @@ async function handleChat(payload, res) {
 
     const tafsirSources = sources.filter((source) => source.source_type === 'tafsir');
     const scholarSources = sources.filter((source) => ['fatwa', 'scholar', 'scholar_statement', 'book', 'lecture', 'educational_explanation', 'video_transcript'].includes(source.source_type));
-    const directTafsirLookup = isDirectTafsirLookup(question) && tafsirSources.length > 0;
+    const directTafsirIntent = isDirectTafsirLookup(question);
+    const directTafsirLookup = directTafsirIntent && tafsirSources.length > 0;
     const directScholarLookup = isDirectScholarLookup(question) && scholarSources.length > 0;
+
+    if (directTafsirIntent && tafsirSources.length === 0) {
+      const out = noSourceResponse({
+        mode,
+        modelMode,
+        classification,
+        sourceBackend: retrieval.sourceBackend,
+        warnings: retrieval.warnings,
+      });
+      if (DEBUG_SOURCES || payload.debug) out.debug = { ...retrieval.debug, classification, retrievalErrors: retrieval.errors, directTafsirIntent: true };
+      return send(res, 200, out);
+    }
+
     if (classification.intent === 'direct_source_lookup' || directTafsirLookup || directScholarLookup) {
       const directSources = directTafsirLookup ? tafsirSources : (directScholarLookup ? scholarSources : sources);
       const out = templateSourceResponse({
