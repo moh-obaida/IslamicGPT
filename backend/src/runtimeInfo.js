@@ -18,21 +18,26 @@ function safeExec(command) {
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
   } catch (_) {
-    return 'unknown';
+    return null;
   }
 }
 
 function getGitCommit() {
-  return safeExec('git rev-parse --short HEAD');
+  const envCommit = String(process.env.GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || '').trim();
+  if (envCommit) return envCommit.length > 12 ? envCommit.slice(0, 12) : envCommit;
+  return safeExec('git rev-parse --short HEAD') || 'unknown';
 }
 
 function getGitBranch() {
-  return safeExec('git rev-parse --abbrev-ref HEAD');
+  const envBranch = String(process.env.GIT_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || '').trim();
+  if (envBranch) return envBranch;
+  return safeExec('git rev-parse --abbrev-ref HEAD') || 'unknown';
 }
 
 function getRuntimeInfo(extra = {}) {
   return {
     app: 'IslamicGPT',
+    version: process.env.APP_VERSION || '0.2.0',
     env: process.env.NODE_ENV || 'development',
     commit: getGitCommit(),
     branch: getGitBranch(),

@@ -14,6 +14,7 @@ const MODE_TO_TYPE = {
   hadith_mode: 'hadith',
   quran_mode: 'quran',
   tafsir_mode: 'tafsir',
+  scholar_mode: 'scholar',
   fiqh_mode: 'fiqh',
   aqidah_mode: 'aqidah',
   islamic_search_mode: 'all',
@@ -410,26 +411,32 @@ function detectDirectSurahNameLookup(question) {
   if (!raw) return null;
   const ascii = raw.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
   const arabic = normalizeArabicText(raw);
+  const surahPrefix = '(?:surah|surat|sura)';
   const candidates = [
     {
       surahNumber: 1,
       ayahNumber: 1,
-      matchers: [/\b(?:surah\s+)?(?:al[-\s]?)?fatihah\b/, /\b(?:surah\s+)?fatiha\b/, /الفاتحه/],
+      matchers: [new RegExp(`\\b${surahPrefix}\\s+(?:al[-\\s]?)?fatihah\\b`, 'i'), new RegExp(`\\b${surahPrefix}\\s+fatiha\\b`, 'i'), /الفاتحه/],
     },
     {
       surahNumber: 112,
       ayahNumber: 1,
-      matchers: [/\b(?:surah\s+)?(?:al[-\s]?)?ikhlas\b/, /\b(?:surah\s+)?ikhlas\b/, /الاخلاص/],
+      matchers: [new RegExp(`\\b${surahPrefix}\\s+(?:al[-\\s]?)?ikhlas\\b`, 'i'), new RegExp(`\\b${surahPrefix}\\s+ikhlas\\b`, 'i'), /الاخلاص/],
     },
     {
       surahNumber: 113,
       ayahNumber: 1,
-      matchers: [/\b(?:surah\s+)?(?:al[-\s]?)?falaq\b/, /\b(?:surah\s+)?falaq\b/, /الفلق/],
+      matchers: [new RegExp(`\\b${surahPrefix}\\s+(?:al[-\\s]?)?falaq\\b`, 'i'), new RegExp(`\\b${surahPrefix}\\s+falaq\\b`, 'i'), /الفلق/],
     },
     {
       surahNumber: 114,
       ayahNumber: 1,
-      matchers: [/\b(?:surah\s+)?(?:an[-\s]?)?nas\b/, /\b(?:surah\s+)?nas\b/, /الناس/],
+      matchers: [new RegExp(`\\b${surahPrefix}\\s+(?:an[-\\s]?)?nas\\b`, 'i'), new RegExp(`\\b${surahPrefix}\\s+nas\\b`, 'i'), /الناس/],
+    },
+    {
+      surahNumber: 12,
+      ayahNumber: 1,
+      matchers: [new RegExp(`\\b${surahPrefix}\\s+(?:al[-\\s]?)?yusuf\\b`, 'i'), new RegExp(`\\b${surahPrefix}\\s+yusuf\\b`, 'i'), /سورة\s+يوسف/],
     },
   ];
   for (const candidate of candidates) {
