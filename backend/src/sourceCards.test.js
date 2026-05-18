@@ -27,6 +27,7 @@ test('formats tafsir source cards with tafsir metadata', () => {
   assert.strictEqual(tafsir.badge, 'Tafsir');
   assert.strictEqual(tafsir.metadata.tafsir_edition_slug, 'ar-tafsir-muyassar');
   assert.strictEqual(tafsir.metadata.surah_name_ar, 'الفاتحة');
+  assert.strictEqual(tafsir.copyCitation, 'Tafsir Muyassar — تفسير 1:1');
   assert.deepStrictEqual(tafsir.badges, ['Approved', 'Verified']);
 });
 
@@ -50,6 +51,7 @@ test('formats Quran source cards with surah names and translation metadata', () 
   assert.strictEqual(quran.source_type, 'quran');
   assert.strictEqual(quran.badge, 'Quran');
   assert.strictEqual(quran.title, 'Al-Baqarah 2:255');
+  assert.strictEqual(quran.copyCitation, 'Quran 2:255');
   assert.strictEqual(quran.metadata.translation_source, 'Tanzil');
   assert.strictEqual(quran.metadata.quran_arabic_source, 'Uthmani');
 });

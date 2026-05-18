@@ -32,6 +32,7 @@ function formatSourceCards(sources) {
 
     if (s.source_type === 'tafsir') {
       const title = s.title || `${s.tafsir_book_name || 'Tafsir'} ${s.surah_number || '?'}:${s.ayah_number || s.ayah_range || '?'}`;
+      const tafsirRef = `${s.tafsir_book_name || 'Tafsir'} — تفسير ${s.surah_number || '?'}:${s.ayah_number || s.ayah_range || '?'}`;
       return {
         id: s.id,
         type: 'tafsir',
@@ -61,12 +62,13 @@ function formatSourceCards(sources) {
         },
         badges,
         usedFor: 'Tafsir evidence',
-        copyCitation: title,
+        copyCitation: tafsirRef,
       };
     }
 
     if (['quran', 'quran_translation'].includes(s.source_type)) {
       const title = quranTitle(s);
+      const quranRef = `Quran ${s.surah_number || s.surah || '?'}:${s.ayah_number || s.ayah || '?'}`;
       return {
         id: s.id,
         type: s.source_type,
@@ -102,7 +104,7 @@ function formatSourceCards(sources) {
         },
         badges,
         usedFor: 'Quran evidence',
-        copyCitation: title,
+        copyCitation: quranRef,
       };
     }
 

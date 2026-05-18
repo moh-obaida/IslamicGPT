@@ -4,6 +4,7 @@ const { formatSourceCards } = require('./sourceCards');
 const {
   buildNoSourceMessage,
   buildValidationBlockedMessage,
+  stripLeakedMetadataFromAnswer,
   buildQuranTemplate,
   buildTafsirTemplate,
   buildScholarTemplate,
@@ -160,6 +161,24 @@ test('resolveAnswerType classifies source kinds', () => {
   assert.strictEqual(resolveAnswerType({ source_type: 'tafsir' }), 'tafsir');
   assert.strictEqual(resolveAnswerType({ source_type: 'fatwa' }), 'fatwa');
   assert.strictEqual(resolveAnswerType({ source_type: 'hadith' }), 'hadith');
+});
+
+test('stripLeakedMetadataFromAnswer removes legacy attribution dump lines', () => {
+  const dirty = [
+    '### Quran verse',
+    'Arabic text: The Noble Qur\'an Encyclopedia',
+    'Translation: Saheeh International',
+    'Dataset: risan/quran-json',
+    'https://github.com/risan/quran-json',
+    'License: CC-BY-SA-4.0',
+    'Attribution required',
+    'Share-alike review required',
+  ].join('\n');
+  const clean = stripLeakedMetadataFromAnswer(dirty);
+  assert.match(clean, /Quran verse/);
+  assert.doesNotMatch(clean, /github\.com/i);
+  assert.doesNotMatch(clean, /Dataset:/i);
+  assert.doesNotMatch(clean, /Attribution required/i);
 });
 
 test('buildTemplateAnswer routes by source type', () => {

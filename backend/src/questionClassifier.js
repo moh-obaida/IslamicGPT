@@ -15,7 +15,7 @@ const MODE_BEHAVIOR = {
 };
 
 const ISLAMIC_KEYWORDS = [
-  'islam', 'muslim', 'quran', "qur'an", 'ayah', 'verse', 'surah', 'ayat al-kursi', 'ayat al kursi', 'ayatul kursi', 'hadith', 'sunnah',
+  'islam', 'muslim', 'quran', "qur'an", 'ayah', 'verse', 'surah', 'surat', 'sura', 'ayat al-kursi', 'ayat al kursi', 'ayatul kursi', 'hadith', 'sunnah',
   'prophet', 'rasul', 'allah', 'dua', 'dhikr', 'salah', 'prayer', 'wudu', 'zakat',
   'fasting', 'ramadan', 'hajj', 'umrah', 'halal', 'haram', 'fiqh', 'fatwa', 'aqidah',
   'tawheed', 'shirk', 'iman', 'ihsan', 'tafsir', 'sahaba', 'bukhari', 'muslim',
@@ -87,11 +87,16 @@ const DIRECT_SOURCE_LOOKUP_PATTERNS = [
   /أعطني آية/,
   /اعطني آية/,
   /آية الكرسي/,
-  /\b(?:surah\s+)?(?:al[-\s]?)?fatihah\b/i,
-  /\b(?:surah\s+)?fatiha\b/i,
-  /\b(?:surah\s+)?(?:al[-\s]?)?ikhlas\b/i,
-  /\b(?:surah\s+)?(?:al[-\s]?)?falaq\b/i,
-  /\b(?:surah\s+)?(?:an[-\s]?)?nas\b/i,
+  /\b(?:surah|surat|sura)\s+(?:al[-\s]?)?fatihah\b/i,
+  /\b(?:surah|surat|sura)\s+fatiha\b/i,
+  /\b(?:surah|surat|sura)\s+(?:al[-\s]?)?ikhlas\b/i,
+  /\b(?:surah|surat|sura)\s+ikhlas\b/i,
+  /\b(?:surah|surat|sura)\s+(?:al[-\s]?)?falaq\b/i,
+  /\b(?:surah|surat|sura)\s+falaq\b/i,
+  /\b(?:surah|surat|sura)\s+(?:an[-\s]?)?nas\b/i,
+  /\b(?:surah|surat|sura)\s+nas\b/i,
+  /\b(?:surah|surat|sura)\s+(?:al[-\s]?)?yusuf\b/i,
+  /\b(?:surah|surat|sura)\s+yusuf\b/i,
   /سورة\s+الفاتحة/,
   /سورة\s+الإخلاص/,
   /سورة\s+الاخلاص/,
@@ -155,6 +160,15 @@ function includesAny(text, keywords) {
   return keywords.some((keyword) => lower.includes(String(keyword).toLowerCase()));
 }
 
+function isObviousQuranSurahQuery(message = '') {
+  const text = String(message || '').trim();
+  if (!text) return false;
+  if (quranReferenceFromQuery(text)) return true;
+  if (/\b(?:surah|surat|sura)\s+[\p{L}]/iu.test(text)) return true;
+  if (/سورة\s+[\u0600-\u06FF]/u.test(text)) return true;
+  return false;
+}
+
 function detectIntent(message, mode) {
   if (COMPARISON_PATTERNS.some((pattern) => pattern.test(message)) || mode === 'compare_opinions_mode') return 'comparison';
   if (/\bshow\s+(?:me\s+)?tafsir\b/i.test(message) || /اعرض.*تفسير/.test(message)) return 'direct_source_lookup';
@@ -186,7 +200,11 @@ function classifyQuestion(message, mode = 'islamic_search_mode') {
   const normalizedMessage = normalizeMessage(message);
   const behavior = MODE_BEHAVIOR[mode] || MODE_BEHAVIOR.islamic_search_mode;
   const modeImpliesIslamic = Boolean(mode && mode in MODE_BEHAVIOR && mode !== 'islamic_search_mode');
-  const isIslamic = Boolean(normalizedMessage) && (includesAny(normalizedMessage, ISLAMIC_KEYWORDS) || modeImpliesIslamic);
+  const isIslamic = Boolean(normalizedMessage) && (
+    includesAny(normalizedMessage, ISLAMIC_KEYWORDS)
+    || modeImpliesIslamic
+    || isObviousQuranSurahQuery(normalizedMessage)
+  );
   const intent = detectIntent(normalizedMessage, mode);
   const isSensitive = includesAny(normalizedMessage, SENSITIVE_KEYWORDS) || intent === 'personal_ruling' || mode === 'fiqh_mode';
   const sourceType = inferSourceType(normalizedMessage, mode, intent);

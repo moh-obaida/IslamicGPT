@@ -130,6 +130,38 @@ function buildValidationBlockedMessage(question = '') {
   return containsArabic(question) ? VALIDATION_BLOCKED_AR : VALIDATION_BLOCKED_EN;
 }
 
+const LEAKED_METADATA_LINE_PATTERNS = [
+  /^Arabic text:/i,
+  /^Translation source:/i,
+  /^Translator:/i,
+  /^Dataset:/i,
+  /^License:/i,
+  /^License status:/i,
+  /^Attribution required$/i,
+  /^Share-alike review required$/i,
+  /^Edition:\s/i,
+  /^Book:\s/i,
+  /^Original source:/i,
+  /^https?:\/\/\S+$/i,
+  /github\.com/i,
+  /^Quran JSON dataset/i,
+  /risan\/quran-json/i,
+  /spa5k\/tafsir_api/i,
+];
+
+function stripLeakedMetadataFromAnswer(answer = '') {
+  return String(answer || '')
+    .split('\n')
+    .filter((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return true;
+      return !LEAKED_METADATA_LINE_PATTERNS.some((pattern) => pattern.test(trimmed));
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function buildQuranTemplate(source, question = '') {
   const useArabic = containsArabic(question);
   const ref = resolveAyahRef(source);
@@ -342,30 +374,29 @@ function buildHadithTemplate(source) {
 }
 
 function buildTemplateAnswer(source, question = '') {
+  let answer;
   if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
-    return buildHadithTemplate(source);
+    answer = buildHadithTemplate(source);
+  } else if (source.source_type === 'tafsir') {
+    answer = buildTafsirTemplate(source, question);
+  } else if (['quran', 'quran_translation'].includes(source.source_type)) {
+    answer = buildQuranTemplate(source, question);
+  } else if (['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(source.source_type)) {
+    answer = buildScholarTemplate(source, question);
+  } else {
+    const sourceTitle = source.source_title || source.title || source.collection_name || source.scholar_name || source.id || 'Approved source';
+    answer = [
+      'I found an approved source related to this topic.',
+      '',
+      sourceTitle,
+      '',
+      source.translation_text || source.arabic_text || source.summary || 'Text is not available in the approved source record.',
+      '',
+      'Source:',
+      sourceTitle,
+    ].join('\n');
   }
-  if (source.source_type === 'tafsir') {
-    return buildTafsirTemplate(source, question);
-  }
-  if (['quran', 'quran_translation'].includes(source.source_type)) {
-    return buildQuranTemplate(source, question);
-  }
-  if (['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(source.source_type)) {
-    return buildScholarTemplate(source, question);
-  }
-
-  const sourceTitle = source.source_title || source.title || source.collection_name || source.scholar_name || source.id || 'Approved source';
-  return [
-    'I found an approved source related to this topic.',
-    '',
-    sourceTitle,
-    '',
-    source.translation_text || source.arabic_text || source.summary || 'Text is not available in the approved source record.',
-    '',
-    'Source:',
-    sourceTitle,
-  ].join('\n');
+  return stripLeakedMetadataFromAnswer(answer);
 }
 
 module.exports = {
@@ -384,6 +415,7 @@ module.exports = {
   answerHasBuiltInScholarNote,
   buildNoSourceMessage,
   buildValidationBlockedMessage,
+  stripLeakedMetadataFromAnswer,
   buildTemplateAnswer,
   buildQuranTemplate,
   buildTafsirTemplate,

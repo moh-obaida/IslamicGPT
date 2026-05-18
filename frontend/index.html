@@ -260,7 +260,8 @@
     /* Messages */
     #messages { display: flex; flex-direction: column; gap: 24px; }
     .message { display: flex; gap: 16px; max-width: 100%; animation: fadeIn 0.22s ease; }
-    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.user { align-self: flex-end; flex-direction: row-reverse; max-width: 85%; }
+    .message.user.no-avatar { flex-direction: row; gap: 0; }
     .avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
     .avatar.ai { background: var(--softTurq); color: var(--turq); }
     .avatar.user { background: var(--black); color: white; }
@@ -329,6 +330,7 @@
       color: var(--muted);
     }
     .message-actions button:hover { border-color: var(--turqLine); color: var(--turq); }
+    .message-actions button.copied { border-color: var(--turq); color: var(--turq); }
     .skeleton { border-radius: 10px; background: linear-gradient(90deg, var(--card2), var(--line), var(--card2)); background-size: 200% 100%; animation: shimmer 1.2s infinite; min-height: 14px; }
     @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
     .settings-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
@@ -1133,8 +1135,72 @@
       return `<div class="answer-type-badge${extra}">${escapeHtml(label)}</div>`;
     }
 
-    async function copyText(value) {
-      try { await navigator.clipboard.writeText(String(value || '')); } catch (_) {}
+    function encodeCopyPayload(value) {
+      try {
+        return btoa(unescape(encodeURIComponent(String(value || ''))));
+      } catch {
+        return '';
+      }
+    }
+    function decodeCopyPayload(encoded) {
+      try {
+        return decodeURIComponent(escape(atob(String(encoded || ''))));
+      } catch {
+        return '';
+      }
+    }
+    async function copyText(value, button) {
+      const text = String(value || '');
+      if (!text) return false;
+      let ok = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          ok = true;
+        }
+      } catch (_) {}
+      if (!ok) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { ok = document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(ta);
+      }
+      if (button && ok) {
+        const prev = button.textContent;
+        const copiedLabel = button.dataset.copiedLabel || 'Copied';
+        button.textContent = copiedLabel;
+        button.classList.add('copied');
+        button.disabled = true;
+        setTimeout(() => {
+          button.textContent = prev;
+          button.classList.remove('copied');
+          button.disabled = false;
+        }, 1600);
+      }
+      return ok;
+    }
+    async function copyFromBtn(button) {
+      const encoded = button?.dataset?.copyB64 || '';
+      const text = decodeCopyPayload(encoded);
+      await copyText(text, button);
+    }
+    function resolveSourceOpenUrl(data = {}) {
+      const raw = data.sources?.[0] || {};
+      const card = data.sourceCards?.[0] || {};
+      return String(
+        raw.source_url
+        || raw.url
+        || card.source_url
+        || card.metadata?.original_source
+        || card.metadata?.translation_source_url
+        || card.metadata?.dataset_url
+        || '',
+      ).trim();
     }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
@@ -1148,7 +1214,7 @@
       document.getElementById('welcome').classList.add('hidden');
       const messages = document.getElementById('messages');
       sourcesPanel.innerHTML = '';
-      messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${escapeHtml(text)}</div></div>`;
+      messages.innerHTML += `<div class="message user no-avatar"><div class="bubble">${escapeHtml(text)}</div></div>`;
       updateProgress(['classified_question']);
       try {
         const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value, thinkingMode: (document.getElementById('thinkingMode') || { value: 'balanced' }).value }) });
@@ -1170,8 +1236,11 @@
           }
           return a || 'No answer returned.';
         })();
-                const typeBadge = answerTypeBadge(data.answerType);
-        const copyActions = `<div class="message-actions"><button type="button" onclick="copyText(${JSON.stringify(cleanAssistantAnswer)})">Copy answer</button>${data.sourceCards?.[0]?.copyCitation ? `<button type="button" onclick="copyText(${JSON.stringify(data.sourceCards[0].copyCitation)})">Copy reference</button>` : ''}${data.sources?.[0]?.source_url ? `<button type="button" onclick="window.open(${JSON.stringify(data.sources[0].source_url)}, '_blank')">Open source</button>` : ''}</div>`;
+        const typeBadge = answerTypeBadge(data.answerType);
+        const sourceUrl = resolveSourceOpenUrl(data);
+        const copyAnswerB64 = encodeCopyPayload(cleanAssistantAnswer);
+        const copyRefB64 = data.sourceCards?.[0]?.copyCitation ? encodeCopyPayload(data.sourceCards[0].copyCitation) : '';
+        const copyActions = `<div class="message-actions"><button type="button" class="copy-btn" data-copy-b64="${copyAnswerB64}" data-copied-label="Copied" onclick="copyFromBtn(this)">Copy answer</button>${copyRefB64 ? `<button type="button" class="copy-btn" data-copy-b64="${copyRefB64}" data-copied-label="Reference copied" onclick="copyFromBtn(this)">Copy reference</button>` : ''}${sourceUrl ? `<button type="button" onclick="window.open(${JSON.stringify(sourceUrl)}, '_blank', 'noopener,noreferrer')">Open source</button>` : ''}</div>`;
         messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${typeBadge}${renderAssistantMessage(cleanAssistantAnswer)}${copyActions}</div></div>`;
         sourcesPanel.innerHTML = '';
         if (data.sourceCards && data.sourceCards.length) {

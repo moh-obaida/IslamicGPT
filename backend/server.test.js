@@ -585,6 +585,12 @@ test('/api/chat uses template answers for direct Quran lookups without Ollama', 
   assert.strictEqual(body.answer.includes('Quran 2:255'), true);
   assert.strictEqual(body.answer.includes('Saheeh International'), true);
   assert.strictEqual(body.sourceCards[0].metadata.translation_source, 'Tanzil');
+  assert.doesNotMatch(body.answer, /github\.com/i);
+  assert.doesNotMatch(body.answer, /License:/i);
+  assert.doesNotMatch(body.answer, /Attribution required/i);
+  assert.doesNotMatch(body.answer, /Share-alike review required/i);
+  assert.doesNotMatch(body.answer, /Dataset:/i);
+  assert.doesNotMatch(body.answer, /Arabic text:/i);
 });
 
 test('/api/chat routes Arabic surah-name Al-Ikhlas lookup to Quran 112:1 template', async () => {
@@ -639,6 +645,20 @@ test('/api/chat keeps unknown unimported surah-name lookup safely blocked', asyn
   const { body } = await postJson('/api/chat', { message: 'سورة يوسف', mode: 'quran_mode', modelMode: 'quick' });
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
+});
+
+test('/api/chat routes English Surat yusuf to no_source_gate when surah is not imported', async () => {
+  const { body } = await postJson('/api/chat', {
+    message: 'Surat yusuf',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(body.isIslamicQuestion, true);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
+  assert.match(body.answer, /could not find enough approved source evidence|لم أجد مصدرًا معتمدًا/i);
+  assert.doesNotMatch(body.answer, /optimized for Islamic research and source-backed/i);
 });
 
 test('/api/chat uses template answers for Quran Aya references without Ollama', async () => {
@@ -925,6 +945,27 @@ test('/api/chat blocks unknown Arabic scholar fatwa lookup safely', async () => 
 });
 
 
+
+test('/api/chat Arabic direct Tafsir answer has clean labels and no license metadata', async () => {
+  const { body } = await postJson('/api/chat', {
+    message: 'تفسير آية الكرسي',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.match(body.answer, /### تفسير الآية/);
+  assert.match(body.answer, /البقرة/);
+  assert.match(body.answer, /\*\*الآية:\*\*[\s\S]*2:255/);
+  const surahSection = body.answer.split('**السورة:**')[1].split('**الآية:**')[0];
+  assert.doesNotMatch(surahSection, /2:255/);
+  assert.doesNotMatch(body.answer, /github\.com/i);
+  assert.doesNotMatch(body.answer, /License:/i);
+  assert.doesNotMatch(body.answer, /License status/i);
+  assert.doesNotMatch(body.answer, /Attribution required/i);
+  assert.doesNotMatch(body.answer, /\*\*Edition:\*\*/i);
+});
 
 test('/api/chat answers Arabic Ayat al-Kursi tafsir lookup with deterministic template', async () => {
   const { response, body } = await postJson('/api/chat', {
