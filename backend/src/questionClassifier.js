@@ -1,7 +1,10 @@
+const { quranReferenceFromQuery } = require('./supabaseSourceDb');
+
 const MODE_BEHAVIOR = {
   hadith_mode: { sourceType: 'hadith', intent: 'general' },
   quran_mode: { sourceType: 'quran', intent: 'general' },
   tafsir_mode: { sourceType: 'tafsir', intent: 'general' },
+  scholar_mode: { sourceType: 'scholar', intent: 'general' },
   fiqh_mode: { sourceType: 'fiqh', intent: 'general' },
   aqidah_mode: { sourceType: 'aqidah', intent: 'general' },
   compare_opinions_mode: { sourceType: 'all', intent: 'comparison' },
@@ -159,6 +162,7 @@ function detectIntent(message, mode) {
   if (DIRECT_SCHOLAR_LOOKUP_PATTERNS.some((pattern) => pattern.test(message)) || ARABIC_SCHOLAR_VARIANTS.some((variant) => message.includes(variant))) return 'direct_source_lookup';
   if (PERSONAL_RULING_PATTERNS.some((pattern) => pattern.test(message))) return 'personal_ruling';
   if (EXPLANATION_PATTERNS.some((pattern) => pattern.test(message)) || ['explain_simply_mode', 'student_explanation_mode'].includes(mode)) return 'explanation';
+  if (quranReferenceFromQuery(message)) return 'direct_source_lookup';
   if (DIRECT_SOURCE_LOOKUP_PATTERNS.some((pattern) => pattern.test(message))) return 'direct_source_lookup';
   return 'general';
 }

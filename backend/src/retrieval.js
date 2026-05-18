@@ -280,6 +280,7 @@ async function searchIslamicKnowledgeBase(question, mode, options = {}) {
     quran_mode: 'quran',
     hadith_mode: 'hadith',
     tafsir_mode: 'tafsir',
+    scholar_mode: 'scholar',
     fiqh_mode: 'fiqh',
     aqidah_mode: 'aqidah',
     compare_opinions_mode: 'all',

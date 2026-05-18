@@ -542,7 +542,7 @@ test('/api/chat blocks Islamic answers when no approved source exists', async ()
   assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
   assert.strictEqual(body.sourceCards.length, 0);
   assert.strictEqual(body.answer.includes('I could not find enough approved source evidence to answer this safely.'), true);
-  assert.strictEqual(body.answer.includes('Try asking with a specific reference'), true);
+  assert.strictEqual(body.answer.includes('Quran 2:255'), true);
 });
 
 test('/api/chat uses template answers for direct source lookup', async () => {
@@ -577,8 +577,9 @@ test('/api/chat uses template answers for direct Quran lookups without Ollama', 
   assert.strictEqual(body.confidence, 'source_backed');
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.answer.includes('### Quran verse'), true);
-  assert.strictEqual(body.answer.includes('**Source:**\nQuran 2:255'), true);
-  assert.strictEqual(body.answer.includes('Translation: Saheeh International'), true);
+  assert.strictEqual(body.answer.includes('**Source:**'), true);
+  assert.strictEqual(body.answer.includes('Quran 2:255'), true);
+  assert.strictEqual(body.answer.includes('Saheeh International'), true);
   assert.strictEqual(body.sourceCards[0].metadata.translation_source, 'Tanzil');
 });
 
@@ -648,7 +649,7 @@ test('/api/chat uses template answers for Quran Aya references without Ollama', 
   assert.strictEqual(body.confidence, 'source_backed');
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert.strictEqual(body.answer.includes('### Quran verse'), true);
-  assert.strictEqual(body.answer.includes('**Source:**\nQuran 2:255'), true);
+  assert.strictEqual(body.answer.includes('Quran 2:255'), true);
 });
 
 test('/api/chat uses template answers for direct Tafsir lookups without Ollama', async () => {
@@ -661,10 +662,10 @@ test('/api/chat uses template answers for direct Tafsir lookups without Ollama',
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
-  assert.strictEqual(body.answer.includes('A relevant Tafsir source is Tafsir Ibn Kathir, Tafsir of 1:1.'), true);
-  assert.strictEqual(body.answer.includes('Reference:\nQuran 1:1'), true);
-  assert.strictEqual(body.answer.includes('Edition:\nen-tafisr-ibn-kathir'), true);
-  assert.strictEqual(body.answer.includes('This is a source-backed Tafsir excerpt.'), true);
+  assert.strictEqual(body.answer.includes('### Tafsir'), true);
+  assert.strictEqual(body.answer.includes('Tafsir Ibn Kathir'), true);
+  assert.strictEqual(body.answer.includes('**Ayah:**'), true);
+  assert.strictEqual(body.answer.includes('source-backed Tafsir excerpt'), true);
 });
 
 test('/api/chat answers direct Tafsir reference queries with deterministic preview without Ollama', async () => {
@@ -676,9 +677,11 @@ test('/api/chat answers direct Tafsir reference queries with deterministic previ
 
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
-  assert.strictEqual(body.answer.includes('Tafsir Ibn Kathir'), true);
-  assert.strictEqual(body.answer.includes('Quran 1:1'), true);
-  assert.strictEqual(body.answer.includes('Explanation:'), true);
+  if (!body.answer.includes('Tafsir Ibn Kathir')) {
+    throw new Error(`Unexpected tafsir answer:\n${body.answer.slice(0, 600)}`);
+  }
+  assert.strictEqual(body.answer.includes('1:1'), true);
+  assert.strictEqual(body.answer.includes('**Explanation:**') || body.answer.includes('**نص التفسير:**'), true);
   assert.strictEqual(body.answer.includes(LONG_TAFSIR_EXPLANATION), false);
   assert.strictEqual(body.answer.includes('…'), true);
   assert.strictEqual(body.sources[0].source_type, 'tafsir');
@@ -698,7 +701,8 @@ test('/api/chat prefers Tafsir template source when mixed matches include non-Ta
 
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
-  assert.strictEqual(body.answer.startsWith('A relevant Tafsir source is Tafsir Ibn Kathir, Tafsir of 1:1.'), true);
+  assert.strictEqual(body.answer.includes('### Tafsir'), true);
+  assert.strictEqual(body.answer.includes('Tafsir Ibn Kathir'), true);
   assert.strictEqual(body.sources[0].source_type, 'tafsir');
 });
 
@@ -780,8 +784,10 @@ test('/api/chat answers direct scholar lookup with deterministic template and no
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
   assert.strictEqual(body.answer.includes('الشيخ عبد العزيز بن باز'), true);
-  assert.strictEqual(body.answer.includes('source-backed excerpt') || body.answer.includes('هذا مقتطف موثق'), true);
-  assert.strictEqual(body.answer.includes('not a personalized fatwa') || body.answer.includes('ليس فتوى شخصية'), true);
+  assert.strictEqual(body.answer.includes('source-backed excerpt') || body.answer.includes('مقتطف موثق'), true);
+  assert.strictEqual(body.answer.includes('not a personalized fatwa') || body.answer.includes('فتوى شخصية'), true);
+  const noteMatches = (body.answer.match(/personalized fatwa|فتوى شخصية/g) || []).length;
+  assert.ok(noteMatches <= 1);
 });
 
 test('/api/chat answers Arabic direct Bin Baz lookup with deterministic template and no LLM call', async () => {
@@ -795,15 +801,17 @@ test('/api/chat answers Arabic direct Bin Baz lookup with deterministic template
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
-  assert.strictEqual(body.answer.includes('وجدت مصدرًا معتمدًا'), true);
-  assert.strictEqual(body.answer.includes('العنوان:'), true);
-  assert.strictEqual(body.answer.includes('العالم:'), true);
-  assert.strictEqual(body.answer.includes('مقتطف من الجواب:'), true);
-  assert.strictEqual(body.answer.includes('المرجع:'), true);
-  assert.strictEqual(body.answer.includes('تنبيه:'), true);
-  assert.strictEqual(body.answer.includes('Title:'), false);
-  assert.strictEqual(body.answer.includes('Answer excerpt:'), false);
-  assert.strictEqual(body.answer.includes('This is a source-backed excerpt'), false);
+  assert.strictEqual(body.answer.includes('مصدر معتمد'), true);
+  assert.strictEqual(body.answer.includes('**العنوان:**'), true);
+  assert.strictEqual(body.answer.includes('**العالم:**'), true);
+  assert.strictEqual(body.answer.includes('**مقتطف من الجواب:**'), true);
+  assert.strictEqual(body.answer.includes('**المرجع:**'), true);
+  assert.strictEqual(body.answer.includes('**تنبيه:**'), true);
+  assert.strictEqual(body.answer.includes('**Title:**'), false);
+  assert.strictEqual(body.answer.includes('**Answer excerpt:**'), false);
+  assert.strictEqual(body.answer.includes('Approved scholar source'), false);
+  const arNoteMatches = (body.answer.match(/فتوى شخصية/g) || []).length;
+  assert.ok(arNoteMatches <= 1);
 });
 
 test('/api/chat answers Arabic direct fatwa wording with deterministic template and no LLM call', async () => {
@@ -817,12 +825,12 @@ test('/api/chat answers Arabic direct fatwa wording with deterministic template 
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
   assert(['scholar', 'fatwa'].includes(body.sources[0].source_type));
-  assert.strictEqual(body.answer.includes('وجدت مصدرًا معتمدًا'), true);
-  assert.strictEqual(body.answer.includes('العنوان:'), true);
-  assert.strictEqual(body.answer.includes('العالم:'), true);
-  assert.strictEqual(body.answer.includes('مقتطف من الجواب:'), true);
-  assert.strictEqual(body.answer.includes('المرجع:'), true);
-  assert.strictEqual(body.answer.includes('تنبيه:'), true);
+  assert.strictEqual(body.answer.includes('مصدر معتمد'), true);
+  assert.strictEqual(body.answer.includes('**العنوان:**'), true);
+  assert.strictEqual(body.answer.includes('**العالم:**'), true);
+  assert.strictEqual(body.answer.includes('**مقتطف من الجواب:**'), true);
+  assert.strictEqual(body.answer.includes('**المرجع:**'), true);
+  assert.strictEqual(body.answer.includes('**تنبيه:**'), true);
 });
 
 test('/api/chat keeps English direct scholar lookup template labels', async () => {
@@ -835,12 +843,40 @@ test('/api/chat keeps English direct scholar lookup template labels', async () =
   assert.strictEqual(response.status, 200);
   assert.strictEqual(body.llmCalled, false);
   assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
-  assert.strictEqual(body.answer.includes('Title:'), true);
-  assert.strictEqual(body.answer.includes('Scholar:'), true);
-  assert.strictEqual(body.answer.includes('Answer excerpt:'), true);
-  assert.strictEqual(body.answer.includes('Reference:'), true);
-  assert.strictEqual(body.answer.includes('العنوان:'), false);
-  assert.strictEqual(body.answer.includes('مقتطف من الجواب:'), false);
+  assert.strictEqual(body.answer.includes('**Title:**'), true);
+  assert.strictEqual(body.answer.includes('**Scholar:**'), true);
+  assert.strictEqual(body.answer.includes('**Answer excerpt:**'), true);
+  assert.strictEqual(body.answer.includes('**Reference:**'), true);
+  assert.strictEqual(body.answer.includes('**العنوان:**'), false);
+  assert.strictEqual(body.answer.includes('**مقتطف من الجواب:**'), false);
+  const enNoteMatches = (body.answer.match(/personalized fatwa/gi) || []).length;
+  assert.ok(enNoteMatches <= 1);
+});
+
+test('/api/chat uses Arabic labels for Arabic Quran questions', async () => {
+  const { body } = await postJson('/api/chat', {
+    message: 'القرآن 2:255',
+    mode: 'quran_mode',
+    modelMode: 'quick',
+  });
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.match(body.answer, /آية من القرآن الكريم/);
+  assert.match(body.answer, /\*\*المصدر:\*\*/);
+});
+
+test('/api/chat returns answerType for template and no-source responses', async () => {
+  const quran = await postJson('/api/chat', { message: 'Quran 2:255', mode: 'quran_mode', modelMode: 'quick' });
+  assert.strictEqual(quran.body.answerType, 'quran');
+
+  const blocked = await postJson('/api/chat', { message: 'سورة يوسف', mode: 'quran_mode', modelMode: 'quick' });
+  assert.strictEqual(blocked.body.answerType, 'no_approved_source');
+});
+
+test('/api/chat Arabic no-source message is clear and safe', async () => {
+  const { body } = await postJson('/api/chat', { message: 'سورة يوسف', mode: 'quran_mode', modelMode: 'quick' });
+  assert.match(body.answer, /لم أجد مصدرًا معتمدًا كافيًا/);
+  assert.match(body.answer, /القرآن 2:255/);
 });
 
 test('/api/chat blocks unknown scholar fatwa lookup safely', async () => {

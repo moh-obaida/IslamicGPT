@@ -21,6 +21,13 @@ const { validateIslamicAnswerAgainstSources } = require('./src/answerValidator')
 const { getRuntimeInfo } = require('./src/runtimeInfo');
 const { classifyQuestion } = require('./src/questionClassifier');
 const {
+  TAFSIR_PREVIEW_MAX_CHARS,
+  answerHasBuiltInScholarNote,
+  buildNoSourceMessage,
+  buildTemplateAnswer,
+  resolveAnswerType,
+} = require('./src/templateAnswers');
+const {
   deleteSource,
   getHealthSummary,
   isSupabaseConfigured,
@@ -40,7 +47,6 @@ const {
 } = require('./src/sourceStore');
 
 const REFUSAL_MESSAGE = 'I could not find enough reliable evidence in the approved sources.';
-const TAFSIR_PREVIEW_MAX_CHARS = 1500;
 const DEBUG_SOURCES = String(process.env.ISLAMICGPT_DEBUG_SOURCES || process.env.DEBUG_SOURCES || process.env.VITE_DEBUG_SOURCES || 'false').toLowerCase() === 'true';
 const MAX_REQUEST_BYTES = Number(process.env.MAX_CHAT_REQUEST_BYTES || 64 * 1024);
 const DEFAULT_MODE = 'islamic_search_mode';
@@ -55,6 +61,7 @@ const SUPPORTED_MODES = new Set([
   'student_explanation_mode',
   'compare_opinions_mode',
   'explain_simply_mode',
+  'scholar_mode',
 ]);
 
 const isCasualChat = (q = '') => /^(hello|hi|hey|salam|assalamu alaikum|thanks|thank you|good morning|good evening|test|how are you\??)$/i.test(q.trim().toLowerCase());
@@ -139,67 +146,9 @@ function scholarConsultationNote() {
 function appendScholarNote(answer, classification) {
   const safeAnswer = cleanAnswerText(answer) || REFUSAL_MESSAGE;
   if (!classification.requiresScholarWarning) return safeAnswer;
+  if (answerHasBuiltInScholarNote(safeAnswer)) return safeAnswer;
   if (safeAnswer.includes(scholarConsultationNote())) return safeAnswer;
   return `${safeAnswer}\n\n${scholarConsultationNote()}`;
-}
-
-
-function capText(value, maxChars = 1000) {
-  const full = String(value || '').trim();
-  if (!full) return '';
-  const preview = full.slice(0, maxChars).trim();
-  return full.length > preview.length ? `${preview}…` : preview;
-}
-
-function containsArabic(text) {
-  return /[\u0600-\u06FF]/.test(String(text || ''));
-}
-
-function shouldUseArabicScholarTemplate(question, source = {}) {
-  const normalizedQuestion = String(question || '').trim();
-  if (containsArabic(normalizedQuestion)) return true;
-  if (normalizedQuestion) return false;
-  if (String(source.language || '').toLowerCase() === 'arabic') return true;
-  return [source.title, source.question_text, source.answer_text, source.scholar_name, source.scholar_name_ar, source.arabic_text]
-    .some((value) => containsArabic(value));
-}
-
-function getSourceReference(source = {}) {
-  const candidates = [
-    source.fatwa_reference,
-    source.reference,
-    source.reference_number,
-    source.metadata?.reference,
-    source.metadata?.original_record?.reference,
-    source.fatwa_number,
-  ];
-  const seen = new Set();
-  for (const item of candidates) {
-    const value = String(item || '').trim();
-    if (!value) continue;
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    return value;
-  }
-  return '';
-}
-
-function getSourceUrl(source = {}) {
-  return String(source.source_url || source.url || source.metadata?.url || source.metadata?.original_record?.url || '').trim();
-}
-
-function scholarReference(source) {
-  const normalizedRef = getSourceReference(source);
-  const looksLikeFatwaPrefix = /^\s*fatwa\b/i.test(normalizedRef);
-  const fatwaLabel = source.fatwa_number && !normalizedRef ? `Fatwa ${source.fatwa_number}` : '';
-  return [
-    source.work_title || source.work_title_en || source.work_title_ar,
-    !looksLikeFatwaPrefix && normalizedRef ? normalizedRef : '',
-    fatwaLabel,
-    source.page_number ? `p. ${source.page_number}` : '',
-    source.page_range ? `pp. ${source.page_range}` : '',
-  ].filter(Boolean).join(' / ');
 }
 
 function sourceWarnings(sources, classification, extraWarnings = []) {
@@ -221,17 +170,11 @@ function resolveIslamicConfidence({ sources, classification, validationFailed = 
   return 'source_backed';
 }
 
-function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'none', warnings = [] }) {
-  const friendlyRefusal = [
-    'I could not find enough approved source evidence to answer this safely.',
-    '',
-    'Try asking with a specific reference, such as:',
-    '- Quran 2:255',
-    '- Sahih al-Bukhari Hadith 1',
-    '- Tafsir of Surah Al-Fatihah 1:1',
-  ].join('\n');
+function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'none', warnings = [], question = '' }) {
+  const friendlyRefusal = buildNoSourceMessage(question);
   return {
     answer: appendScholarNote(friendlyRefusal, classification),
+    answerType: 'no_approved_source',
     mode,
     modelMode,
     resolvedModelMode: null,
@@ -254,156 +197,6 @@ function noSourceResponse({ mode, modelMode, classification, sourceBackend = 'no
     validation: { passed: false, attempts: 0, issues: ['no_sources_found'] },
     loadingStagesCompleted: ['classified_question', 'searched_approved_sources'],
   };
-}
-
-function buildTemplateAnswer(source, question = '') {
-  if (['hadith', 'hadith_explanation'].includes(source.source_type)) {
-    const ref = `${source.collection_name || 'Hadith source'}${source.hadith_number ? `, Hadith ${source.hadith_number}` : ''}`;
-    const heading = source.title ? `### ${source.title}` : '### Hadith';
-    const quoteText = source.translation_text || source.meaning_text || source.explanation_text || 'Translation text is not available in the approved source record.';
-    const meaningCandidate = source.explanation_text || source.meaning_text || '';
-    const shouldShowMeaning = Boolean(
-      meaningCandidate
-      && meaningCandidate.trim()
-      && meaningCandidate.trim() !== String(source.translation_text || '').trim()
-    );
-    return [
-      heading,
-      '',
-      'The Prophet ﷺ said:',
-      '',
-      `> ${quoteText}`,
-      '',
-      source.arabic_text ? '**Arabic:**' : null,
-      source.arabic_text || null,
-      '',
-      shouldShowMeaning ? '**Meaning:**' : null,
-      shouldShowMeaning ? meaningCandidate : null,
-      shouldShowMeaning ? '' : null,
-      source.grade ? `**Grade:** ${source.grade}` : null,
-      source.grade ? '' : null,
-      '**Source:**',
-      ref,
-    ].filter(Boolean).join('\n');
-  }
-
-  if (source.source_type === 'tafsir') {
-    const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_range || source.ayah_number || source.ayah || '?'}`;
-    const tafsirBookName = source.tafsir_book_name || source.tafsir_book_name_en || source.tafsir_book_name_ar || source.title || 'Tafsir source';
-    const previewSource = source.explanation_text || source.translation_text || 'Explanation text is not available in the approved source record.';
-    const preview = String(previewSource).slice(0, TAFSIR_PREVIEW_MAX_CHARS).trim();
-    const previewSuffix = String(previewSource).length > preview.length ? '…' : '';
-    return [
-      `A relevant Tafsir source is ${tafsirBookName}, Tafsir of ${ref}.`,
-      '',
-      'Explanation:',
-      `${preview}${previewSuffix}`,
-      '',
-      'Source:',
-      `${tafsirBookName}, Tafsir of ${ref}`,
-      '',
-      'Reference:',
-      `Quran ${ref}`,
-      '',
-      'Edition:',
-      source.tafsir_edition_slug || 'Unknown edition',
-      '',
-      'Note:',
-      'This is a source-backed Tafsir excerpt. Review the source card for full text and attribution.',
-    ].filter(Boolean).join('\n');
-  }
-
-  if (['quran', 'quran_translation'].includes(source.source_type)) {
-    const ref = `${source.surah_number || source.surah || '?'}:${source.ayah_number || source.ayah || source.ayah_range || '?'}`;
-    const verseLabel = source.surah_name_en ? `${source.surah_name_en} ${ref}` : ref;
-    const translationCredit = source.translation_name || source.translator || '';
-    return [
-      '### Quran verse',
-      '',
-      `**Surah:** ${verseLabel}`,
-      '',
-      source.translation_text ? `> ${source.translation_text}` : null,
-      source.translation_text ? '' : null,
-      source.arabic_text ? '**Arabic:**' : null,
-      source.arabic_text || null,
-      '',
-      '**Source:**',
-      `Quran ${ref}`,
-      translationCredit ? '' : null,
-      translationCredit ? `Translation: ${translationCredit}` : null,
-    ].filter(Boolean).join('\n');
-  }
-
-  if (['fatwa', 'scholar_statement', 'book', 'lecture', 'educational_explanation'].includes(source.source_type)) {
-    const useArabicTemplate = shouldUseArabicScholarTemplate(question, source);
-    const scholarName = source.scholar_name_en || source.scholar_name_ar || source.scholar_name || '';
-    const answerExcerpt = capText(source.answer_text || source.translation_text || source.arabic_text || source.summary_text || source.explanation_text || source.quote_text || 'Text is not available in the approved source record.');
-    const sourceRef = getSourceReference(source) || scholarReference(source) || source.source_title || source.title || source.id || 'Approved source';
-    const sourceUrl = getSourceUrl(source);
-    if (useArabicTemplate) {
-      return [
-        'وجدت مصدرًا معتمدًا متعلقًا بهذا السؤال.',
-        '',
-        'العنوان:',
-        source.title || source.source_title || 'مصدر شرعي',
-        '',
-        scholarName ? 'العالم:' : null,
-        scholarName || null,
-        '',
-        source.question_text ? 'السؤال:' : null,
-        source.question_text || null,
-        '',
-        'مقتطف من الجواب:',
-        answerExcerpt,
-        '',
-        sourceRef ? 'المرجع:' : null,
-        sourceRef || null,
-        '',
-        sourceUrl ? 'الرابط:' : null,
-        sourceUrl || null,
-        sourceUrl ? '' : null,
-        'تنبيه:',
-        'هذا مقتطف موثق من المصدر، وليس فتوى شخصية. في الحالات الخاصة، يُرجى مراجعة عالم مؤهل.',
-      ].filter(Boolean).join('\n');
-    }
-    return [
-      'I found an approved scholar source related to this question.',
-      '',
-      'Title:',
-      source.title || source.source_title || 'Scholar source',
-      '',
-      scholarName ? 'Scholar:' : null,
-      scholarName || null,
-      '',
-      source.question_text ? 'Question:' : null,
-      source.question_text || null,
-      '',
-      'Answer excerpt:',
-      answerExcerpt,
-      '',
-      'Reference:',
-      sourceRef,
-      '',
-      sourceUrl ? 'Link:' : null,
-      sourceUrl || null,
-      sourceUrl ? '' : null,
-      '',
-      'Note:',
-      'This is a source-backed excerpt. It is not a personalized fatwa. For personal circumstances, consult a qualified scholar.',
-    ].filter(Boolean).join('\n');
-  }
-
-  const sourceTitle = source.source_title || source.title || source.collection_name || source.scholar_name || source.id || 'Approved source';
-  return [
-    'I found an approved source related to this topic.',
-    '',
-    sourceTitle,
-    '',
-    source.translation_text || source.arabic_text || source.summary || 'Text is not available in the approved source record.',
-    '',
-    'Source:',
-    sourceTitle,
-  ].filter(Boolean).join('\n');
 }
 
 function isDirectTafsirLookup(question = '') {
@@ -445,9 +238,14 @@ function isDirectScholarLookup(question = '') {
 
 function templateSourceResponse({ sources, mode, modelMode, classification, sourceBackend, loading, warnings = [], question = '' }) {
   const sanitizedSources = sanitizeSourcesForResponse(sources);
-  const answer = appendScholarNote(buildTemplateAnswer(sources[0], question), classification);
+  const templateAnswer = buildTemplateAnswer(sources[0], question);
+  const answer = answerHasBuiltInScholarNote(templateAnswer)
+    ? templateAnswer
+    : appendScholarNote(templateAnswer, classification);
+  const answerType = resolveAnswerType(sources[0]);
   return {
     answer,
+    answerType,
     mode,
     modelMode,
     resolvedModelMode: 'template_answer',
@@ -913,6 +711,7 @@ async function handleChat(payload, res) {
         classification,
         sourceBackend: retrieval.sourceBackend,
         warnings: retrieval.warnings,
+        question,
       });
       if (DEBUG_SOURCES || payload.debug) out.debug = { ...retrieval.debug, classification, retrievalErrors: retrieval.errors };
       return send(res, 200, out);
@@ -931,6 +730,7 @@ async function handleChat(payload, res) {
         classification,
         sourceBackend: retrieval.sourceBackend,
         warnings: retrieval.warnings,
+        question,
       });
       if (DEBUG_SOURCES || payload.debug) out.debug = { ...retrieval.debug, classification, retrievalErrors: retrieval.errors, directTafsirIntent: true };
       return send(res, 200, out);

@@ -14,6 +14,7 @@ const MODE_TO_TYPE = {
   hadith_mode: 'hadith',
   quran_mode: 'quran',
   tafsir_mode: 'tafsir',
+  scholar_mode: 'scholar',
   fiqh_mode: 'fiqh',
   aqidah_mode: 'aqidah',
   islamic_search_mode: 'all',

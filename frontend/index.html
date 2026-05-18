@@ -31,27 +31,71 @@
       --shadowSoft: 0 4px 12px rgba(0,0,0,0.1);
     }
     body[data-theme="light"] {
-      --bg: #f8f9fa;
-      --side: #ffffff;
-      --main: #ffffff;
+      --bg: #faf8f4;
+      --side: #fffefb;
+      --main: #fffefb;
       --card: #ffffff;
-      --card2: #f1f3f5;
-      --line: #e9ecef;
-      --text: #212529;
-      --muted: #495057;
-      --soft: #adb5bd;
-      --black: #000000;
-      --turq: #0ca678;
-      --turq2: #099268;
-      --softTurq: rgba(12, 166, 120, 0.1);
-      --turqLine: rgba(12, 166, 120, 0.28);
-      --bad: #fa5252;
-      --badBg: rgba(250, 82, 82, 0.1);
+      --card2: #f4f1ea;
+      --line: #ddd6c8;
+      --text: #1a2422;
+      --muted: #4a5c58;
+      --soft: #6b7d78;
+      --black: #0f1413;
+      --turq: #0a9b88;
+      --turq2: #087f70;
+      --softTurq: rgba(10, 155, 136, 0.12);
+      --turqLine: rgba(10, 155, 136, 0.32);
+      --bad: #e03131;
+      --badBg: rgba(224, 49, 49, 0.08);
+      --shadow: 0 8px 28px rgba(26, 36, 34, 0.08);
+      --shadowSoft: 0 4px 14px rgba(26, 36, 34, 0.06);
     }
+    body[data-theme="light"] .side { background: linear-gradient(180deg, var(--side), #f7f4ee); }
+    body[data-theme="light"] .sidebar-panel { background: var(--card); box-shadow: var(--shadowSoft); }
+    body[data-theme="light"] .sidebar-panel.glow { background: linear-gradient(180deg, rgba(10,155,136,0.08), var(--card)); }
+    body[data-theme="light"] .side-stat { background: var(--card2); }
+    body[data-theme="light"] .workspace-header { background: rgba(255, 254, 251, 0.92); }
+    body[data-theme="light"] .chat-controls,
+    body[data-theme="light"] .composer-box,
+    body[data-theme="light"] .library-card,
+    body[data-theme="light"] .prompt-chip,
+    body[data-theme="light"] .message.ai .bubble,
+    body[data-theme="light"] .source-card { background: var(--card); }
+    body[data-theme="light"] .assistant-content blockquote { color: var(--text); background: var(--softTurq); }
+    body[data-theme="light"] .assistant-content h3 { color: var(--turq2); }
+    body[data-theme="light"] .assistant-content .assistant-arabic,
+    body[data-theme="light"] .source-arabic { background: var(--card2); }
+    body[data-theme="light"] .trust-badge { background: var(--card); color: var(--turq2); }
     * { box-sizing: border-box; }
-    body { margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      --headerHeight: 72px;
+    }
     button, input, select, textarea { font: inherit; color: inherit; }
     button { cursor: pointer; border: none; background: transparent; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--turq);
+      outline-offset: 2px;
+    }
+    select.styled-select {
+      appearance: none;
+      background: var(--card2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2398a6a3' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 10px center;
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 30px 8px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 130px;
+      cursor: pointer;
+    }
+    select.styled-select:hover { border-color: var(--turqLine); }
+    body.no-composer .composer-container { display: none !important; }
 
     .app { height: 100vh; display: grid; grid-template-columns: var(--sidebarWidth) 1px 1fr; }
     .side { background: linear-gradient(180deg, var(--side), rgba(8,12,11,0.92)); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
@@ -120,7 +164,22 @@
     .status-sub { font-size: 10px; color: var(--soft); line-height: 1.45; }
 
     /* Workspace Header */
-    .workspace-header { min-height: 72px; padding: 0 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(5,7,6,0.72); backdrop-filter: blur(14px); }
+    .workspace-header {
+      min-height: var(--headerHeight);
+      height: var(--headerHeight);
+      padding: 0 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(5,7,6,0.72);
+      backdrop-filter: blur(14px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      flex-shrink: 0;
+    }
     .header-title h2 { margin: 0; font-size: 16px; font-weight: 800; }
     .header-title span { font-size: 12px; color: var(--soft); }
     .header-actions { display: flex; gap: 12px; }
@@ -131,7 +190,8 @@
 
     /* Workspace Content */
     .workspace-content { flex: 1; overflow-y: auto; position: relative; }
-    .content-inner { max-width: 940px; margin: 0 auto; padding: 36px 24px; }
+    .content-inner { max-width: 940px; margin: 0 auto; padding: 28px 24px 120px; }
+    #chatView.content-inner { padding-top: 32px; }
 
     .welcome-card { text-align: center; padding: 24px 0 36px; position: relative; }
     .welcome-glow {
@@ -215,12 +275,72 @@
     .assistant-content .source-badge { display: inline-block; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); color: var(--soft); font-size: 12px; }
 
     /* Composer */
-    .composer-container { padding: 0 24px 24px; width: 100%; max-width: 940px; margin: 0 auto; }
-    .chat-controls { background: rgba(14,20,19,0.84); border: 1px solid var(--line); border-radius: 16px; padding: 9px 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; box-shadow: var(--shadowSoft); }
+    .composer-container {
+      padding: 0 24px 20px;
+      width: 100%;
+      max-width: 940px;
+      margin: 0 auto;
+      flex-shrink: 0;
+    }
+    .main { position: relative; }
+    .chat-controls {
+      background: rgba(14,20,19,0.84);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadowSoft);
+    }
     .chat-controls .control-item { display: flex; align-items: center; gap: 6px; }
-    .chat-controls label { font-size: 11px; font-weight: 800; color: var(--soft); text-transform: uppercase; }
-    .chat-controls select { background: var(--card2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 8px; font-size: 12px; }
-    .source-indicator { font-size: 11px; font-weight: 800; color: var(--soft); margin-left: auto; white-space: nowrap; }
+    .chat-controls label { font-size: 10px; font-weight: 800; color: var(--soft); text-transform: uppercase; letter-spacing: 0.06em; }
+    .source-indicator { font-size: 11px; font-weight: 700; color: var(--turq); margin-left: auto; white-space: nowrap; }
+    .answer-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--turqLine);
+      background: var(--softTurq);
+      color: var(--turq);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .answer-type-badge.no-source { color: var(--warn); border-color: var(--warnBg); background: var(--warnBg); }
+    .message-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .message-actions button {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--card2);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .message-actions button:hover { border-color: var(--turqLine); color: var(--turq); }
+    .skeleton { border-radius: 10px; background: linear-gradient(90deg, var(--card2), var(--line), var(--card2)); background-size: 200% 100%; animation: shimmer 1.2s infinite; min-height: 14px; }
+    @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+    .settings-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .settings-tab {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card2);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+    .settings-tab.active { background: var(--softTurq); border-color: var(--turqLine); color: var(--turq); }
+    .settings-panel.hidden { display: none; }
+    .sidebar-toggle { display: none; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); font-size: 12px; font-weight: 800; }
+    body.sidebar-open .side { display: flex; position: fixed; inset: 0 auto 0 0; width: min(88vw, var(--sidebarWidth)); z-index: 40; box-shadow: var(--shadow); }
     .composer-box { background: rgba(14,20,19,0.94); border: 1px solid var(--line); border-radius: 20px; padding: 6px; box-shadow: var(--shadowSoft); display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s; }
     .composer-box:focus-within { border-color: var(--turq); box-shadow: 0 0 0 4px rgba(18, 200, 178, 0.1); }
     .composer-box textarea { width: 100%; border: none; background: transparent; color: var(--text); padding: 10px 14px; font-size: 15px; line-height: 1.45; resize: none; outline: none; min-height: 46px; max-height: 150px; }
@@ -274,6 +394,7 @@
     @media (max-width: 900px) {
       .app { grid-template-columns: 1fr; }
       .side { display: none; }
+      .sidebar-toggle { display: inline-flex; }
       .resizer { display: none; }
       .workspace-header { padding: 14px 16px; align-items: flex-start; }
       .header-actions { flex-wrap: wrap; justify-content: flex-end; }
@@ -313,7 +434,7 @@
         <div class="sidebar-panel glow">
           <div class="side-panel-head">
             <div class="side-panel-title">Source Library</div>
-            <span class="side-chip" id="sideBackendLabel">Checking</span>
+            <span class="side-chip" id="sideBackendLabel">Loading</span>
           </div>
           <div class="side-stat-grid">
             <div class="side-stat"><strong id="sideApprovedCount">—</strong><span>Approved sources</span></div>
@@ -324,14 +445,14 @@
         <div class="sidebar-panel">
           <div class="side-panel-head">
             <div class="side-panel-title">User Promise</div>
-            <span class="side-chip">Clean UX</span>
+            <span class="side-chip">Source-first</span>
           </div>
-          <div class="sidebar-note">IslamicGPT only answers religious questions when approved sources are available. Personal rulings still need qualified scholars.</div>
+          <div class="sidebar-note">Approved sources only. No source, no answer. For personal religious rulings, consult a qualified scholar.</div>
         </div>
 
         <div class="section-card">
           <span class="section-label">Recent Conversations</span>
-          <div id="recentChats" class="hint">No recent chats yet</div>
+          <div id="recentChats" class="hint">No conversations yet. Start by asking about Quran, Tafsir, Hadith, or a verified fatwa.</div>
         </div>
       </div>
       <div class="status-card">
@@ -350,7 +471,8 @@
           <span id="pageSubtitle">Ready to search approved Islamic sources</span>
         </div>
         <div class="header-actions">
-          <div class="action-pill status checking" id="backendStatusPill">Checking connection…</div>
+          <button class="sidebar-toggle" type="button" onclick="toggleSidebar()">Menu</button>
+          <div class="action-pill status checking" id="backendStatusPill">Source status</div>
           <button class="action-pill" onclick="toggleTheme()" id="themeToggle">Light Mode</button>
         </div>
       </header>
@@ -360,7 +482,7 @@
             <div class="welcome-glow"></div>
             <div class="hero-mark">IG</div>
             <h1>Islamic<span>GPT</span></h1>
-            <p>Search Quran, Hadith, Tafsir, and verified scholar sources.</p>
+            <p>Source-first Islamic research from approved Quran, Hadith, Tafsir, and scholar records only.</p>
             
             <div class="trust-badges">
               <div class="trust-badge">✓ Source-first</div>
@@ -370,8 +492,8 @@
 
             <div class="library-status">
               <div class="library-card accent">
-                <strong id="libraryStatus">Checking connection…</strong>
-                <span id="libraryBackend">Source backend status will appear here.</span>
+                <strong id="libraryStatus">Loading source status…</strong>
+                <span id="libraryBackend">Approved source counts appear when the backend is connected.</span>
               </div>
               <div class="library-card">
                 <strong id="libraryCount">Approved source count</strong>
@@ -388,8 +510,9 @@
               <div class="prompt-grid">
                 <button class="prompt-chip" onclick="setExample('Quran 2:255')"><span class="prompt-type">Quran</span><span class="prompt-text">Quran 2:255</span></button>
                 <button class="prompt-chip" onclick="setExample('Hadith about intention')"><span class="prompt-type">Hadith</span><span class="prompt-text">Hadith about intention</span></button>
-                <button class="prompt-chip" onclick="setExample('Tafsir of Al-Fatihah')"><span class="prompt-type">Tafsir</span><span class="prompt-text">Tafsir of Al-Fatihah</span></button>
-                <button class="prompt-chip" onclick="setExample('What did scholars say about sincerity?')"><span class="prompt-type">Scholar/Fatwa</span><span class="prompt-text">What did scholars say about sincerity?</span></button>
+                <button class="prompt-chip" onclick="setExample('تفسير آية الكرسي')"><span class="prompt-type">Tafsir</span><span class="prompt-text">تفسير آية الكرسي</span></button>
+                <button class="prompt-chip" onclick="setExample('ما حكم التماثيل في البيت عند ابن باز؟')"><span class="prompt-type">Scholar/Fatwa</span><span class="prompt-text">ما حكم التماثيل عند ابن باز؟</span></button>
+                <button class="prompt-chip" onclick="setExample('سورة الإخلاص')"><span class="prompt-type">Quran Surah</span><span class="prompt-text">سورة الإخلاص</span></button>
               </div>
             </div>
           </div>
@@ -421,29 +544,58 @@
         <div id="settingsView" class="content-inner hidden">
           <div class="dashboard-header">
             <h1>Settings</h1>
-            <p>Configure IslamicGPT behavior and source rules.</p>
+            <p>Configure source safety, answer style, and display preferences.</p>
           </div>
-          
+          <div class="settings-tabs">
+            <button type="button" class="settings-tab active" data-settings-tab="general" onclick="switchSettingsTab('general')">General</button>
+            <button type="button" class="settings-tab" data-settings-tab="safety" onclick="switchSettingsTab('safety')">Source & Safety</button>
+            <button type="button" class="settings-tab" data-settings-tab="ai" onclick="switchSettingsTab('ai')">AI Provider</button>
+            <button type="button" class="settings-tab" data-settings-tab="display" onclick="switchSettingsTab('display')">Display</button>
+            <button type="button" class="settings-tab" data-settings-tab="advanced" onclick="switchSettingsTab('advanced')">Advanced</button>
+          </div>
           <div class="full-card">
-            <div class="settings-section">
-              <span class="settings-label">AI Provider & Routing</span>
-              <div class="settings-item"><span>AI Provider Mode</span><select><option>Local Ollama (Recommended)</option><option>Cloud Fallback</option></select></div>
-              <div class="settings-item"><span>Local AI Endpoint</span><input type="text" value="http://localhost:11434" disabled></div>
-              <div class="settings-item"><span>Speed Mode</span><select><option>Fast</option><option selected>Balanced</option><option>Quality</option></select></div>
-              <div class="settings-item"><span>Timeout (ms)</span><input type="text" value="30000"></div>
+            <div id="settings-general" class="settings-panel">
+              <div class="settings-section">
+                <span class="settings-label">General</span>
+                <div class="settings-item"><span>Default mode</span><span class="hint">Use the composer mode selector in chat.</span></div>
+                <div class="settings-item"><span>Answer depth default</span><span class="hint">Balanced is recommended for most questions.</span></div>
+              </div>
             </div>
-
-            <div class="settings-section">
-              <span class="settings-label">Source & Citation Settings</span>
-              <div class="settings-item"><label><input type="checkbox" id="requireSources" checked> Require approved sources for Islamic questions</label></div>
-              <div class="settings-item"><label><input type="checkbox" checked> Show source cards automatically</label></div>
-              <div class="settings-item"><label><input type="checkbox"> Fallback to search-only if model fails</label></div>
+            <div id="settings-safety" class="settings-panel hidden">
+              <div class="settings-section">
+                <span class="settings-label">Source & Safety</span>
+                <div class="settings-item"><label><input type="checkbox" id="requireSources" checked disabled> Approved sources required for Islamic answers</label></div>
+                <div class="settings-item"><label><input type="checkbox" checked disabled> No source, no answer for direct Islamic lookups</label></div>
+                <div class="settings-item"><label><input type="checkbox" checked> Show source cards automatically</label></div>
+              </div>
             </div>
-
-            <div class="settings-section">
-              <span class="settings-label">Display</span>
-              <div class="settings-item"><label><input type="checkbox"> Compact Message Mode</label></div>
-              <div class="settings-item"><label><input type="checkbox" checked> Show Progress Tracker</label></div>
+            <div id="settings-ai" class="settings-panel hidden">
+              <div class="settings-section">
+                <span class="settings-label">AI Provider</span>
+                <div class="settings-item"><span>Answer style</span>
+                  <select id="thinkingMode" class="styled-select">
+                    <option value="fast">Fast</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="deep">Deep</option>
+                  </select>
+                </div>
+                <div class="settings-item"><span>Local model endpoint</span><input type="text" value="http://localhost:11434" disabled></div>
+              </div>
+            </div>
+            <div id="settings-display" class="settings-panel hidden">
+              <div class="settings-section">
+                <span class="settings-label">Display</span>
+                <div class="settings-item"><label><input type="checkbox" checked> Show progress tracker</label></div>
+                <div class="settings-item"><label><input type="checkbox" id="compactMode"> Compact message mode</label></div>
+              </div>
+            </div>
+            <div id="settings-advanced" class="settings-panel hidden">
+              <div class="settings-section">
+                <span class="settings-label">Advanced</span>
+                <div class="settings-item"><span>Request timeout (ms)</span><input type="text" value="30000" disabled></div>
+                <div class="settings-item"><span>Compare sources</span><span class="hint">Coming soon as a dedicated toggle.</span></div>
+                <div class="settings-item"><span>Explain simply</span><span class="hint">Use Detailed or Student-friendly depth in chat.</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -492,12 +644,11 @@
         <div class="chat-controls">
           <div class="control-item">
             <label for="modeSelect">Mode</label>
-            <select id="modeSelect" onchange="updateComposerState()"></select>
+            <select id="modeSelect" class="styled-select" onchange="updateComposerState()"></select>
           </div>
           <div class="control-item">
             <label for="answerDepth">Depth</label>
-            <select id="answerDepth" onchange="updateComposerState()">
-              <option value="auto">Auto</option>
+            <select id="answerDepth" class="styled-select" onchange="updateComposerState()">
               <option value="quick">Quick</option>
               <option value="balanced" selected>Balanced</option>
               <option value="detailed">Detailed</option>
@@ -505,25 +656,15 @@
               <option value="evidence">Evidence-heavy</option>
             </select>
           </div>
-          <div class="control-item">
-            <label for="thinkingMode">AI Mode</label>
-            <select id="thinkingMode" onchange="updateComposerState()">
-              <option value="fast">Fast</option>
-              <option value="balanced" selected>Balanced</option>
-              <option value="deep">Deep</option>
-              <option value="research">Research / Thinking</option>
-            </select>
-          </div>
-          <div class="source-indicator" id="sourceIndicator">Normal chat: sources optional</div>
+          <div class="source-indicator" id="sourceIndicator">Approved sources required</div>
         </div>
         <div class="composer-box">
-          <textarea id="input" placeholder="Ask a question or search sources..." oninput="autoResize(this)"></textarea>
+          <textarea id="input" placeholder="Ask an Islamic question or search approved sources..." oninput="autoResize(this)"></textarea>
           <div class="composer-footer">
             <div class="composer-badges">
-              <div class="badge" id="activeModeBadge">General Mode</div>
-              <div class="badge" id="activeDepthBadge">Balanced Depth</div>
-              <div class="badge" id="activeThinkingBadge">Balanced AI</div>
-              <div class="badge" id="activeSourceRuleBadge">Sources optional</div>
+              <div class="badge active" id="activeSourceRuleBadge">Source-first</div>
+              <div class="badge" id="activeModeBadge">Search / General</div>
+              <div class="badge" id="activeDepthBadge">Balanced</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
               <button id="clearBtn" class="hidden" onclick="clearInput()" style="font-size:11px; color:var(--soft); font-weight:800;">Clear</button>
@@ -531,7 +672,7 @@
             </div>
           </div>
         </div>
-        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">IslamicGPT is an AI assistant. Always consult qualified scholars for personal religious rulings.</div>
+        <div class="disclaimer" style="text-align:center; margin-top:12px; font-size:10px; color:var(--soft);">For personal religious rulings, consult a qualified scholar.</div>
       </div>
     </main>
   </div>
@@ -547,13 +688,23 @@
       {id:'quran_mode',label:'Quran'},
       {id:'hadith_mode',label:'Hadith'},
       {id:'tafsir_mode',label:'Tafsir'},
-      {id:'fiqh_mode',label:'Fiqh'},
-      {id:'aqidah_mode',label:'Aqidah'},
-      {id:'arabic_mode',label:'Arabic'},
-      {id:'student_explanation_mode',label:'Student'},
-      {id:'compare_opinions_mode',label:'Compare Sources'},
-      {id:'explain_simply_mode',label:'Explain Simply'}
+      {id:'scholar_mode',label:'Scholar / Fatwa'}
     ];
+    const PLACEHOLDERS = {
+      islamic_search_mode: 'Ask an Islamic question or search approved sources...',
+      quran_mode: 'Try "Quran 2:255" or "سورة الإخلاص"',
+      hadith_mode: 'Try "Hadith about intention"',
+      tafsir_mode: 'Try "تفسير آية الكرسي"',
+      scholar_mode: 'Try "ما حكم التماثيل عند ابن باز؟"'
+    };
+    const ANSWER_TYPE_LABELS = {
+      quran: 'Quran',
+      tafsir: 'Tafsir',
+      fatwa: 'Fatwa',
+      hadith: 'Hadith',
+      no_approved_source: 'No approved source',
+      source: 'Source-backed'
+    };
     const STAGES = [{id:'classified_question',label:'Classifying request'},{id:'searched_approved_sources',label:'Searching approved sources'},{id:'built_source_context',label:'Building source context'},{id:'called_local_model',label:'Generating verified answer'},{id:'validated_citations',label:'Validating citations'},{id:'prepared_answer',label:'Finalizing response'}];
 
     function isAdminRoute() {
@@ -593,6 +744,7 @@
       document.getElementById('pageTitle').textContent = titles[view];
       document.getElementById('pageSubtitle').textContent = subtitles[view];
       currentView = view;
+      document.body.classList.toggle('no-composer', view === 'settings' || view === 'sources' || view === 'admin');
       if (view === 'sources') loadPublicSources();
       if (view === 'admin') loadAdminRoute();
     }
@@ -651,7 +803,7 @@
       const items = getRecentChats();
       if (!items.length) {
         target.className = 'hint';
-        target.textContent = 'No recent chats yet';
+        target.textContent = 'No conversations yet. Start by asking about Quran, Tafsir, Hadith, or a verified fatwa.';
         return;
       }
       target.className = 'recent-list';
@@ -889,21 +1041,39 @@
         setAdminStatus('Backend Offline. Could not reindex sources.');
       }
     }
-    function updateComposerState() { 
+    function updateComposerState() {
       currentMode = document.getElementById('modeSelect').value;
-      const modeLabel = MODES.find(m => m.id === currentMode)?.label || 'General';
+      const modeLabel = MODES.find(m => m.id === currentMode)?.label || 'Search / General';
       const depth = document.getElementById('answerDepth').value;
-      const depthLabelMap = {auto:'Auto',quick:'Quick',balanced:'Balanced',detailed:'Detailed',student:'Student-friendly',evidence:'Evidence-heavy'};
-      const thinking = document.getElementById('thinkingMode').value;
-      const thinkingLabelMap = {fast:'Fast',balanced:'Balanced',deep:'Deep',research:'Research'};
-      const islamicMode = currentMode !== 'islamic_search_mode';
-      const sourceRule = islamicMode ? 'Sources required' : 'Sources optional';
-      const sourceIndicator = islamicMode ? 'Islamic answer: sources required' : 'Normal chat: sources optional';
+      const depthLabelMap = { quick: 'Quick', balanced: 'Balanced', detailed: 'Detailed', student: 'Student-friendly', evidence: 'Evidence-heavy' };
       document.getElementById('activeModeBadge').textContent = modeLabel;
       document.getElementById('activeDepthBadge').textContent = depthLabelMap[depth] || 'Balanced';
-      document.getElementById('activeThinkingBadge').textContent = `${thinkingLabelMap[thinking] || 'Balanced'} AI`;
-      document.getElementById('activeSourceRuleBadge').textContent = sourceRule;
-      document.getElementById('sourceIndicator').textContent = sourceIndicator;
+      document.getElementById('activeSourceRuleBadge').textContent = 'Source-first';
+      document.getElementById('sourceIndicator').textContent = 'Approved sources required · No source, no answer';
+      const input = document.getElementById('input');
+      if (input) input.placeholder = PLACEHOLDERS[currentMode] || PLACEHOLDERS.islamic_search_mode;
+    }
+
+    function switchSettingsTab(tab) {
+      document.querySelectorAll('.settings-tab').forEach((btn) => btn.classList.toggle('active', btn.dataset.settingsTab === tab));
+      document.querySelectorAll('.settings-panel').forEach((panel) => panel.classList.add('hidden'));
+      const target = document.getElementById(`settings-${tab}`);
+      if (target) target.classList.remove('hidden');
+    }
+
+    function toggleSidebar() {
+      document.body.classList.toggle('sidebar-open');
+    }
+
+    function answerTypeBadge(type) {
+      const label = ANSWER_TYPE_LABELS[type] || '';
+      if (!label) return '';
+      const extra = type === 'no_approved_source' ? ' no-source' : '';
+      return `<div class="answer-type-badge${extra}">${escapeHtml(label)}</div>`;
+    }
+
+    async function copyText(value) {
+      try { await navigator.clipboard.writeText(String(value || '')); } catch (_) {}
     }
     function toggleTheme() { const b = document.body; const t = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; b.setAttribute('data-theme', t); document.getElementById('themeToggle').textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode'; }
 
@@ -920,7 +1090,7 @@
       messages.innerHTML += `<div class="message user"><div class="avatar user">U</div><div class="bubble">${escapeHtml(text)}</div></div>`;
       updateProgress(['classified_question']);
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value, thinkingMode: document.getElementById('thinkingMode').value }) });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, mode: currentMode, modelMode: document.getElementById('answerDepth').value, thinkingMode: (document.getElementById('thinkingMode') || { value: 'balanced' }).value }) });
         const data = await res.json();
         if (data.loadingStagesCompleted) { updateProgress(data.loadingStagesCompleted); setTimeout(() => document.getElementById('progressTracker').classList.add('hidden'), 1000); }
         const cleanAssistantAnswer = (() => {
@@ -939,7 +1109,9 @@
           }
           return a || 'No answer returned.';
         })();
-        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${renderAssistantMessage(cleanAssistantAnswer)}</div></div>`;
+                const typeBadge = answerTypeBadge(data.answerType);
+        const copyActions = `<div class="message-actions"><button type="button" onclick="copyText(${JSON.stringify(cleanAssistantAnswer)})">Copy answer</button>${data.sourceCards?.[0]?.copyCitation ? `<button type="button" onclick="copyText(${JSON.stringify(data.sourceCards[0].copyCitation)})">Copy reference</button>` : ''}${data.sources?.[0]?.source_url ? `<button type="button" onclick="window.open(${JSON.stringify(data.sources[0].source_url)}, '_blank')">Open source</button>` : ''}</div>`;
+        messages.innerHTML += `<div class="message ai"><div class="avatar ai">IG</div><div class="bubble">${typeBadge}${renderAssistantMessage(cleanAssistantAnswer)}${copyActions}</div></div>`;
         sourcesPanel.innerHTML = '';
         if (data.sourceCards && data.sourceCards.length) {
           sourcesPanel.innerHTML = renderSourceCards(data.sourceCards, data.sources || []);
@@ -972,23 +1144,23 @@
         const sourceCount = preferSupabase ? supabaseApproved : (ragCount ?? supabaseApproved);
         const hasReliableCount = Number.isFinite(sourceCount) && sourceCount >= 0;
         
-        pill.textContent = backendOnline ? 'AI Connected' : 'Backend Offline';
+        pill.textContent = backendOnline ? 'Source backend online' : 'Source status unavailable';
         pill.className = backendOnline ? 'action-pill status' : 'action-pill status error';
         dot.className = backendOnline ? 'status-dot online' : 'status-dot';
         
         if (backendOnline) {
-          statusText.textContent = 'AI Ready';
+          statusText.textContent = 'Source backend ready';
           statusSub.textContent = hasReliableCount ? `v0.2.0 • Approved sources: ${sourceCount}` : 'v0.2.0 • Source backend ready';
-          libraryStatus.textContent = 'Source backend online';
-          libraryBackend.textContent = 'AI Connected';
+          libraryStatus.textContent = 'Approved sources available';
+          libraryBackend.textContent = 'Approved source library is available.';
           libraryCount.textContent = hasReliableCount ? `${sourceCount} approved source${sourceCount === 1 ? '' : 's'}` : 'Source backend ready';
           document.getElementById('sideBackendLabel').textContent = 'Online';
           document.getElementById('sideApprovedCount').textContent = hasReliableCount ? sourceCount : '—';
         } else {
-          statusText.textContent = 'Backend Offline';
-          statusSub.textContent = 'v0.2.0 • Islamic answers require the source backend';
-          libraryStatus.textContent = 'Backend Offline';
-          libraryBackend.textContent = 'Islamic answers require the source backend. Start the VM/backend to continue.';
+          statusText.textContent = 'Source status unavailable';
+          statusSub.textContent = 'v0.2.0 • Source status unavailable';
+          libraryStatus.textContent = 'Source status unavailable';
+          libraryBackend.textContent = 'Connect the backend to view approved source counts.';
           libraryCount.textContent = 'Approved source count unavailable';
           document.getElementById('sideBackendLabel').textContent = 'Offline';
           document.getElementById('sideApprovedCount').textContent = '—';
@@ -997,10 +1169,10 @@
         pill.textContent = 'Backend Offline'; 
         pill.className = 'action-pill status error';
         dot.className = 'status-dot'; 
-        statusText.textContent = 'Backend Offline';
-        statusSub.textContent = 'v0.2.0 • Islamic answers require the source backend';
-        libraryStatus.textContent = 'Backend Offline';
-        libraryBackend.textContent = 'Islamic answers require the source backend. Start the VM/backend to continue.';
+        statusText.textContent = 'Source status unavailable';
+        statusSub.textContent = 'v0.2.0 • Source status unavailable';
+        libraryStatus.textContent = 'Source status unavailable';
+        libraryBackend.textContent = 'Connect the backend to view approved source counts.';
         libraryCount.textContent = 'Approved source count unavailable';
         document.getElementById('sideBackendLabel').textContent = 'Offline';
         document.getElementById('sideApprovedCount').textContent = '—';
