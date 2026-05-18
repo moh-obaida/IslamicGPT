@@ -219,6 +219,29 @@ before(async () => {
   ], null, 2));
   fs.writeFileSync(path.join(sourceRoot, 'tafsir', 'seed.json'), JSON.stringify([
     {
+      id: 'tafsir-ar-muyassar-2-255',
+      source_type: 'tafsir',
+      title: 'Tafsir Muyassar, Tafsir of 2:255',
+      collection_name: 'Tafsir',
+      surah: 2,
+      ayah: 255,
+      surah_number: 2,
+      ayah_number: 255,
+      ayah_start: 255,
+      ayah_end: 255,
+      ayah_range: '255',
+      surah_name_ar: 'البقرة',
+      surah_name_en: 'Al-Baqarah',
+      tafsir_edition_slug: 'ar-tafsir-muyassar',
+      tafsir_book_name: 'التفسير الميسر',
+      tafsir_author: 'نخبة من العلماء',
+      tafsir_language: 'ar',
+      explanation_text: 'تفسير ميسر لآية الكرسي.',
+      verified_by_admin: true,
+      approved_for_answers: true,
+      topic_tags: ['ayat al-kursi', 'آية الكرسي', 'tafsir'],
+    },
+    {
       id: 'tafsir-en-tafisr-ibn-kathir-1-1',
       source_type: 'tafsir',
       title: 'Tafsir Ibn Kathir, Tafsir of 1:1',
@@ -846,6 +869,78 @@ test('/api/chat blocks unknown Arabic scholar fatwa lookup safely', async () => 
   assert.strictEqual(body.confidence, 'no_approved_source_found');
 });
 
+
+
+test('/api/chat answers Arabic Ayat al-Kursi tafsir lookup with deterministic template', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'تفسير آية الكرسي',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
+  assert.strictEqual(body.sources[0].surah_number, 2);
+  assert.strictEqual(body.sources[0].ayah_number, 255);
+});
+
+test('/api/chat answers Arabic numeric tafsir lookup with deterministic template', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'تفسير 2:255',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
+  assert.strictEqual(body.sources[0].surah_number, 2);
+  assert.strictEqual(body.sources[0].ayah_number, 255);
+});
+
+test('/api/chat answers English numeric tafsir lookup with deterministic template', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'Tafsir of Quran 2:255',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
+});
+
+test('/api/chat answers Arabic Fatihah tafsir lookup with deterministic template', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'تفسير سورة الفاتحة 1:1',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'template_answer');
+  assert.strictEqual(body.sources[0].source_type, 'tafsir');
+  assert.strictEqual(body.sources[0].surah_number, 1);
+  assert.strictEqual(body.sources[0].ayah_number, 1);
+});
+
+test('/api/chat blocks unimported Arabic tafsir lookup safely', async () => {
+  const { response, body } = await postJson('/api/chat', {
+    message: 'تفسير سورة يوسف',
+    mode: 'islamic_search_mode',
+    modelMode: 'quick',
+  });
+
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(body.llmCalled, false);
+  assert.strictEqual(body.hallucinationGuard.method, 'no_source_gate');
+  assert.strictEqual(body.confidence, 'no_approved_source_found');
+});
 
 test('/api/chat keeps hello as normal chat without source requirements', async () => {
   const { response, body } = await postJson('/api/chat', {
